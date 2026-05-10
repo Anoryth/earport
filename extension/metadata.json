@@ -3,7 +3,7 @@
     "name": "LibrePods",
     "description": "AirPods integration for GNOME - Battery status, noise control modes (ANC, Transparency, Adaptive), and advanced settings",
     "version": 1,
-    "shell-version": ["45", "46", "47", "48", "49"],
+    "shell-version": ["45", "46", "47", "48", "49", "50"],
     "url": "https://github.com/librepods/librepods",
     "settings-schema": "org.gnome.shell.extensions.librepods",
     "gettext-domain": "librepods"

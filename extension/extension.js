@@ -317,8 +317,8 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _createMenu() {
-        /* Header */
-        this.menu.setHeader('audio-headphones-symbolic', 'LibrePods');
+        /* Header - will be updated when connected */
+        this.menu.setHeader('audio-headphones-symbolic', 'AirPods');
 
         /* Battery section */
         this._batteryBox = new St.BoxLayout({
@@ -424,9 +424,10 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         /* Reset low battery notification state */
         this._lowBatteryNotified = {left: false, right: false};
 
-        /* Show connection notification */
+        /* Show connection notification with display name */
         if (this._settings.get_boolean('enable-connection-notifications')) {
-            this._showNotification('AirPods Connected', name || 'AirPods');
+            const displayName = this._proxy?.DisplayName || this._proxy?.DeviceModel || name || 'AirPods';
+            this._showNotification(`${displayName} Connected`, '');
         }
 
         this._updateState();
@@ -435,9 +436,10 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     _onDeviceDisconnected(proxy, sender, [address, name]) {
         console.log(`LibrePods: Device disconnected - ${name}`);
 
-        /* Show disconnection notification */
+        /* Show disconnection notification with display name */
         if (this._settings.get_boolean('enable-connection-notifications')) {
-            this._showNotification('AirPods Disconnected', name || 'AirPods');
+            const displayName = this._proxy?.DisplayName || this._proxy?.DeviceModel || name || 'AirPods';
+            this._showNotification(`${displayName} Disconnected`, '');
         }
 
         this._updateDisconnectedState();
@@ -458,12 +460,13 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 
         const threshold = this._settings.get_int('low-battery-threshold');
         const isHeadphones = this._proxy?.IsHeadphones || false;
+        const displayName = this._proxy?.DisplayName || this._proxy?.DeviceModel || 'AirPods';
 
         if (isHeadphones) {
             /* For AirPods Max, only check left (main battery) */
             if (left >= 0 && left <= threshold && !this._lowBatteryNotified.left) {
                 this._lowBatteryNotified.left = true;
-                this._showNotification('Low Battery', `Battery at ${left}%`);
+                this._showNotification(`${displayName} Low Battery`, `Battery at ${left}%`);
             } else if (left > threshold) {
                 this._lowBatteryNotified.left = false;
             }
@@ -486,7 +489,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             }
 
             if (messages.length > 0) {
-                this._showNotification('Low Battery', messages.join(', '));
+                this._showNotification(`${displayName} Low Battery`, messages.join(', '));
             }
         }
     }
@@ -506,10 +509,14 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             const supportsANC = this._proxy.SupportsANC || false;
             const supportsAdaptive = this._proxy.SupportsAdaptive || false;
             const deviceModel = this._proxy.DeviceModel || null;
+            const displayName = this._proxy.DisplayName || this._proxy.DeviceModel || 'AirPods';
 
-            this.subtitle = this._proxy.DisplayName || this._proxy.DeviceModel || 'Connected';
+            this.subtitle = displayName;
             this.checked = true;
             this._batteryBox.opacity = 255;
+
+            /* Update menu header with display name */
+            this.menu.setHeader('audio-headphones-symbolic', displayName);
 
             /* Update layout based on device type */
             this._leftBattery.setHeadphonesMode(isHeadphones, deviceModel);
@@ -543,6 +550,9 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         this.checked = false;
         this._batteryBox.opacity = 128;
         this._ncBox.opacity = 128;
+
+        /* Reset menu header to default */
+        this.menu.setHeader('audio-headphones-symbolic', 'AirPods');
 
         /* Reset to earbuds mode (show all indicators) */
         this._leftBattery.setHeadphonesMode(false);
