@@ -120,6 +120,12 @@ const char *airpods_state_get_display_name(AirPodsState *state)
     if (state->display_name && state->display_name[0] != '\0') {
         return state->display_name;
     }
+    /* Fall back to BlueZ device name while the model is not yet detected
+     * (metadata packet arrives shortly after connection). */
+    if (state->model == AIRPODS_MODEL_UNKNOWN &&
+        state->device_name && state->device_name[0] != '\0') {
+        return state->device_name;
+    }
     return airpods_model_to_string(state->model);
 }
 

@@ -272,18 +272,24 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
 
         /* Connect UI signals for daemon settings */
         this._caRow.connect('notify::active', () => {
+            if (this._updatingFromProxy)
+                return;
             if (this._proxy && this._proxy.Connected) {
                 this._proxy.SetConversationalAwarenessRemote(this._caRow.active, () => {});
             }
         });
 
         this._adaptiveRow.connect('notify::value', () => {
+            if (this._updatingFromProxy)
+                return;
             if (this._proxy && this._proxy.Connected) {
                 this._proxy.SetAdaptiveNoiseLevelRemote(this._adaptiveRow.value, () => {});
             }
         });
 
         this._earPauseRow.connect('notify::selected', () => {
+            if (this._updatingFromProxy)
+                return;
             if (this._proxy) {
                 this._proxy.SetEarPauseModeRemote(this._earPauseRow.selected, () => {});
             }
@@ -361,7 +367,9 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
         });
 
         /* Initialize ear pause mode (available even when AirPods are not connected) */
+        this._updatingFromProxy = true;
         this._earPauseRow.selected = this._proxy.EarPauseMode;
+        this._updatingFromProxy = false;
 
         this._updateState();
     }
@@ -379,6 +387,11 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
             return;
 
         const connected = this._proxy.Connected;
+
+        /* Suppress feedback loop: programmatic widget updates would otherwise
+         * fire notify handlers that push values back to the daemon. */
+        this._updatingFromProxy = true;
+        this._updatingListeningModes = true;
 
         if (connected) {
             const displayName = this._proxy.DisplayName || this._proxy.DeviceModel || 'AirPods';
@@ -401,13 +414,10 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
             this._adaptiveRow.value = this._proxy.AdaptiveNoiseLevel;
             this._earPauseRow.selected = this._proxy.EarPauseMode;
 
-            /* Update listening modes */
-            this._updatingListeningModes = true;
             this._lpOffRow.active = this._proxy.ListeningModeOff;
             this._lpTransparencyRow.active = this._proxy.ListeningModeTransparency;
             this._lpANCRow.active = this._proxy.ListeningModeANC;
             this._lpAdaptiveRow.active = this._proxy.ListeningModeAdaptive;
-            this._updatingListeningModes = false;
 
             this._setSensitive(true);
         } else {
@@ -416,6 +426,9 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
             this._displayNameRow.text = '';
             this._setSensitive(false);
         }
+
+        this._updatingFromProxy = false;
+        this._updatingListeningModes = false;
     }
 
     _setSensitive(sensitive) {

@@ -223,13 +223,17 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
         /* Load and apply saved device profile */
         apply_device_profile(app.pending_address);
 
-        dbus_service_emit_device_connected(app.dbus_service,
-                                            app.pending_address,
-                                            app.pending_name);
+        /* Emit property changes BEFORE the DeviceConnected signal so the
+         * extension's proxy cache is up-to-date when its handler reads
+         * DisplayName for the connection notification. */
         dbus_service_emit_properties_changed(app.dbus_service, "Connected");
         dbus_service_emit_properties_changed(app.dbus_service, "DeviceName");
         dbus_service_emit_properties_changed(app.dbus_service, "DeviceAddress");
         dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
+
+        dbus_service_emit_device_connected(app.dbus_service,
+                                            app.pending_address,
+                                            app.pending_name);
 
         /* Schedule sending saved settings after connection stabilizes (500ms delay) */
         g_timeout_add(500, apply_saved_settings_idle, g_strdup(app.pending_address));

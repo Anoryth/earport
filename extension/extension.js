@@ -300,6 +300,10 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
                 title: 'LibrePods',
                 iconName: 'audio-headphones-symbolic',
             });
+            /* Reset our reference if the source is destroyed externally */
+            this._notificationSource.connect('destroy', () => {
+                this._notificationSource = null;
+            });
             Main.messageTray.add(this._notificationSource);
         }
         return this._notificationSource;
@@ -424,9 +428,15 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         /* Reset low battery notification state */
         this._lowBatteryNotified = {left: false, right: false};
 
-        /* Show connection notification with display name */
+        /* Show connection notification with display name. The proxy's cached
+         * DisplayName may still be the stale "Unknown AirPods" fallback on
+         * the first connection after daemon startup, so prefer the bluetooth
+         * name from the signal in that case. */
         if (this._settings.get_boolean('enable-connection-notifications')) {
-            const displayName = this._proxy?.DisplayName || this._proxy?.DeviceModel || name || 'AirPods';
+            const cached = this._proxy?.DisplayName;
+            const displayName = (cached && cached !== 'Unknown AirPods')
+                ? cached
+                : (name || this._proxy?.DeviceModel || 'AirPods');
             this._showNotification(`${displayName} Connected`, '');
         }
 
