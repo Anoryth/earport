@@ -23,30 +23,52 @@ static gchar *get_config_dir(void)
     return g_build_filename(config_home, CONFIG_DIR_NAME, NULL);
 }
 
-/* One-time migration of the configuration directory from the project's
- * former name. Only runs when the new directory does not exist yet. */
+static bool ensure_config_dir(void);
+
+/* One-time migration of the configuration files from the project's former
+ * name. The new directory may already exist but empty (systemd's
+ * ConfigurationDirectory= pre-creates it), so migrate file by file as long
+ * as the new config has not been written yet. */
 static void migrate_legacy_config_dir(void)
 {
     static bool migration_checked = false;
+    static const char *config_files[] = {CONFIG_FILE_NAME, "devices.conf", NULL};
 
     if (migration_checked)
         return;
     migration_checked = true;
 
     gchar *new_dir = get_config_dir();
-    if (!g_file_test(new_dir, G_FILE_TEST_EXISTS)) {
-        gchar *old_dir = g_build_filename(g_get_user_config_dir(),
-                                          LEGACY_CONFIG_DIR_NAME, NULL);
-        if (g_file_test(old_dir, G_FILE_TEST_IS_DIR)) {
-            if (g_rename(old_dir, new_dir) == 0) {
-                g_message("Migrated configuration from %s to %s", old_dir, new_dir);
-            } else {
-                g_warning("Failed to migrate configuration from %s: %s",
-                          old_dir, g_strerror(errno));
+    gchar *old_dir = g_build_filename(g_get_user_config_dir(),
+                                      LEGACY_CONFIG_DIR_NAME, NULL);
+    gchar *new_conf = g_build_filename(new_dir, CONFIG_FILE_NAME, NULL);
+
+    if (g_file_test(old_dir, G_FILE_TEST_IS_DIR) &&
+        !g_file_test(new_conf, G_FILE_TEST_EXISTS)) {
+        if (!ensure_config_dir())
+            goto out;
+
+        for (int i = 0; config_files[i] != NULL; i++) {
+            gchar *src = g_build_filename(old_dir, config_files[i], NULL);
+            gchar *dst = g_build_filename(new_dir, config_files[i], NULL);
+            if (g_file_test(src, G_FILE_TEST_EXISTS)) {
+                if (g_rename(src, dst) == 0) {
+                    g_message("Migrated %s to %s", src, dst);
+                } else {
+                    g_warning("Failed to migrate %s: %s", src, g_strerror(errno));
+                }
             }
+            g_free(src);
+            g_free(dst);
         }
-        g_free(old_dir);
+
+        /* Remove the old directory if now empty */
+        g_rmdir(old_dir);
     }
+
+out:
+    g_free(new_conf);
+    g_free(old_dir);
     g_free(new_dir);
 }
 

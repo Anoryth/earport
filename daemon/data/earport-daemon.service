@@ -14,7 +14,9 @@ RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=%h/.config/earport
+# Creates $XDG_CONFIG_HOME/earport before sandboxing and keeps it writable
+# (ReadWritePaths= would fail at namespace setup while the dir is missing)
+ConfigurationDirectory=earport
 PrivateTmp=true
 
 [Install]
