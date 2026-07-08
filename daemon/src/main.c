@@ -37,7 +37,13 @@ typedef struct {
     /* Reconnection */
     guint reconnect_timeout_id;
     int reconnect_attempts;
+    bool bluez_connected;   /* Device still connected at BlueZ level */
 } AppContext;
+
+/* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
+ * right after the BlueZ link comes up, so retry with exponential backoff. */
+#define RECONNECT_MAX_ATTEMPTS 5
+#define RECONNECT_BASE_DELAY_SEC 2
 
 static AppContext app = {0};
 
@@ -46,6 +52,8 @@ static void connect_to_airpods(const char *address, const char *name);
 static void disconnect_from_airpods(void);
 static void apply_device_profile(const char *address);
 static gboolean apply_saved_settings_idle(gpointer user_data);
+static void schedule_reconnect(void);
+static void cancel_reconnect(void);
 
 /* ============================================================================
  * Bluetooth data handling
@@ -95,14 +103,26 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         dbus_service_emit_properties_changed(app.dbus_service, "ChargingCase");
         break;
 
-    case AAP_PKT_TYPE_EAR_DETECTION:
+    case AAP_PKT_TYPE_EAR_DETECTION: {
+        bool primary_in_ear = packet.data.ear_detection.primary_in_ear;
+        bool secondary_in_ear = packet.data.ear_detection.secondary_in_ear;
+
         g_message("Ear detection: primary=%s secondary=%s",
-                  packet.data.ear_detection.primary_in_ear ? "in" : "out",
-                  packet.data.ear_detection.secondary_in_ear ? "in" : "out");
+                  primary_in_ear ? "in" : "out",
+                  secondary_in_ear ? "in" : "out");
+
+        /* AirPods Max have a single sensor: the secondary slot always reads
+         * "out", which would jam the one-out auto-pause logic. Mirror the
+         * primary status instead. */
+        g_mutex_lock(&app.state.lock);
+        bool is_headphones = airpods_model_is_headphones(app.state.model);
+        g_mutex_unlock(&app.state.lock);
+        if (is_headphones)
+            secondary_in_ear = primary_in_ear;
 
         airpods_state_set_ear_detection(&app.state,
-                                         packet.data.ear_detection.primary_in_ear,
-                                         packet.data.ear_detection.secondary_in_ear,
+                                         primary_in_ear,
+                                         secondary_in_ear,
                                          packet.data.ear_detection.primary_left);
 
         dbus_service_emit_ear_detection_changed(app.dbus_service,
@@ -118,6 +138,7 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
                                                     app.state.ear_detection.right_in_ear);
         }
         break;
+    }
 
     case AAP_PKT_TYPE_NOISE_CONTROL:
         g_message("Noise control mode: %s",
@@ -183,6 +204,8 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
                 dbus_service_emit_properties_changed(app.dbus_service, "IsHeadphones");
                 dbus_service_emit_properties_changed(app.dbus_service, "SupportsANC");
                 dbus_service_emit_properties_changed(app.dbus_service, "SupportsAdaptive");
+                /* DisplayName falls back to the model name, refresh it too */
+                dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
             }
         }
         break;
@@ -192,6 +215,61 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
     }
 }
 
+/* ============================================================================
+ * L2CAP reconnection with exponential backoff
+ * ========================================================================== */
+
+static gboolean reconnect_timeout_cb(gpointer user_data)
+{
+    (void)user_data;
+    app.reconnect_timeout_id = 0;
+
+    if (!app.bluez_connected || app.pending_address == NULL)
+        return G_SOURCE_REMOVE;
+
+    if (app.bt_conn && bt_connection_is_connected(app.bt_conn))
+        return G_SOURCE_REMOVE;
+
+    g_message("L2CAP reconnect attempt %d/%d to %s",
+              app.reconnect_attempts, RECONNECT_MAX_ATTEMPTS, app.pending_address);
+
+    /* On failure, the BT_STATE_ERROR callback schedules the next attempt */
+    connect_to_airpods(app.pending_address, app.pending_name);
+
+    return G_SOURCE_REMOVE;
+}
+
+static void schedule_reconnect(void)
+{
+    if (app.reconnect_timeout_id > 0)
+        return;
+
+    if (!app.bluez_connected || app.pending_address == NULL)
+        return;
+
+    if (app.reconnect_attempts >= RECONNECT_MAX_ATTEMPTS) {
+        g_warning("Giving up L2CAP reconnection after %d attempts", app.reconnect_attempts);
+        return;
+    }
+
+    guint delay = RECONNECT_BASE_DELAY_SEC << app.reconnect_attempts;  /* 2,4,8,16,32s */
+    app.reconnect_attempts++;
+
+    g_message("Scheduling L2CAP reconnect attempt %d/%d in %us",
+              app.reconnect_attempts, RECONNECT_MAX_ATTEMPTS, delay);
+
+    app.reconnect_timeout_id = g_timeout_add_seconds(delay, reconnect_timeout_cb, NULL);
+}
+
+static void cancel_reconnect(void)
+{
+    if (app.reconnect_timeout_id > 0) {
+        g_source_remove(app.reconnect_timeout_id);
+        app.reconnect_timeout_id = 0;
+    }
+    app.reconnect_attempts = 0;
+}
+
 static void on_bt_state_changed(BluetoothState state, const char *error, void *user_data)
 {
     (void)user_data;
@@ -199,7 +277,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
     switch (state) {
     case BT_STATE_CONNECTED:
         g_message("Bluetooth connected, sending handshake...");
-        app.reconnect_attempts = 0;
+        cancel_reconnect();
 
         /* Attach to main loop for data reception */
         bt_connection_attach_to_mainloop(app.bt_conn, NULL);
@@ -250,10 +328,15 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
         airpods_state_reset(&app.state);
         dbus_service_emit_properties_changed(app.dbus_service, "Connected");
+
+        /* L2CAP dropped but the device is still connected at BlueZ level
+         * (e.g. AirPods went idle): try to re-establish the link. */
+        schedule_reconnect();
         break;
 
     case BT_STATE_ERROR:
         g_warning("Bluetooth error: %s", error ? error : "unknown");
+        schedule_reconnect();
         break;
 
     default:
@@ -351,11 +434,14 @@ static void connect_to_airpods(const char *address, const char *name)
         return;
     }
 
-    /* Store pending info */
+    /* Store pending info (dup first: on reconnect, address/name may alias
+     * app.pending_address/app.pending_name) */
+    char *addr_copy = g_strdup(address);
+    char *name_copy = g_strdup(name);
     g_free(app.pending_address);
     g_free(app.pending_name);
-    app.pending_address = g_strdup(address);
-    app.pending_name = g_strdup(name);
+    app.pending_address = addr_copy;
+    app.pending_name = name_copy;
 
     /* Create new connection if needed */
     if (app.bt_conn == NULL) {
@@ -386,6 +472,8 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
 {
     (void)user_data;
     g_message("BlueZ: AirPods connected - %s (%s)", device->name, device->address);
+    app.bluez_connected = true;
+    app.reconnect_attempts = 0;
     connect_to_airpods(device->address, device->name);
 }
 
@@ -393,6 +481,8 @@ static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *us
 {
     (void)user_data;
     g_message("BlueZ: AirPods disconnected - %s (%s)", device->name, device->address);
+    app.bluez_connected = false;
+    cancel_reconnect();
     disconnect_from_airpods();
 }
 
@@ -584,6 +674,8 @@ static gboolean on_sigterm(gpointer user_data)
 static void cleanup(void)
 {
     g_message("Cleaning up...");
+
+    cancel_reconnect();
 
     if (app.bt_conn) {
         bt_connection_free(app.bt_conn);

@@ -246,16 +246,13 @@ void media_control_on_ear_detection_changed(MediaControl *mc,
     /* Detect transitions (edge detection) */
     if (mc->prev_state_valid) {
         bool prev_pods_out = false;
-        bool prev_pods_in = false;
 
         switch (mc->ear_pause_mode) {
         case EAR_PAUSE_ONE_OUT:
             prev_pods_out = !mc->prev_left_in_ear || !mc->prev_right_in_ear;
-            prev_pods_in = mc->prev_left_in_ear && mc->prev_right_in_ear;
             break;
         case EAR_PAUSE_BOTH_OUT:
             prev_pods_out = !mc->prev_left_in_ear && !mc->prev_right_in_ear;
-            prev_pods_in = mc->prev_left_in_ear || mc->prev_right_in_ear;
             break;
         default:
             break;

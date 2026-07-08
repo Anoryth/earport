@@ -105,12 +105,12 @@ struct DbusService {
     void *display_name_user_data;
 };
 
-static GVariant *get_property(GDBusConnection *connection,
-                               const gchar *sender,
-                               const gchar *object_path,
-                               const gchar *interface_name,
+static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
+                               const gchar *sender G_GNUC_UNUSED,
+                               const gchar *object_path G_GNUC_UNUSED,
+                               const gchar *interface_name G_GNUC_UNUSED,
                                const gchar *property_name,
-                               GError **error,
+                               GError **error G_GNUC_UNUSED,
                                gpointer user_data)
 {
     DbusService *service = user_data;
@@ -175,10 +175,10 @@ static GVariant *get_property(GDBusConnection *connection,
     return result;
 }
 
-static void handle_method_call(GDBusConnection *connection,
-                                const gchar *sender,
-                                const gchar *object_path,
-                                const gchar *interface_name,
+static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
+                                const gchar *sender G_GNUC_UNUSED,
+                                const gchar *object_path G_GNUC_UNUSED,
+                                const gchar *interface_name G_GNUC_UNUSED,
                                 const gchar *method_name,
                                 GVariant *parameters,
                                 GDBusMethodInvocation *invocation,
@@ -280,7 +280,7 @@ static const GDBusInterfaceVTable interface_vtable = {
 };
 
 static void on_bus_acquired(GDBusConnection *connection,
-                             const gchar *name,
+                             const gchar *name G_GNUC_UNUSED,
                              gpointer user_data)
 {
     DbusService *service = user_data;
@@ -306,16 +306,16 @@ static void on_bus_acquired(GDBusConnection *connection,
     }
 }
 
-static void on_name_acquired(GDBusConnection *connection,
+static void on_name_acquired(GDBusConnection *connection G_GNUC_UNUSED,
                               const gchar *name,
-                              gpointer user_data)
+                              gpointer user_data G_GNUC_UNUSED)
 {
     g_message("D-Bus name acquired: %s", name);
 }
 
-static void on_name_lost(GDBusConnection *connection,
+static void on_name_lost(GDBusConnection *connection G_GNUC_UNUSED,
                           const gchar *name,
-                          gpointer user_data)
+                          gpointer user_data G_GNUC_UNUSED)
 {
     g_warning("D-Bus name lost: %s", name);
 }

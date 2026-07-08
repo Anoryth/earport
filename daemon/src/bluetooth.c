@@ -86,8 +86,11 @@ bool bt_connection_connect(BluetoothConnection *conn, const char *address)
     /* Create L2CAP socket */
     conn->socket_fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
     if (conn->socket_fd < 0) {
-        g_warning("Failed to create L2CAP socket: %s", strerror(errno));
-        set_state(conn, BT_STATE_ERROR, strerror(errno));
+        int err = errno;
+        g_warning("Failed to create L2CAP socket: %s", strerror(err));
+        set_state(conn, BT_STATE_ERROR, strerror(err));
+        /* Leave the state machine ready for another attempt */
+        conn->state = BT_STATE_DISCONNECTED;
         return false;
     }
 
@@ -116,10 +119,13 @@ bool bt_connection_connect(BluetoothConnection *conn, const char *address)
 
     /* Connect (blocking for now, could be made async) */
     if (connect(conn->socket_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        g_warning("Failed to connect to %s: %s", address, strerror(errno));
+        int err = errno;
+        g_warning("Failed to connect to %s: %s", address, strerror(err));
         close(conn->socket_fd);
         conn->socket_fd = -1;
-        set_state(conn, BT_STATE_ERROR, strerror(errno));
+        set_state(conn, BT_STATE_ERROR, strerror(err));
+        /* Leave the state machine ready for another attempt */
+        conn->state = BT_STATE_DISCONNECTED;
         return false;
     }
 

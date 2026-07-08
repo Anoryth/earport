@@ -59,7 +59,7 @@ bool config_load(LibrePodsConfig *config)
 
     if (!g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_NONE, &error)) {
         if (error != NULL) {
-            if (error->code != G_FILE_ERROR_NOENT) {
+            if (!g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
                 g_warning("Failed to load config file: %s", error->message);
             }
             g_error_free(error);
@@ -172,7 +172,7 @@ bool config_load_device_listening_modes(const char *device_address, ListeningMod
 
     if (!g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_NONE, &error)) {
         if (error != NULL) {
-            if (error->code != G_FILE_ERROR_NOENT) {
+            if (!g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
                 g_warning("Failed to load devices config: %s", error->message);
             }
             g_error_free(error);
@@ -302,7 +302,7 @@ bool config_load_device_profile(const char *device_address, DeviceProfile *profi
 
     if (!g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_NONE, &error)) {
         if (error != NULL) {
-            if (error->code != G_FILE_ERROR_NOENT) {
+            if (!g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
                 g_warning("Failed to load devices config: %s", error->message);
             }
             g_error_free(error);
