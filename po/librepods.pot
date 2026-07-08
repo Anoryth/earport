@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: librepods 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/librepods-gnome/issues\n"
-"POT-Creation-Date: 2026-07-07 23:07+0200\n"
+"POT-Creation-Date: 2026-07-08 23:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,74 +15,78 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension/extension.js:100
+#: extension/extension.js:98
 msgid "Headphones"
 msgstr ""
 
-#: extension/extension.js:241 extension/extension.js:556 extension/prefs.js:450
+#: extension/extension.js:237 extension/extension.js:557 extension/prefs.js:450
 msgid "Disconnected"
 msgstr ""
 
-#: extension/extension.js:345 extension/prefs.js:154
+#: extension/extension.js:320 extension/extension.js:483 extension/prefs.js:427
+msgid "Left"
+msgstr ""
+
+#: extension/extension.js:321 extension/extension.js:490 extension/prefs.js:427
+msgid "Right"
+msgstr ""
+
+#: extension/extension.js:322
+msgid "Case"
+msgstr ""
+
+#: extension/extension.js:346 extension/prefs.js:154
 msgid "Off"
 msgstr ""
 
-#: extension/extension.js:346
+#: extension/extension.js:347
 msgid "ANC"
 msgstr ""
 
-#: extension/extension.js:347
+#: extension/extension.js:348
 msgid "Hear"
 msgstr ""
 
-#: extension/extension.js:348
+#: extension/extension.js:349
 msgid "Auto"
 msgstr ""
 
-#: extension/extension.js:368
+#: extension/extension.js:369
 msgid "Advanced Settings"
 msgstr ""
 
-#: extension/extension.js:425
+#: extension/extension.js:426
 #, javascript-format
 msgid "%s Connected"
 msgstr ""
 
-#: extension/extension.js:442
+#: extension/extension.js:443
 #, javascript-format
 msgid "%s Disconnected"
 msgstr ""
 
-#: extension/extension.js:470 extension/extension.js:496
+#: extension/extension.js:471 extension/extension.js:497
 #, javascript-format
 msgid "%s Low Battery"
 msgstr ""
 
-#: extension/extension.js:471
+#: extension/extension.js:472
 msgid "Battery"
 msgstr ""
 
-#: extension/extension.js:482 extension/prefs.js:427
-msgid "Left"
-msgstr ""
-
-#: extension/extension.js:489 extension/prefs.js:427
-msgid "Right"
-msgstr ""
-
-#: extension/extension.js:644
+#: extension/extension.js:645
 msgid "Noise Control Off"
 msgstr ""
 
-#: extension/extension.js:645 extension/prefs.js:166
+#: extension/extension.js:646 extension/prefs.js:166
 msgid "Noise Cancellation"
 msgstr ""
 
-#: extension/extension.js:646 extension/prefs.js:160
+#: extension/extension.js:647 extension/prefs.js:160
 msgid "Transparency"
 msgstr ""
 
-#: extension/extension.js:647 extension/prefs.js:172
+#: extension/extension.js:648 extension/prefs.js:172
 msgid "Adaptive"
 msgstr ""
 

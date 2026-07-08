@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: librepods 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/librepods-gnome/issues\n"
-"POT-Creation-Date: 2026-07-07 12:00+0200\n"
+"POT-Creation-Date: 2026-07-08 23:02+0200\n"
 "PO-Revision-Date: 2026-07-07 12:00+0200\n"
 "Last-Translator: LibrePods Contributors\n"
 "Language-Team: French\n"
@@ -16,212 +16,289 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
+#: extension/extension.js:98
 msgid "Headphones"
 msgstr "Casque"
 
+#: extension/extension.js:237 extension/extension.js:557 extension/prefs.js:450
 msgid "Disconnected"
 msgstr "Déconnecté"
 
-msgid "Off"
-msgstr "Off"
-
-msgid "ANC"
-msgstr "ANC"
-
-msgid "Hear"
-msgstr "Ambiant"
-
-msgid "Auto"
-msgstr "Auto"
-
-msgid "Advanced Settings"
-msgstr "Réglages avancés"
-
-msgid "%s Connected"
-msgstr "%s connectés"
-
-msgid "%s Disconnected"
-msgstr "%s déconnectés"
-
-msgid "%s Low Battery"
-msgstr "%s : batterie faible"
-
-msgid "Battery"
-msgstr "Batterie"
-
+#: extension/extension.js:320 extension/extension.js:483 extension/prefs.js:427
 msgid "Left"
 msgstr "Gauche"
 
+#: extension/extension.js:321 extension/extension.js:490 extension/prefs.js:427
 msgid "Right"
 msgstr "Droit"
 
+#: extension/extension.js:322
+msgid "Case"
+msgstr "Boîtier"
+
+#: extension/extension.js:346 extension/prefs.js:154
+msgid "Off"
+msgstr "Off"
+
+#: extension/extension.js:347
+msgid "ANC"
+msgstr "ANC"
+
+#: extension/extension.js:348
+msgid "Hear"
+msgstr "Ambiant"
+
+#: extension/extension.js:349
+msgid "Auto"
+msgstr "Auto"
+
+#: extension/extension.js:369
+msgid "Advanced Settings"
+msgstr "Réglages avancés"
+
+#: extension/extension.js:426
+#, javascript-format
+msgid "%s Connected"
+msgstr "%s connectés"
+
+#: extension/extension.js:443
+#, javascript-format
+msgid "%s Disconnected"
+msgstr "%s déconnectés"
+
+#: extension/extension.js:471 extension/extension.js:497
+#, javascript-format
+msgid "%s Low Battery"
+msgstr "%s : batterie faible"
+
+#: extension/extension.js:472
+msgid "Battery"
+msgstr "Batterie"
+
+#: extension/extension.js:645
 msgid "Noise Control Off"
 msgstr "Contrôle du bruit désactivé"
 
+#: extension/extension.js:646 extension/prefs.js:166
 msgid "Noise Cancellation"
 msgstr "Réduction de bruit"
 
+#: extension/extension.js:647 extension/prefs.js:160
 msgid "Transparency"
 msgstr "Transparence"
 
+#: extension/extension.js:648 extension/prefs.js:172
 msgid "Adaptive"
 msgstr "Adaptatif"
 
+#: extension/prefs.js:28
 msgid "Set Shortcut"
 msgstr "Définir le raccourci"
 
+#: extension/prefs.js:37
 msgid "Press a key combination"
 msgstr "Appuyez sur une combinaison de touches"
 
+#: extension/prefs.js:38
 msgid "Press Esc to cancel or Backspace to disable the shortcut"
 msgstr "Échap pour annuler, Retour arrière pour désactiver le raccourci"
 
+#: extension/prefs.js:86
 msgid "Device Status"
 msgstr "État de l'appareil"
 
+#: extension/prefs.js:87
 msgid "Current AirPods connection status"
 msgstr "État de connexion actuel des AirPods"
 
+#: extension/prefs.js:92
 msgid "Connection"
 msgstr "Connexion"
 
+#: extension/prefs.js:93
 msgid "Checking…"
 msgstr "Vérification…"
 
+#: extension/prefs.js:99
 msgid "Ear Detection"
 msgstr "Détection intra-auriculaire"
 
+#: extension/prefs.js:100
 msgid "Unknown"
 msgstr "Inconnu"
 
+#: extension/prefs.js:107
 msgid "Device Profile"
 msgstr "Profil de l'appareil"
 
+#: extension/prefs.js:108
 msgid ""
 "Customize your AirPods. Leave the name empty to use the device model name"
 msgstr ""
-"Personnalisez vos AirPods. Laissez le nom vide pour utiliser le nom du "
-"modèle"
+"Personnalisez vos AirPods. Laissez le nom vide pour utiliser le nom du modèle"
 
+#: extension/prefs.js:114
 msgid "Custom Name"
 msgstr "Nom personnalisé"
 
+#: extension/prefs.js:121
 msgid "AirPods Features"
 msgstr "Fonctionnalités AirPods"
 
+#: extension/prefs.js:122
 msgid "Advanced features for your AirPods"
 msgstr "Fonctionnalités avancées de vos AirPods"
 
+#: extension/prefs.js:128
 msgid "Conversational Awareness"
 msgstr "Détection de conversation"
 
+#: extension/prefs.js:129
 msgid "Automatically lower volume when you speak"
 msgstr "Baisse automatiquement le volume quand vous parlez"
 
+#: extension/prefs.js:135
 msgid "Adaptive Noise Level"
 msgstr "Niveau de bruit adaptatif"
 
+#: extension/prefs.js:136
 msgid "Adjust the transparency level (0-100)"
 msgstr "Ajuste le niveau de transparence (0-100)"
 
+#: extension/prefs.js:148
 msgid "Long Press Actions"
 msgstr "Actions d'appui long"
 
+#: extension/prefs.js:149
 msgid "Configure which modes are cycled when pressing and holding the stem"
 msgstr "Modes parcourus lors d'un appui long sur la tige"
 
+#: extension/prefs.js:155
 msgid "Include Off mode in long press cycle"
 msgstr "Inclure le mode Off dans le cycle d'appui long"
 
+#: extension/prefs.js:161
 msgid "Include Transparency mode in long press cycle"
 msgstr "Inclure le mode Transparence dans le cycle d'appui long"
 
+#: extension/prefs.js:167
 msgid "Include ANC mode in long press cycle"
 msgstr "Inclure la réduction de bruit dans le cycle d'appui long"
 
+#: extension/prefs.js:173
 msgid "Include Adaptive mode in long press cycle"
 msgstr "Inclure le mode Adaptatif dans le cycle d'appui long"
 
+#: extension/prefs.js:179
 msgid "Media Control"
 msgstr "Contrôle multimédia"
 
+#: extension/prefs.js:180
 msgid "Configure media playback behavior"
 msgstr "Comportement de la lecture multimédia"
 
+#: extension/prefs.js:185 extension/prefs.js:234
 msgid "Disabled"
 msgstr "Désactivé"
 
+#: extension/prefs.js:186
 msgid "When one earbud removed"
 msgstr "Quand un écouteur est retiré"
 
+#: extension/prefs.js:187
 msgid "When both earbuds removed"
 msgstr "Quand les deux écouteurs sont retirés"
 
+#: extension/prefs.js:190
 msgid "Auto-pause media"
 msgstr "Pause automatique"
 
+#: extension/prefs.js:191
 msgid "Pause playback when earbuds are removed"
 msgstr "Met en pause la lecture quand les écouteurs sont retirés"
 
+#: extension/prefs.js:198
 msgid "Notifications"
 msgstr "Notifications"
 
+#: extension/prefs.js:199
 msgid "Configure notification preferences"
 msgstr "Préférences de notification"
 
+#: extension/prefs.js:204
 msgid "Connection notifications"
 msgstr "Notifications de connexion"
 
+#: extension/prefs.js:205
 msgid "Notify when AirPods connect or disconnect"
 msgstr "Notifier à la connexion et à la déconnexion des AirPods"
 
+#: extension/prefs.js:210
 msgid "Low battery notifications"
 msgstr "Notifications de batterie faible"
 
+#: extension/prefs.js:211
 msgid "Notify when battery drops below threshold"
 msgstr "Notifier quand la batterie passe sous le seuil"
 
+#: extension/prefs.js:216
 msgid "Low battery threshold"
 msgstr "Seuil de batterie faible"
 
+#: extension/prefs.js:217
 msgid "Notify when battery drops below this percentage"
 msgstr "Notifier quand la batterie passe sous ce pourcentage"
 
+#: extension/prefs.js:229
 msgid "Keyboard Shortcuts"
 msgstr "Raccourcis clavier"
 
+#: extension/prefs.js:239
 msgid "Cycle noise control mode"
 msgstr "Changer le mode de contrôle du bruit"
 
+#: extension/prefs.js:240
 msgid "Also works when the Quick Settings menu is closed"
 msgstr "Fonctionne aussi quand le menu des réglages rapides est fermé"
 
+#: extension/prefs.js:255
 msgid "About"
 msgstr "À propos"
 
+#: extension/prefs.js:261
 msgid "AirPods integration for GNOME"
 msgstr "Intégration des AirPods pour GNOME"
 
+#: extension/prefs.js:267
 msgid "Version"
 msgstr "Version"
 
+#: extension/prefs.js:375
 msgid "Daemon not running"
 msgstr "Le démon n'est pas lancé"
 
+#: extension/prefs.js:384
 msgid "Error connecting to daemon"
 msgstr "Erreur de connexion au démon"
 
+#: extension/prefs.js:423
+#, javascript-format
 msgid "Connected: %s"
 msgstr "Connecté : %s"
 
+#: extension/prefs.js:425 extension/prefs.js:426
 msgid "In ear"
 msgstr "Dans l'oreille"
 
+#: extension/prefs.js:425 extension/prefs.js:426
 msgid "Out"
 msgstr "Retiré"
 
+#: extension/prefs.js:437
+#, javascript-format
 msgid "Device model: %s"
 msgstr "Modèle de l'appareil : %s"
 
+#: extension/prefs.js:451
 msgid "No device connected"
 msgstr "Aucun appareil connecté"

@@ -11,6 +11,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
+import Cairo from 'cairo';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
@@ -24,13 +25,16 @@ import {AirPodsInterface, BUS_NAME, OBJECT_PATH} from './dbusInterface.js';
 
 const AirPodsProxy = Gio.DBusProxy.makeProxyWrapper(AirPodsInterface);
 
-/* Icon size for battery indicators */
-const BATTERY_ICON_SIZE = 32;
+/* Ring geometry (logical px; the widget size comes from CSS) */
+const RING_LINE_WIDTH = 4;
+const RING_ICON_SIZE = 20;
 
-/* Battery indicator widget with symbolic icon and progress bar */
+/* Battery indicator widget: circular progress ring around a symbolic icon,
+ * with percentage and name below. The ring color comes from the widget's
+ * themed foreground color, so all state styling lives in the stylesheet. */
 const BatteryIndicator = GObject.registerClass(
 class BatteryIndicator extends St.BoxLayout {
-    _init(type, label) {
+    _init(type, label, gicon) {
         super._init({
             style_class: 'librepods-battery-indicator',
             vertical: true,
@@ -39,36 +43,31 @@ class BatteryIndicator extends St.BoxLayout {
 
         this._type = type; // 'left', 'right', 'case'
         this._label = label;
+        this._defaultGicon = gicon;
 
-        /* Determine icon based on type */
-        let iconName;
-        if (this._type === 'case') {
-            iconName = 'battery-symbolic';
-        } else {
-            iconName = 'audio-headphones-symbolic';
-        }
+        this._ring = new St.DrawingArea({
+            style_class: 'librepods-battery-ring',
+        });
+        this._ring.connect('repaint', area => this._drawRing(area));
+        this._ring.connect('style-changed', () => this._ring.queue_repaint());
 
-        /* Icon widget */
         this._icon = new St.Icon({
-            icon_name: iconName,
-            icon_size: BATTERY_ICON_SIZE,
+            gicon,
+            icon_size: RING_ICON_SIZE,
             style_class: 'librepods-battery-icon',
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+            y_expand: true,
         });
 
-        /* Progress bar container */
-        this._progressContainer = new St.BoxLayout({
-            style_class: 'librepods-progress-container',
+        /* Stack the icon on top of the ring */
+        this._ringBin = new St.Widget({
+            layout_manager: new Clutter.BinLayout(),
             x_align: Clutter.ActorAlign.CENTER,
         });
-
-        /* Progress bar fill; the fill width is derived from the container's
-         * allocated width so the CSS remains the single source of truth */
-        this._progressFill = new St.Widget({
-            style_class: 'librepods-progress-fill',
-        });
-        this._progressContainer.add_child(this._progressFill);
-        this._progressContainer.connect('notify::width',
-            () => this._syncFillWidth());
+        this._ringBin.add_child(this._ring);
+        this._ringBin.add_child(this._icon);
 
         this._levelLabel = new St.Label({
             text: '--',
@@ -81,8 +80,7 @@ class BatteryIndicator extends St.BoxLayout {
             opacity: 160,
         });
 
-        this.add_child(this._icon);
-        this.add_child(this._progressContainer);
+        this.add_child(this._ringBin);
         this.add_child(this._levelLabel);
         this.add_child(this._nameLabel);
 
@@ -98,10 +96,10 @@ class BatteryIndicator extends St.BoxLayout {
             /* For headphones, left indicator becomes the unified battery */
             if (isHeadphones) {
                 this._nameLabel.text = deviceModel || _('Headphones');
-                this._icon.icon_name = 'audio-headphones-symbolic';
+                this._icon.gicon = Gio.ThemedIcon.new('audio-headphones-symbolic');
             } else {
                 this._nameLabel.text = this._label;
-                this._icon.icon_name = 'audio-headphones-symbolic';
+                this._icon.gicon = this._defaultGicon;
             }
             this.visible = true;
         } else if (this._type === 'right' || this._type === 'case') {
@@ -120,70 +118,68 @@ class BatteryIndicator extends St.BoxLayout {
 
         if (level < 0) {
             this._levelLabel.text = '--';
-            this._icon.opacity = 128;
-            this._progressContainer.opacity = 128;
+            this._ringBin.opacity = 128;
             this._setStyleState(null);
         } else {
             this._levelLabel.text = `${level}%`;
-            this._icon.opacity = 255;
-            this._progressContainer.opacity = 255;
+            this._ringBin.opacity = 255;
 
             if (charging) {
                 this._setStyleState('charging');
+            } else if (level <= 10) {
+                this._setStyleState('critical');
             } else if (level <= 20) {
                 this._setStyleState('low');
-            } else if (level <= 50) {
-                this._setStyleState('medium');
             } else {
                 this._setStyleState(null);
             }
         }
 
-        this._syncFillWidth();
-    }
-
-    _syncFillWidth() {
-        const containerWidth = this._progressContainer.width;
-
-        if (this._level < 0 || containerWidth <= 0) {
-            this._progressFill.width = 0;
-            return;
-        }
-
-        const fraction = Math.min(this._level, 100) / 100;
-        this._progressFill.width = Math.round(containerWidth * fraction);
+        this._ring.queue_repaint();
     }
 
     _setStyleState(state) {
-        /* Only update if state changed */
         if (this._currentStyleState === state)
             return;
 
-        /* Remove previous state */
-        if (this._currentStyleState) {
-            if (this._currentStyleState === 'charging') {
-                this._levelLabel.remove_style_class_name('charging');
-                this._progressFill.remove_style_class_name('charging');
-            } else if (this._currentStyleState === 'low') {
-                this._levelLabel.remove_style_class_name('low-battery');
-                this._progressFill.remove_style_class_name('low');
-            } else if (this._currentStyleState === 'medium') {
-                this._progressFill.remove_style_class_name('medium');
-            }
-        }
-
-        /* Apply new state */
-        if (state === 'charging') {
-            this._levelLabel.add_style_class_name('charging');
-            this._progressFill.add_style_class_name('charging');
-        } else if (state === 'low') {
-            this._levelLabel.add_style_class_name('low-battery');
-            this._progressFill.add_style_class_name('low');
-        } else if (state === 'medium') {
-            this._progressFill.add_style_class_name('medium');
-        }
+        if (this._currentStyleState)
+            this._ring.remove_style_class_name(this._currentStyleState);
+        if (state)
+            this._ring.add_style_class_name(state);
 
         this._currentStyleState = state;
+    }
+
+    _drawRing(area) {
+        const cr = area.get_context();
+        const themeNode = area.get_theme_node();
+        const [width, height] = area.get_surface_size();
+
+        const cx = width / 2;
+        const cy = height / 2;
+        const radius = Math.min(width, height) / 2 - RING_LINE_WIDTH / 2;
+        const color = themeNode.get_foreground_color();
+
+        cr.setLineWidth(RING_LINE_WIDTH);
+
+        /* Track: themed color, well faded */
+        cr.setSourceRGBA(color.red / 255, color.green / 255, color.blue / 255,
+            (color.alpha / 255) * 0.25);
+        cr.arc(cx, cy, radius, 0, 2 * Math.PI);
+        cr.stroke();
+
+        /* Progress arc, clockwise from the top */
+        if (this._level >= 0) {
+            const fraction = Math.min(this._level, 100) / 100;
+            cr.setSourceRGBA(color.red / 255, color.green / 255,
+                color.blue / 255, color.alpha / 255);
+            cr.setLineCap(Cairo.LineCap.ROUND);
+            cr.arc(cx, cy, radius,
+                -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * fraction);
+            cr.stroke();
+        }
+
+        cr.$dispose();
     }
 });
 
@@ -256,6 +252,11 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             transparency: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-transparency-symbolic.svg`),
             adaptive: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-adaptive-symbolic.svg`),
         };
+        this._batteryIcons = {
+            left: Gio.icon_new_for_string(`${iconsDir}/librepods-bud-left-symbolic.svg`),
+            right: Gio.icon_new_for_string(`${iconsDir}/librepods-bud-right-symbolic.svg`),
+            case: Gio.icon_new_for_string(`${iconsDir}/librepods-case-symbolic.svg`),
+        };
 
         /* Load settings */
         this._settings = extensionObject.getSettings();
@@ -316,9 +317,9 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             x_align: Clutter.ActorAlign.CENTER,
         });
 
-        this._leftBattery = new BatteryIndicator('left', 'Left');
-        this._rightBattery = new BatteryIndicator('right', 'Right');
-        this._caseBattery = new BatteryIndicator('case', 'Case');
+        this._leftBattery = new BatteryIndicator('left', _('Left'), this._batteryIcons.left);
+        this._rightBattery = new BatteryIndicator('right', _('Right'), this._batteryIcons.right);
+        this._caseBattery = new BatteryIndicator('case', _('Case'), this._batteryIcons.case);
 
         this._batteryBox.add_child(this._leftBattery);
         this._batteryBox.add_child(this._rightBattery);
@@ -774,17 +775,25 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
             if (lowestBattery >= 0) {
                 this._batteryLabel.text = `${lowestBattery}%`;
 
+                const charging = isHeadphones
+                    ? this._proxy.ChargingLeft
+                    : (this._proxy.ChargingLeft || this._proxy.ChargingRight);
+
                 /* Update style based on battery level */
                 this._batteryLabel.remove_style_class_name('low');
                 this._batteryLabel.remove_style_class_name('critical');
+                this._batteryLabel.remove_style_class_name('charging');
 
-                if (lowestBattery <= 10) {
+                if (charging) {
+                    this._batteryLabel.add_style_class_name('charging');
+                } else if (lowestBattery <= 10) {
                     this._batteryLabel.add_style_class_name('critical');
                 } else if (lowestBattery <= 20) {
                     this._batteryLabel.add_style_class_name('low');
                 }
             } else {
                 this._batteryLabel.text = '';
+                this._batteryLabel.visible = false;
             }
         }
     }

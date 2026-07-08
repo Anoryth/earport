@@ -10,10 +10,14 @@
    Panel Battery Indicator
    ============================================ */
 
+/* Subtle pill next to the headphones icon */
 .librepods-panel-battery {
     font-size: 11px;
-    font-weight: 500;
-    margin-left: 4px;
+    font-weight: 600;
+    margin-left: 5px;
+    padding: 1px 8px;
+    border-radius: 99px;
+    background-color: rgba(128, 128, 128, 0.2);
     transition-duration: 200ms;
 }
 
@@ -25,46 +29,44 @@
     color: #e01b24;
 }
 
+.librepods-panel-battery.charging {
+    color: #2ec27e;
+}
+
 /* ============================================
    Battery Section (Quick Settings Menu)
    ============================================ */
 
 .librepods-battery-box {
-    spacing: 32px;
-    padding: 12px 16px;
+    spacing: 28px;
+    padding: 14px 16px 10px 16px;
 }
 
 .librepods-battery-indicator {
-    spacing: 4px;
-    min-width: 52px;
+    spacing: 6px;
+    min-width: 60px;
 }
 
-.librepods-progress-container {
-    width: 40px;
-    height: 6px;
-    border-radius: 3px;
-    background-color: rgba(128, 128, 128, 0.35);
-    margin-top: 2px;
+/* Circular battery gauge. The ring is drawn in Cairo with this widget's
+ * foreground color: the state classes below are the single place where
+ * the gauge colors are defined. */
+.librepods-battery-ring {
+    width: 56px;
+    height: 56px;
+    color: #3584e4;
+    color: -st-accent-color;
 }
 
-.librepods-progress-fill {
-    height: 6px;
-    border-radius: 3px;
-    background-color: #3584e4;
-    background-color: -st-accent-color;
-    transition-duration: 200ms;
+.librepods-battery-ring.low {
+    color: #ff7800;
 }
 
-.librepods-progress-fill.medium {
-    background-color: #ff7800;
+.librepods-battery-ring.critical {
+    color: #e01b24;
 }
 
-.librepods-progress-fill.low {
-    background-color: #e01b24;
-}
-
-.librepods-progress-fill.charging {
-    background-color: #2ec27e;
+.librepods-battery-ring.charging {
+    color: #2ec27e;
 }
 
 .librepods-battery-icon {
@@ -75,15 +77,6 @@
     font-size: 13px;
     font-weight: bold;
     text-align: center;
-    transition-duration: 200ms;
-}
-
-.librepods-battery-level.charging {
-    color: #2ec27e;
-}
-
-.librepods-battery-level.low-battery {
-    color: #ff7800;
 }
 
 .librepods-battery-name {
