@@ -16,5 +16,10 @@
       <summary>Enable connection notifications</summary>
       <description>Show notification when AirPods connect or disconnect</description>
     </key>
+    <key name="cycle-noise-mode-shortcut" type="as">
+      <default><![CDATA[['<Super><Shift>n']]]></default>
+      <summary>Cycle noise control mode</summary>
+      <description>Keyboard shortcut to cycle through the enabled noise control modes</description>
+    </key>
   </schema>
 </schemalist>

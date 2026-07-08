@@ -9,64 +9,18 @@ import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-/* D-Bus interface definition */
-const AirPodsInterface = `
-<node>
-  <interface name="org.librepods.AirPods1">
-    <property name="Connected" type="b" access="read"/>
-    <property name="DeviceName" type="s" access="read"/>
-    <property name="DeviceModel" type="s" access="read"/>
-    <property name="DisplayName" type="s" access="read"/>
-    <property name="IsHeadphones" type="b" access="read"/>
-    <property name="SupportsANC" type="b" access="read"/>
-    <property name="SupportsAdaptive" type="b" access="read"/>
-    <property name="BatteryLeft" type="i" access="read"/>
-    <property name="BatteryRight" type="i" access="read"/>
-    <property name="BatteryCase" type="i" access="read"/>
-    <property name="ChargingLeft" type="b" access="read"/>
-    <property name="ChargingRight" type="b" access="read"/>
-    <property name="ChargingCase" type="b" access="read"/>
-    <property name="NoiseControlMode" type="s" access="read"/>
-    <property name="ConversationalAwareness" type="b" access="read"/>
-    <property name="LeftInEar" type="b" access="read"/>
-    <property name="RightInEar" type="b" access="read"/>
-    <property name="AdaptiveNoiseLevel" type="i" access="read"/>
-    <method name="SetNoiseControlMode">
-      <arg type="s" name="mode" direction="in"/>
-    </method>
-    <method name="SetConversationalAwareness">
-      <arg type="b" name="enabled" direction="in"/>
-    </method>
-    <method name="SetAdaptiveNoiseLevel">
-      <arg type="i" name="level" direction="in"/>
-    </method>
-    <signal name="DeviceConnected">
-      <arg type="s" name="address"/>
-      <arg type="s" name="name"/>
-    </signal>
-    <signal name="DeviceDisconnected">
-      <arg type="s" name="address"/>
-      <arg type="s" name="name"/>
-    </signal>
-    <signal name="BatteryChanged">
-      <arg type="i" name="left"/>
-      <arg type="i" name="right"/>
-      <arg type="i" name="case_battery"/>
-    </signal>
-    <signal name="NoiseControlModeChanged">
-      <arg type="s" name="mode"/>
-    </signal>
-  </interface>
-</node>
-`;
+import {AirPodsInterface, BUS_NAME, OBJECT_PATH} from './dbusInterface.js';
+
 
 const AirPodsProxy = Gio.DBusProxy.makeProxyWrapper(AirPodsInterface);
 
@@ -107,11 +61,14 @@ class BatteryIndicator extends St.BoxLayout {
             x_align: Clutter.ActorAlign.CENTER,
         });
 
-        /* Progress bar fill */
+        /* Progress bar fill; the fill width is derived from the container's
+         * allocated width so the CSS remains the single source of truth */
         this._progressFill = new St.Widget({
             style_class: 'librepods-progress-fill',
         });
         this._progressContainer.add_child(this._progressFill);
+        this._progressContainer.connect('notify::width',
+            () => this._syncFillWidth());
 
         this._levelLabel = new St.Label({
             text: '--',
@@ -121,6 +78,7 @@ class BatteryIndicator extends St.BoxLayout {
         this._nameLabel = new St.Label({
             text: label,
             style_class: 'librepods-battery-name',
+            opacity: 160,
         });
 
         this.add_child(this._icon);
@@ -139,7 +97,7 @@ class BatteryIndicator extends St.BoxLayout {
         if (this._type === 'left') {
             /* For headphones, left indicator becomes the unified battery */
             if (isHeadphones) {
-                this._nameLabel.text = deviceModel || 'Headphones';
+                this._nameLabel.text = deviceModel || _('Headphones');
                 this._icon.icon_name = 'audio-headphones-symbolic';
             } else {
                 this._nameLabel.text = this._label;
@@ -164,13 +122,11 @@ class BatteryIndicator extends St.BoxLayout {
             this._levelLabel.text = '--';
             this._icon.opacity = 128;
             this._progressContainer.opacity = 128;
-            this._progressFill.width = 0;
             this._setStyleState(null);
         } else {
             this._levelLabel.text = `${level}%`;
             this._icon.opacity = 255;
             this._progressContainer.opacity = 255;
-            this._progressFill.width = Math.round(level * 0.4);
 
             if (charging) {
                 this._setStyleState('charging');
@@ -182,6 +138,20 @@ class BatteryIndicator extends St.BoxLayout {
                 this._setStyleState(null);
             }
         }
+
+        this._syncFillWidth();
+    }
+
+    _syncFillWidth() {
+        const containerWidth = this._progressContainer.width;
+
+        if (this._level < 0 || containerWidth <= 0) {
+            this._progressFill.width = 0;
+            return;
+        }
+
+        const fraction = Math.min(this._level, 100) / 100;
+        this._progressFill.width = Math.round(containerWidth * fraction);
     }
 
     _setStyleState(state) {
@@ -220,10 +190,11 @@ class BatteryIndicator extends St.BoxLayout {
 /* Noise control mode button */
 const NoiseControlButton = GObject.registerClass(
 class NoiseControlButton extends St.Button {
-    _init(mode, label, iconName) {
+    _init(mode, label, gicon) {
         super._init({
             style_class: 'librepods-nc-button',
             can_focus: true,
+            accessible_name: label,
             child: new St.BoxLayout({
                 vertical: true,
                 x_align: Clutter.ActorAlign.CENTER,
@@ -233,7 +204,7 @@ class NoiseControlButton extends St.Button {
         this._mode = mode;
 
         const icon = new St.Icon({
-            icon_name: iconName,
+            gicon,
             icon_size: 18,
             style_class: 'librepods-nc-icon',
         });
@@ -267,7 +238,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     _init(extensionObject) {
         super._init({
             title: 'AirPods',
-            subtitle: 'Disconnected',
+            subtitle: _('Disconnected'),
             iconName: 'audio-headphones-symbolic',
             toggleMode: false,
         });
@@ -276,6 +247,15 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         this._proxy = null;
         this._propertiesChangedId = 0;
         this._signalIds = [];
+
+        /* Custom symbolic icons shipped with the extension */
+        const iconsDir = `${extensionObject.path}/icons`;
+        this._modeIcons = {
+            off: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-off-symbolic.svg`),
+            anc: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-anc-symbolic.svg`),
+            transparency: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-transparency-symbolic.svg`),
+            adaptive: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-adaptive-symbolic.svg`),
+        };
 
         /* Load settings */
         this._settings = extensionObject.getSettings();
@@ -287,6 +267,9 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         this._notificationSource = null;
 
         this._createMenu();
+
+        /* Clicking the tile cycles through noise control modes */
+        this.connect('clicked', () => this.cycleNoiseControlMode());
     }
 
     setProxy(proxy) {
@@ -309,7 +292,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         return this._notificationSource;
     }
 
-    _showNotification(title, body) {
+    _showNotification(title, body = '', urgent = false) {
         const source = this._getNotificationSource();
         const notification = new MessageTray.Notification({
             source: source,
@@ -317,6 +300,8 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             body: body,
             iconName: 'audio-headphones-symbolic',
         });
+        if (urgent)
+            notification.urgency = MessageTray.Urgency.HIGH;
         source.addNotification(notification);
     }
 
@@ -357,10 +342,10 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         });
 
         this._ncButtons = {
-            off: new NoiseControlButton('off', 'Off', 'audio-speakers-symbolic'),
-            anc: new NoiseControlButton('anc', 'ANC', 'microphone-sensitivity-muted-symbolic'),
-            transparency: new NoiseControlButton('transparency', 'Hear', 'audio-input-microphone-high-symbolic'),
-            adaptive: new NoiseControlButton('adaptive', 'Auto', 'emblem-synchronizing-symbolic'),
+            off: new NoiseControlButton('off', _('Off'), this._modeIcons.off),
+            anc: new NoiseControlButton('anc', _('ANC'), this._modeIcons.anc),
+            transparency: new NoiseControlButton('transparency', _('Hear'), this._modeIcons.transparency),
+            adaptive: new NoiseControlButton('adaptive', _('Auto'), this._modeIcons.adaptive),
         };
 
         for (const [mode, button] of Object.entries(this._ncButtons)) {
@@ -380,7 +365,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 
         /* Settings button */
         this._settingsItem = new PopupMenu.PopupImageMenuItem(
-            'Advanced Settings',
+            _('Advanced Settings'),
             'emblem-system-symbolic'
         );
         this._settingsItem.connect('activate', () => this._openSettings());
@@ -437,7 +422,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             const displayName = (cached && cached !== 'Unknown AirPods')
                 ? cached
                 : (name || this._proxy?.DeviceModel || 'AirPods');
-            this._showNotification(`${displayName} Connected`, '');
+            this._showNotification(_('%s Connected').replace('%s', displayName));
         }
 
         this._updateState();
@@ -446,10 +431,15 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     _onDeviceDisconnected(proxy, sender, [address, name]) {
         console.log(`LibrePods: Device disconnected - ${name}`);
 
-        /* Show disconnection notification with display name */
+        /* Show disconnection notification with display name. Skip the
+         * "Unknown AirPods" fallback that the daemon reports once its state
+         * has already been reset. */
         if (this._settings.get_boolean('enable-connection-notifications')) {
-            const displayName = this._proxy?.DisplayName || this._proxy?.DeviceModel || name || 'AirPods';
-            this._showNotification(`${displayName} Disconnected`, '');
+            const cached = this._proxy?.DisplayName;
+            const displayName = (cached && cached !== 'Unknown AirPods')
+                ? cached
+                : (name || 'AirPods');
+            this._showNotification(_('%s Disconnected').replace('%s', displayName));
         }
 
         this._updateDisconnectedState();
@@ -476,7 +466,10 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             /* For AirPods Max, only check left (main battery) */
             if (left >= 0 && left <= threshold && !this._lowBatteryNotified.left) {
                 this._lowBatteryNotified.left = true;
-                this._showNotification(`${displayName} Low Battery`, `Battery at ${left}%`);
+                this._showNotification(
+                    _('%s Low Battery').replace('%s', displayName),
+                    `${_('Battery')}: ${left}%`,
+                    true);
             } else if (left > threshold) {
                 this._lowBatteryNotified.left = false;
             }
@@ -486,20 +479,23 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 
             if (left >= 0 && left <= threshold && !this._lowBatteryNotified.left) {
                 this._lowBatteryNotified.left = true;
-                messages.push(`Left: ${left}%`);
+                messages.push(`${_('Left')}: ${left}%`);
             } else if (left > threshold) {
                 this._lowBatteryNotified.left = false;
             }
 
             if (right >= 0 && right <= threshold && !this._lowBatteryNotified.right) {
                 this._lowBatteryNotified.right = true;
-                messages.push(`Right: ${right}%`);
+                messages.push(`${_('Right')}: ${right}%`);
             } else if (right > threshold) {
                 this._lowBatteryNotified.right = false;
             }
 
             if (messages.length > 0) {
-                this._showNotification(`${displayName} Low Battery`, messages.join(', '));
+                this._showNotification(
+                    _('%s Low Battery').replace('%s', displayName),
+                    messages.join(', '),
+                    true);
             }
         }
     }
@@ -524,6 +520,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
             this.subtitle = displayName;
             this.checked = true;
             this._batteryBox.opacity = 255;
+            this._ncBox.opacity = 255;
 
             /* Update menu header with display name */
             this.menu.setHeader('audio-headphones-symbolic', displayName);
@@ -556,7 +553,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _updateDisconnectedState() {
-        this.subtitle = 'Disconnected';
+        this.subtitle = _('Disconnected');
         this.checked = false;
         this._batteryBox.opacity = 128;
         this._ncBox.opacity = 128;
@@ -611,6 +608,48 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
                 console.error('LibrePods: Failed to set noise control mode:', error.message);
             }
         });
+    }
+
+    /* Cycle to the next noise control mode, following the long-press
+     * configuration (same modes as the stem gesture). Used by the tile
+     * click and the keyboard shortcut. */
+    cycleNoiseControlMode() {
+        if (!this._proxy || !this._proxy.Connected || !this._proxy.SupportsANC)
+            return;
+
+        const order = ['anc', 'transparency', 'adaptive', 'off'];
+        const enabled = {
+            /* Treat missing properties (older daemon) as enabled */
+            anc: this._proxy.ListeningModeANC !== false,
+            transparency: this._proxy.ListeningModeTransparency !== false,
+            adaptive: this._proxy.ListeningModeAdaptive !== false &&
+                (this._proxy.SupportsAdaptive || false),
+            off: this._proxy.ListeningModeOff === true,
+        };
+
+        const cycle = order.filter(mode => enabled[mode]);
+        if (cycle.length < 2)
+            return;
+
+        const currentIndex = cycle.indexOf(this._proxy.NoiseControlMode);
+        const next = cycle[(currentIndex + 1) % cycle.length];
+
+        this._setNoiseControlMode(next);
+        this._updateNoiseControlButtons(next);
+        this._showModeOsd(next);
+    }
+
+    _showModeOsd(mode) {
+        const labels = {
+            off: _('Noise Control Off'),
+            anc: _('Noise Cancellation'),
+            transparency: _('Transparency'),
+            adaptive: _('Adaptive'),
+        };
+
+        Main.osdWindowManager.show(-1,
+            this._modeIcons[mode] ?? Gio.ThemedIcon.new('audio-headphones-symbolic'),
+            labels[mode] ?? mode);
     }
 
     _openSettings() {
@@ -677,8 +716,8 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
         try {
             this._proxy = new AirPodsProxy(
                 Gio.DBus.session,
-                'org.librepods.Daemon',
-                '/org/librepods/AirPods',
+                BUS_NAME,
+                OBJECT_PATH,
                 (proxy, error) => {
                     if (error) {
                         console.error('LibrePods: Failed to connect to daemon:', error.message);
@@ -750,13 +789,16 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
         }
     }
 
+    cycleNoiseControlMode() {
+        this._toggle?.cycleNoiseControlMode();
+    }
+
     destroy() {
         if (this._proxy && this._propertiesChangedId > 0) {
             this._proxy.disconnect(this._propertiesChangedId);
         }
-        if (this._toggle) {
-            this._toggle.destroy();
-        }
+        this.quickSettingsItems.forEach(item => item.destroy());
+        this._toggle = null;
         super.destroy();
     }
 });
@@ -767,9 +809,20 @@ export default class LibrePodsExtension extends Extension {
         this._indicator = new LibrePodsIndicator(this);
 
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
+
+        /* Keyboard shortcut to cycle noise control modes */
+        Main.wm.addKeybinding(
+            'cycle-noise-mode-shortcut',
+            this.getSettings(),
+            Meta.KeyBindingFlags.IGNORE_AUTOREPEAT,
+            Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
+            () => this._indicator?.cycleNoiseControlMode()
+        );
     }
 
     disable() {
+        Main.wm.removeKeybinding('cycle-noise-mode-shortcut');
+
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;

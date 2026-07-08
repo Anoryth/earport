@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- Earbud with ambient sound waves passing through -->
+  <circle cx="8" cy="8" r="2.25" fill="#bebebe"/>
+  <path d="M 4.4 3.9 A 5.6 5.6 0 0 0 4.4 12.1" fill="none" stroke="#bebebe" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 11.6 3.9 A 5.6 5.6 0 0 1 11.6 12.1" fill="none" stroke="#bebebe" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 2.2 5.7 A 7.6 7.6 0 0 0 2.2 10.3" fill="none" stroke="#bebebe" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 13.8 5.7 A 7.6 7.6 0 0 1 13.8 10.3" fill="none" stroke="#bebebe" stroke-width="1.4" stroke-linecap="round"/>
+</svg>

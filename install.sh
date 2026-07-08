@@ -149,6 +149,13 @@ install_extension() {
     # Copy extension files
     cp -r "$SCRIPT_DIR/extension" "$EXTENSION_DIR"
 
+    # Compile GSettings schemas (required by getSettings())
+    if command -v glib-compile-schemas &> /dev/null; then
+        glib-compile-schemas "$EXTENSION_DIR/schemas"
+    else
+        print_warning "glib-compile-schemas not found; using pre-compiled schemas"
+    fi
+
     print_success "Extension installed to $EXTENSION_DIR"
 }
 

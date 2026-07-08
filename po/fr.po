@@ -1,0 +1,227 @@
+# French translation for LibrePods GNOME.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 LibrePods Contributors
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: librepods 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/Anoryth/librepods-gnome/issues\n"
+"POT-Creation-Date: 2026-07-07 12:00+0200\n"
+"PO-Revision-Date: 2026-07-07 12:00+0200\n"
+"Last-Translator: LibrePods Contributors\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Headphones"
+msgstr "Casque"
+
+msgid "Disconnected"
+msgstr "Déconnecté"
+
+msgid "Off"
+msgstr "Off"
+
+msgid "ANC"
+msgstr "ANC"
+
+msgid "Hear"
+msgstr "Ambiant"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "Advanced Settings"
+msgstr "Réglages avancés"
+
+msgid "%s Connected"
+msgstr "%s connectés"
+
+msgid "%s Disconnected"
+msgstr "%s déconnectés"
+
+msgid "%s Low Battery"
+msgstr "%s : batterie faible"
+
+msgid "Battery"
+msgstr "Batterie"
+
+msgid "Left"
+msgstr "Gauche"
+
+msgid "Right"
+msgstr "Droit"
+
+msgid "Noise Control Off"
+msgstr "Contrôle du bruit désactivé"
+
+msgid "Noise Cancellation"
+msgstr "Réduction de bruit"
+
+msgid "Transparency"
+msgstr "Transparence"
+
+msgid "Adaptive"
+msgstr "Adaptatif"
+
+msgid "Set Shortcut"
+msgstr "Définir le raccourci"
+
+msgid "Press a key combination"
+msgstr "Appuyez sur une combinaison de touches"
+
+msgid "Press Esc to cancel or Backspace to disable the shortcut"
+msgstr "Échap pour annuler, Retour arrière pour désactiver le raccourci"
+
+msgid "Device Status"
+msgstr "État de l'appareil"
+
+msgid "Current AirPods connection status"
+msgstr "État de connexion actuel des AirPods"
+
+msgid "Connection"
+msgstr "Connexion"
+
+msgid "Checking…"
+msgstr "Vérification…"
+
+msgid "Ear Detection"
+msgstr "Détection intra-auriculaire"
+
+msgid "Unknown"
+msgstr "Inconnu"
+
+msgid "Device Profile"
+msgstr "Profil de l'appareil"
+
+msgid ""
+"Customize your AirPods. Leave the name empty to use the device model name"
+msgstr ""
+"Personnalisez vos AirPods. Laissez le nom vide pour utiliser le nom du "
+"modèle"
+
+msgid "Custom Name"
+msgstr "Nom personnalisé"
+
+msgid "AirPods Features"
+msgstr "Fonctionnalités AirPods"
+
+msgid "Advanced features for your AirPods"
+msgstr "Fonctionnalités avancées de vos AirPods"
+
+msgid "Conversational Awareness"
+msgstr "Détection de conversation"
+
+msgid "Automatically lower volume when you speak"
+msgstr "Baisse automatiquement le volume quand vous parlez"
+
+msgid "Adaptive Noise Level"
+msgstr "Niveau de bruit adaptatif"
+
+msgid "Adjust the transparency level (0-100)"
+msgstr "Ajuste le niveau de transparence (0-100)"
+
+msgid "Long Press Actions"
+msgstr "Actions d'appui long"
+
+msgid "Configure which modes are cycled when pressing and holding the stem"
+msgstr "Modes parcourus lors d'un appui long sur la tige"
+
+msgid "Include Off mode in long press cycle"
+msgstr "Inclure le mode Off dans le cycle d'appui long"
+
+msgid "Include Transparency mode in long press cycle"
+msgstr "Inclure le mode Transparence dans le cycle d'appui long"
+
+msgid "Include ANC mode in long press cycle"
+msgstr "Inclure la réduction de bruit dans le cycle d'appui long"
+
+msgid "Include Adaptive mode in long press cycle"
+msgstr "Inclure le mode Adaptatif dans le cycle d'appui long"
+
+msgid "Media Control"
+msgstr "Contrôle multimédia"
+
+msgid "Configure media playback behavior"
+msgstr "Comportement de la lecture multimédia"
+
+msgid "Disabled"
+msgstr "Désactivé"
+
+msgid "When one earbud removed"
+msgstr "Quand un écouteur est retiré"
+
+msgid "When both earbuds removed"
+msgstr "Quand les deux écouteurs sont retirés"
+
+msgid "Auto-pause media"
+msgstr "Pause automatique"
+
+msgid "Pause playback when earbuds are removed"
+msgstr "Met en pause la lecture quand les écouteurs sont retirés"
+
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Configure notification preferences"
+msgstr "Préférences de notification"
+
+msgid "Connection notifications"
+msgstr "Notifications de connexion"
+
+msgid "Notify when AirPods connect or disconnect"
+msgstr "Notifier à la connexion et à la déconnexion des AirPods"
+
+msgid "Low battery notifications"
+msgstr "Notifications de batterie faible"
+
+msgid "Notify when battery drops below threshold"
+msgstr "Notifier quand la batterie passe sous le seuil"
+
+msgid "Low battery threshold"
+msgstr "Seuil de batterie faible"
+
+msgid "Notify when battery drops below this percentage"
+msgstr "Notifier quand la batterie passe sous ce pourcentage"
+
+msgid "Keyboard Shortcuts"
+msgstr "Raccourcis clavier"
+
+msgid "Cycle noise control mode"
+msgstr "Changer le mode de contrôle du bruit"
+
+msgid "Also works when the Quick Settings menu is closed"
+msgstr "Fonctionne aussi quand le menu des réglages rapides est fermé"
+
+msgid "About"
+msgstr "À propos"
+
+msgid "AirPods integration for GNOME"
+msgstr "Intégration des AirPods pour GNOME"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "Daemon not running"
+msgstr "Le démon n'est pas lancé"
+
+msgid "Error connecting to daemon"
+msgstr "Erreur de connexion au démon"
+
+msgid "Connected: %s"
+msgstr "Connecté : %s"
+
+msgid "In ear"
+msgstr "Dans l'oreille"
+
+msgid "Out"
+msgstr "Retiré"
+
+msgid "Device model: %s"
+msgstr "Modèle de l'appareil : %s"
+
+msgid "No device connected"
+msgstr "Aucun appareil connecté"

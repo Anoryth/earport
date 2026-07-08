@@ -1,4 +1,10 @@
-/* LibrePods GNOME Shell Extension Stylesheet */
+/* LibrePods GNOME Shell Extension Stylesheet
+ *
+ * Text colors are inherited from the shell theme so the extension follows
+ * light/dark themes automatically. Accent-colored elements declare a static
+ * fallback first, then -st-accent-color (GNOME 47+) which wins when
+ * supported. State colors (low/charging) use the GNOME palette.
+ */
 
 /* ============================================
    Panel Battery Indicator
@@ -8,92 +14,81 @@
     font-size: 11px;
     font-weight: 500;
     margin-left: 4px;
-    color: rgba(255, 255, 255, 0.9);
     transition-duration: 200ms;
 }
 
 .librepods-panel-battery.low {
-    color: #ff7b63;
+    color: #ff7800;
 }
 
 .librepods-panel-battery.critical {
-    color: #ed333b;
+    color: #e01b24;
 }
 
 /* ============================================
    Battery Section (Quick Settings Menu)
    ============================================ */
 
-/* Battery section container */
 .librepods-battery-box {
     spacing: 32px;
     padding: 12px 16px;
 }
 
-/* Individual battery indicator */
 .librepods-battery-indicator {
     spacing: 4px;
     min-width: 52px;
 }
 
-/* Battery progress bar */
 .librepods-progress-container {
     width: 40px;
     height: 6px;
     border-radius: 3px;
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(128, 128, 128, 0.35);
     margin-top: 2px;
 }
 
 .librepods-progress-fill {
     height: 6px;
     border-radius: 3px;
-    background-color: #57e389;
+    background-color: #3584e4;
+    background-color: -st-accent-color;
     transition-duration: 200ms;
 }
 
 .librepods-progress-fill.medium {
-    background-color: #ff7b63;
+    background-color: #ff7800;
 }
 
 .librepods-progress-fill.low {
-    background-color: #ed333b;
+    background-color: #e01b24;
 }
 
 .librepods-progress-fill.charging {
-    background-color: #3584e4;
+    background-color: #2ec27e;
 }
 
-/* Battery icon styling */
 .librepods-battery-icon {
-    color: rgba(255, 255, 255, 0.9);
     transition-duration: 200ms;
 }
 
-/* Battery percentage label */
 .librepods-battery-level {
     font-size: 13px;
     font-weight: bold;
-    color: #ffffff;
     text-align: center;
     transition-duration: 200ms;
 }
 
-/* Charging state - green color */
 .librepods-battery-level.charging {
-    color: #57e389;
+    color: #2ec27e;
 }
 
-/* Low battery warning - orange/red */
 .librepods-battery-level.low-battery {
-    color: #ff7b63;
+    color: #ff7800;
 }
 
-/* Label under battery (Left, Right, Case) */
 .librepods-battery-name {
     font-size: 11px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
     text-align: center;
 }
 
@@ -109,140 +104,43 @@
 .librepods-nc-button {
     padding: 8px 10px;
     border-radius: 16px;
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(128, 128, 128, 0.2);
     min-width: 48px;
     transition-duration: 200ms;
 }
 
 .librepods-nc-button:hover {
-    background-color: rgba(255, 255, 255, 0.18);
+    background-color: rgba(128, 128, 128, 0.3);
 }
 
-.librepods-nc-button:active {
-    background-color: rgba(255, 255, 255, 0.25);
-}
-
+.librepods-nc-button:active,
 .librepods-nc-button:focus {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(128, 128, 128, 0.35);
 }
 
-/* Active/selected noise control mode */
-.librepods-nc-button.active {
+/* Active/selected noise control mode: system accent color */
+.librepods-nc-button.active,
+.librepods-nc-button.active:hover,
+.librepods-nc-button.active:focus {
     background-color: #3584e4;
-    box-shadow: 0 2px 6px rgba(53, 132, 228, 0.4);
-}
-
-.librepods-nc-button.active:hover {
-    background-color: #4590e6;
+    background-color: -st-accent-color;
 }
 
 .librepods-nc-icon {
-    color: rgba(255, 255, 255, 0.9);
     icon-size: 18px;
-}
-
-.librepods-nc-button.active .librepods-nc-icon {
-    color: #ffffff;
 }
 
 .librepods-nc-label {
     font-size: 11px;
     font-weight: 500;
     margin-top: 5px;
-    color: rgba(255, 255, 255, 0.8);
+}
+
+.librepods-nc-button.active .librepods-nc-icon,
+.librepods-nc-button.active .librepods-nc-label {
+    color: #ffffff;
 }
 
 .librepods-nc-button.active .librepods-nc-label {
-    color: #ffffff;
     font-weight: 600;
-}
-
-/* ============================================
-   Light Mode Overrides
-   ============================================ */
-
-/* For systems using light mode shell theme */
-.light .librepods-battery-level {
-    color: #1c1c1c;
-}
-
-.light .librepods-battery-level.charging {
-    color: #26a269;
-}
-
-.light .librepods-battery-level.low-battery {
-    color: #c64600;
-}
-
-.light .librepods-battery-name {
-    color: rgba(0, 0, 0, 0.6);
-}
-
-.light .librepods-nc-button {
-    background-color: rgba(0, 0, 0, 0.08);
-}
-
-.light .librepods-nc-button:hover {
-    background-color: rgba(0, 0, 0, 0.12);
-}
-
-.light .librepods-nc-button:focus {
-    background-color: rgba(0, 0, 0, 0.10);
-}
-
-.light .librepods-nc-button.active {
-    background-color: #3584e4;
-    box-shadow: 0 2px 6px rgba(53, 132, 228, 0.3);
-}
-
-.light .librepods-nc-icon {
-    color: rgba(0, 0, 0, 0.8);
-}
-
-.light .librepods-nc-button.active .librepods-nc-icon {
-    color: #ffffff;
-}
-
-.light .librepods-nc-label {
-    color: rgba(0, 0, 0, 0.7);
-}
-
-.light .librepods-nc-button.active .librepods-nc-label {
-    color: #ffffff;
-}
-
-.light .librepods-battery-icon {
-    color: rgba(0, 0, 0, 0.8);
-}
-
-.light .librepods-progress-container {
-    background-color: rgba(0, 0, 0, 0.12);
-}
-
-.light .librepods-progress-fill {
-    background-color: #26a269;
-}
-
-.light .librepods-progress-fill.medium {
-    background-color: #c64600;
-}
-
-.light .librepods-progress-fill.low {
-    background-color: #a51d2d;
-}
-
-.light .librepods-progress-fill.charging {
-    background-color: #3584e4;
-}
-
-.light .librepods-panel-battery {
-    color: rgba(0, 0, 0, 0.8);
-}
-
-.light .librepods-panel-battery.low {
-    color: #c64600;
-}
-
-.light .librepods-panel-battery.critical {
-    color: #a51d2d;
 }

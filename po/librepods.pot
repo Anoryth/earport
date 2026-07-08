@@ -1,0 +1,298 @@
+# Translation template for LibrePods GNOME.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 LibrePods Contributors
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: librepods 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/Anoryth/librepods-gnome/issues\n"
+"POT-Creation-Date: 2026-07-07 23:07+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension/extension.js:100
+msgid "Headphones"
+msgstr ""
+
+#: extension/extension.js:241 extension/extension.js:556 extension/prefs.js:450
+msgid "Disconnected"
+msgstr ""
+
+#: extension/extension.js:345 extension/prefs.js:154
+msgid "Off"
+msgstr ""
+
+#: extension/extension.js:346
+msgid "ANC"
+msgstr ""
+
+#: extension/extension.js:347
+msgid "Hear"
+msgstr ""
+
+#: extension/extension.js:348
+msgid "Auto"
+msgstr ""
+
+#: extension/extension.js:368
+msgid "Advanced Settings"
+msgstr ""
+
+#: extension/extension.js:425
+#, javascript-format
+msgid "%s Connected"
+msgstr ""
+
+#: extension/extension.js:442
+#, javascript-format
+msgid "%s Disconnected"
+msgstr ""
+
+#: extension/extension.js:470 extension/extension.js:496
+#, javascript-format
+msgid "%s Low Battery"
+msgstr ""
+
+#: extension/extension.js:471
+msgid "Battery"
+msgstr ""
+
+#: extension/extension.js:482 extension/prefs.js:427
+msgid "Left"
+msgstr ""
+
+#: extension/extension.js:489 extension/prefs.js:427
+msgid "Right"
+msgstr ""
+
+#: extension/extension.js:644
+msgid "Noise Control Off"
+msgstr ""
+
+#: extension/extension.js:645 extension/prefs.js:166
+msgid "Noise Cancellation"
+msgstr ""
+
+#: extension/extension.js:646 extension/prefs.js:160
+msgid "Transparency"
+msgstr ""
+
+#: extension/extension.js:647 extension/prefs.js:172
+msgid "Adaptive"
+msgstr ""
+
+#: extension/prefs.js:28
+msgid "Set Shortcut"
+msgstr ""
+
+#: extension/prefs.js:37
+msgid "Press a key combination"
+msgstr ""
+
+#: extension/prefs.js:38
+msgid "Press Esc to cancel or Backspace to disable the shortcut"
+msgstr ""
+
+#: extension/prefs.js:86
+msgid "Device Status"
+msgstr ""
+
+#: extension/prefs.js:87
+msgid "Current AirPods connection status"
+msgstr ""
+
+#: extension/prefs.js:92
+msgid "Connection"
+msgstr ""
+
+#: extension/prefs.js:93
+msgid "Checking…"
+msgstr ""
+
+#: extension/prefs.js:99
+msgid "Ear Detection"
+msgstr ""
+
+#: extension/prefs.js:100
+msgid "Unknown"
+msgstr ""
+
+#: extension/prefs.js:107
+msgid "Device Profile"
+msgstr ""
+
+#: extension/prefs.js:108
+msgid ""
+"Customize your AirPods. Leave the name empty to use the device model name"
+msgstr ""
+
+#: extension/prefs.js:114
+msgid "Custom Name"
+msgstr ""
+
+#: extension/prefs.js:121
+msgid "AirPods Features"
+msgstr ""
+
+#: extension/prefs.js:122
+msgid "Advanced features for your AirPods"
+msgstr ""
+
+#: extension/prefs.js:128
+msgid "Conversational Awareness"
+msgstr ""
+
+#: extension/prefs.js:129
+msgid "Automatically lower volume when you speak"
+msgstr ""
+
+#: extension/prefs.js:135
+msgid "Adaptive Noise Level"
+msgstr ""
+
+#: extension/prefs.js:136
+msgid "Adjust the transparency level (0-100)"
+msgstr ""
+
+#: extension/prefs.js:148
+msgid "Long Press Actions"
+msgstr ""
+
+#: extension/prefs.js:149
+msgid "Configure which modes are cycled when pressing and holding the stem"
+msgstr ""
+
+#: extension/prefs.js:155
+msgid "Include Off mode in long press cycle"
+msgstr ""
+
+#: extension/prefs.js:161
+msgid "Include Transparency mode in long press cycle"
+msgstr ""
+
+#: extension/prefs.js:167
+msgid "Include ANC mode in long press cycle"
+msgstr ""
+
+#: extension/prefs.js:173
+msgid "Include Adaptive mode in long press cycle"
+msgstr ""
+
+#: extension/prefs.js:179
+msgid "Media Control"
+msgstr ""
+
+#: extension/prefs.js:180
+msgid "Configure media playback behavior"
+msgstr ""
+
+#: extension/prefs.js:185 extension/prefs.js:234
+msgid "Disabled"
+msgstr ""
+
+#: extension/prefs.js:186
+msgid "When one earbud removed"
+msgstr ""
+
+#: extension/prefs.js:187
+msgid "When both earbuds removed"
+msgstr ""
+
+#: extension/prefs.js:190
+msgid "Auto-pause media"
+msgstr ""
+
+#: extension/prefs.js:191
+msgid "Pause playback when earbuds are removed"
+msgstr ""
+
+#: extension/prefs.js:198
+msgid "Notifications"
+msgstr ""
+
+#: extension/prefs.js:199
+msgid "Configure notification preferences"
+msgstr ""
+
+#: extension/prefs.js:204
+msgid "Connection notifications"
+msgstr ""
+
+#: extension/prefs.js:205
+msgid "Notify when AirPods connect or disconnect"
+msgstr ""
+
+#: extension/prefs.js:210
+msgid "Low battery notifications"
+msgstr ""
+
+#: extension/prefs.js:211
+msgid "Notify when battery drops below threshold"
+msgstr ""
+
+#: extension/prefs.js:216
+msgid "Low battery threshold"
+msgstr ""
+
+#: extension/prefs.js:217
+msgid "Notify when battery drops below this percentage"
+msgstr ""
+
+#: extension/prefs.js:229
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+#: extension/prefs.js:239
+msgid "Cycle noise control mode"
+msgstr ""
+
+#: extension/prefs.js:240
+msgid "Also works when the Quick Settings menu is closed"
+msgstr ""
+
+#: extension/prefs.js:255
+msgid "About"
+msgstr ""
+
+#: extension/prefs.js:261
+msgid "AirPods integration for GNOME"
+msgstr ""
+
+#: extension/prefs.js:267
+msgid "Version"
+msgstr ""
+
+#: extension/prefs.js:375
+msgid "Daemon not running"
+msgstr ""
+
+#: extension/prefs.js:384
+msgid "Error connecting to daemon"
+msgstr ""
+
+#: extension/prefs.js:423
+#, javascript-format
+msgid "Connected: %s"
+msgstr ""
+
+#: extension/prefs.js:425 extension/prefs.js:426
+msgid "In ear"
+msgstr ""
+
+#: extension/prefs.js:425 extension/prefs.js:426
+msgid "Out"
+msgstr ""
+
+#: extension/prefs.js:437
+#, javascript-format
+msgid "Device model: %s"
+msgstr ""
+
+#: extension/prefs.js:451
+msgid "No device connected"
+msgstr ""
