@@ -1,8 +1,8 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
- * LibrePods GNOME Shell Extension
+ * EarPort Shell Extension
  */
 
 import GObject from 'gi://GObject';
@@ -36,7 +36,7 @@ const BatteryIndicator = GObject.registerClass(
 class BatteryIndicator extends St.BoxLayout {
     _init(type, label, gicon) {
         super._init({
-            style_class: 'librepods-battery-indicator',
+            style_class: 'earport-battery-indicator',
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -46,7 +46,7 @@ class BatteryIndicator extends St.BoxLayout {
         this._defaultGicon = gicon;
 
         this._ring = new St.DrawingArea({
-            style_class: 'librepods-battery-ring',
+            style_class: 'earport-battery-ring',
         });
         this._ring.connect('repaint', area => this._drawRing(area));
         this._ring.connect('style-changed', () => this._ring.queue_repaint());
@@ -54,7 +54,7 @@ class BatteryIndicator extends St.BoxLayout {
         this._icon = new St.Icon({
             gicon,
             icon_size: RING_ICON_SIZE,
-            style_class: 'librepods-battery-icon',
+            style_class: 'earport-battery-icon',
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
             x_expand: true,
@@ -71,12 +71,12 @@ class BatteryIndicator extends St.BoxLayout {
 
         this._levelLabel = new St.Label({
             text: '--',
-            style_class: 'librepods-battery-level',
+            style_class: 'earport-battery-level',
         });
 
         this._nameLabel = new St.Label({
             text: label,
-            style_class: 'librepods-battery-name',
+            style_class: 'earport-battery-name',
             opacity: 160,
         });
 
@@ -188,7 +188,7 @@ const NoiseControlButton = GObject.registerClass(
 class NoiseControlButton extends St.Button {
     _init(mode, label, gicon) {
         super._init({
-            style_class: 'librepods-nc-button',
+            style_class: 'earport-nc-button',
             can_focus: true,
             accessible_name: label,
             child: new St.BoxLayout({
@@ -202,12 +202,12 @@ class NoiseControlButton extends St.Button {
         const icon = new St.Icon({
             gicon,
             icon_size: 18,
-            style_class: 'librepods-nc-icon',
+            style_class: 'earport-nc-icon',
         });
 
         const labelWidget = new St.Label({
             text: label,
-            style_class: 'librepods-nc-label',
+            style_class: 'earport-nc-label',
             x_align: Clutter.ActorAlign.CENTER,
         });
 
@@ -229,8 +229,8 @@ class NoiseControlButton extends St.Button {
 });
 
 /* Main Quick Settings toggle */
-const LibrePodsToggle = GObject.registerClass(
-class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
+const EarPortToggle = GObject.registerClass(
+class EarPortToggle extends QuickSettings.QuickMenuToggle {
     _init(extensionObject) {
         super._init({
             title: 'AirPods',
@@ -247,15 +247,15 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
         /* Custom symbolic icons shipped with the extension */
         const iconsDir = `${extensionObject.path}/icons`;
         this._modeIcons = {
-            off: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-off-symbolic.svg`),
-            anc: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-anc-symbolic.svg`),
-            transparency: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-transparency-symbolic.svg`),
-            adaptive: Gio.icon_new_for_string(`${iconsDir}/librepods-nc-adaptive-symbolic.svg`),
+            off: Gio.icon_new_for_string(`${iconsDir}/earport-nc-off-symbolic.svg`),
+            anc: Gio.icon_new_for_string(`${iconsDir}/earport-nc-anc-symbolic.svg`),
+            transparency: Gio.icon_new_for_string(`${iconsDir}/earport-nc-transparency-symbolic.svg`),
+            adaptive: Gio.icon_new_for_string(`${iconsDir}/earport-nc-adaptive-symbolic.svg`),
         };
         this._batteryIcons = {
-            left: Gio.icon_new_for_string(`${iconsDir}/librepods-bud-left-symbolic.svg`),
-            right: Gio.icon_new_for_string(`${iconsDir}/librepods-bud-right-symbolic.svg`),
-            case: Gio.icon_new_for_string(`${iconsDir}/librepods-case-symbolic.svg`),
+            left: Gio.icon_new_for_string(`${iconsDir}/earport-bud-left-symbolic.svg`),
+            right: Gio.icon_new_for_string(`${iconsDir}/earport-bud-right-symbolic.svg`),
+            case: Gio.icon_new_for_string(`${iconsDir}/earport-case-symbolic.svg`),
         };
 
         /* Load settings */
@@ -281,7 +281,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     _getNotificationSource() {
         if (this._notificationSource === null) {
             this._notificationSource = new MessageTray.Source({
-                title: 'LibrePods',
+                title: 'EarPort',
                 iconName: 'audio-headphones-symbolic',
             });
             /* Reset our reference if the source is destroyed externally */
@@ -312,7 +312,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 
         /* Battery section */
         this._batteryBox = new St.BoxLayout({
-            style_class: 'librepods-battery-box',
+            style_class: 'earport-battery-box',
             x_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -337,7 +337,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 
         /* Noise control section */
         this._ncBox = new St.BoxLayout({
-            style_class: 'librepods-nc-box',
+            style_class: 'earport-nc-box',
             x_expand: true,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -409,7 +409,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _onDeviceConnected(proxy, sender, [address, name]) {
-        console.log(`LibrePods: Device connected - ${name}`);
+        console.log(`EarPort: Device connected - ${name}`);
 
         /* Reset low battery notification state */
         this._lowBatteryNotified = {left: false, right: false};
@@ -430,7 +430,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _onDeviceDisconnected(proxy, sender, [address, name]) {
-        console.log(`LibrePods: Device disconnected - ${name}`);
+        console.log(`EarPort: Device disconnected - ${name}`);
 
         /* Show disconnection notification with display name. Skip the
          * "Unknown AirPods" fallback that the daemon reports once its state
@@ -606,7 +606,7 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 
         this._proxy.SetNoiseControlModeRemote(mode, (result, error) => {
             if (error) {
-                console.error('LibrePods: Failed to set noise control mode:', error.message);
+                console.error('EarPort: Failed to set noise control mode:', error.message);
             }
         });
     }
@@ -681,8 +681,8 @@ class LibrePodsToggle extends QuickSettings.QuickMenuToggle {
 });
 
 /* Quick Settings indicator */
-const LibrePodsIndicator = GObject.registerClass(
-class LibrePodsIndicator extends QuickSettings.SystemIndicator {
+const EarPortIndicator = GObject.registerClass(
+class EarPortIndicator extends QuickSettings.SystemIndicator {
     _init(extensionObject) {
         super._init();
 
@@ -694,7 +694,7 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
         this._batteryLabel = new St.Label({
             text: '',
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'librepods-panel-battery',
+            style_class: 'earport-panel-battery',
         });
         this._batteryLabel.visible = false;
 
@@ -706,7 +706,7 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
         this._extensionObject = extensionObject;
 
         /* Create toggle immediately so it's available for addExternalIndicator */
-        this._toggle = new LibrePodsToggle(extensionObject);
+        this._toggle = new EarPortToggle(extensionObject);
         this.quickSettingsItems.push(this._toggle);
 
         /* Create proxy asynchronously */
@@ -721,7 +721,7 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
                 OBJECT_PATH,
                 (proxy, error) => {
                     if (error) {
-                        console.error('LibrePods: Failed to connect to daemon:', error.message);
+                        console.error('EarPort: Failed to connect to daemon:', error.message);
                         return;
                     }
 
@@ -729,7 +729,7 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
                 }
             );
         } catch (e) {
-            console.error('LibrePods: Error creating proxy:', e.message);
+            console.error('EarPort: Error creating proxy:', e.message);
         }
     }
 
@@ -813,9 +813,9 @@ class LibrePodsIndicator extends QuickSettings.SystemIndicator {
 });
 
 /* Extension class */
-export default class LibrePodsExtension extends Extension {
+export default class EarPortExtension extends Extension {
     enable() {
-        this._indicator = new LibrePodsIndicator(this);
+        this._indicator = new EarPortIndicator(this);
 
         Main.panel.statusArea.quickSettings.addExternalIndicator(this._indicator);
 

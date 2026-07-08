@@ -1,4 +1,4 @@
-/* LibrePods GNOME Shell Extension Stylesheet
+/* EarPort Shell Extension Stylesheet
  *
  * Text colors are inherited from the shell theme so the extension follows
  * light/dark themes automatically. Accent-colored elements declare a static
@@ -11,7 +11,7 @@
    ============================================ */
 
 /* Subtle pill next to the headphones icon */
-.librepods-panel-battery {
+.earport-panel-battery {
     font-size: 11px;
     font-weight: 600;
     margin-left: 5px;
@@ -21,15 +21,15 @@
     transition-duration: 200ms;
 }
 
-.librepods-panel-battery.low {
+.earport-panel-battery.low {
     color: #ff7800;
 }
 
-.librepods-panel-battery.critical {
+.earport-panel-battery.critical {
     color: #e01b24;
 }
 
-.librepods-panel-battery.charging {
+.earport-panel-battery.charging {
     color: #2ec27e;
 }
 
@@ -37,12 +37,12 @@
    Battery Section (Quick Settings Menu)
    ============================================ */
 
-.librepods-battery-box {
+.earport-battery-box {
     spacing: 28px;
     padding: 14px 16px 10px 16px;
 }
 
-.librepods-battery-indicator {
+.earport-battery-indicator {
     spacing: 6px;
     min-width: 60px;
 }
@@ -50,36 +50,36 @@
 /* Circular battery gauge. The ring is drawn in Cairo with this widget's
  * foreground color: the state classes below are the single place where
  * the gauge colors are defined. */
-.librepods-battery-ring {
+.earport-battery-ring {
     width: 56px;
     height: 56px;
     color: #3584e4;
     color: -st-accent-color;
 }
 
-.librepods-battery-ring.low {
+.earport-battery-ring.low {
     color: #ff7800;
 }
 
-.librepods-battery-ring.critical {
+.earport-battery-ring.critical {
     color: #e01b24;
 }
 
-.librepods-battery-ring.charging {
+.earport-battery-ring.charging {
     color: #2ec27e;
 }
 
-.librepods-battery-icon {
+.earport-battery-icon {
     transition-duration: 200ms;
 }
 
-.librepods-battery-level {
+.earport-battery-level {
     font-size: 13px;
     font-weight: bold;
     text-align: center;
 }
 
-.librepods-battery-name {
+.earport-battery-name {
     font-size: 11px;
     font-weight: 500;
     text-align: center;
@@ -89,12 +89,12 @@
    Noise Control Buttons
    ============================================ */
 
-.librepods-nc-box {
+.earport-nc-box {
     spacing: 6px;
     padding: 6px 8px 10px 8px;
 }
 
-.librepods-nc-button {
+.earport-nc-button {
     padding: 8px 10px;
     border-radius: 16px;
     background-color: rgba(128, 128, 128, 0.2);
@@ -102,38 +102,38 @@
     transition-duration: 200ms;
 }
 
-.librepods-nc-button:hover {
+.earport-nc-button:hover {
     background-color: rgba(128, 128, 128, 0.3);
 }
 
-.librepods-nc-button:active,
-.librepods-nc-button:focus {
+.earport-nc-button:active,
+.earport-nc-button:focus {
     background-color: rgba(128, 128, 128, 0.35);
 }
 
 /* Active/selected noise control mode: system accent color */
-.librepods-nc-button.active,
-.librepods-nc-button.active:hover,
-.librepods-nc-button.active:focus {
+.earport-nc-button.active,
+.earport-nc-button.active:hover,
+.earport-nc-button.active:focus {
     background-color: #3584e4;
     background-color: -st-accent-color;
 }
 
-.librepods-nc-icon {
+.earport-nc-icon {
     icon-size: 18px;
 }
 
-.librepods-nc-label {
+.earport-nc-label {
     font-size: 11px;
     font-weight: 500;
     margin-top: 5px;
 }
 
-.librepods-nc-button.active .librepods-nc-icon,
-.librepods-nc-button.active .librepods-nc-label {
+.earport-nc-button.active .earport-nc-icon,
+.earport-nc-button.active .earport-nc-label {
     color: #ffffff;
 }
 
-.librepods-nc-button.active .librepods-nc-label {
+.earport-nc-button.active .earport-nc-label {
     font-weight: 600;
 }

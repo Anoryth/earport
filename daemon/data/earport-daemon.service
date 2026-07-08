@@ -1,12 +1,12 @@
 [Unit]
-Description=LibrePods AirPods Daemon
-Documentation=https://github.com/Anoryth/librepods-gnome
+Description=EarPort AirPods Daemon
+Documentation=https://github.com/Anoryth/earport
 After=bluetooth.target
 
 [Service]
 Type=dbus
-BusName=org.librepods.Daemon
-ExecStart=/usr/local/bin/librepods-daemon
+BusName=io.github.anoryth.EarPort
+ExecStart=/usr/local/bin/earport-daemon
 Restart=on-failure
 RestartSec=5
 
@@ -14,7 +14,7 @@ RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=%h/.config/librepods
+ReadWritePaths=%h/.config/earport
 PrivateTmp=true
 
 [Install]

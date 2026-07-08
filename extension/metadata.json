@@ -1,11 +1,11 @@
 {
-    "uuid": "librepods@librepods.org",
-    "name": "LibrePods",
+    "uuid": "earport@anoryth.github.io",
+    "name": "EarPort",
     "description": "AirPods integration for GNOME - Battery status, noise control modes (ANC, Transparency, Adaptive), and advanced settings",
     "version": 2,
     "version-name": "0.2.0",
     "shell-version": ["46", "47", "48", "49", "50"],
-    "url": "https://github.com/Anoryth/librepods-gnome",
-    "settings-schema": "org.gnome.shell.extensions.librepods",
-    "gettext-domain": "librepods"
+    "url": "https://github.com/Anoryth/earport",
+    "settings-schema": "org.gnome.shell.extensions.earport",
+    "gettext-domain": "earport"
 }

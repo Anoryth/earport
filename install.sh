@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# LibrePods GNOME - Installation Script
+# EarPort - Installation Script
 # Installs the daemon and GNOME Shell extension
 #
 
@@ -14,13 +14,13 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXTENSION_UUID="librepods@librepods.org"
+EXTENSION_UUID="earport@anoryth.github.io"
 EXTENSION_DIR="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_UUID"
 
 print_header() {
     echo -e "${BLUE}"
     echo "╔════════════════════════════════════════════╗"
-    echo "║         LibrePods GNOME Installer          ║"
+    echo "║              EarPort Installer             ║"
     echo "╚════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -114,6 +114,22 @@ build_daemon() {
     print_success "Daemon built successfully"
 }
 
+remove_legacy_install() {
+    # Clean up a pre-rename LibrePods installation, if any
+    if systemctl --user list-unit-files librepods-daemon.service &> /dev/null; then
+        systemctl --user disable --now librepods-daemon.service 2>/dev/null || true
+    fi
+
+    if [ -f /usr/local/bin/librepods-daemon ]; then
+        print_step "Removing legacy LibrePods installation (requires sudo)..."
+        sudo rm -f /usr/local/bin/librepods-daemon \
+            /usr/local/lib/systemd/user/librepods-daemon.service \
+            /usr/local/share/dbus-1/services/org.librepods.Daemon.service
+    fi
+
+    rm -rf "$HOME/.local/share/gnome-shell/extensions/librepods@librepods.org"
+}
+
 install_daemon() {
     print_step "Installing daemon (requires sudo)..."
 
@@ -130,7 +146,7 @@ enable_daemon_service() {
     systemctl --user daemon-reload
 
     # Enable and start the service
-    systemctl --user enable --now librepods-daemon.service
+    systemctl --user enable --now earport-daemon.service
 
     print_success "Daemon service enabled and started"
 }
@@ -185,23 +201,23 @@ print_completion() {
     echo ""
     echo "  2. Pair your AirPods via Bluetooth settings"
     echo ""
-    echo "  3. The LibrePods indicator will appear in Quick Settings"
+    echo "  3. The EarPort indicator will appear in Quick Settings"
     echo ""
     echo "To check daemon status:"
-    echo "  systemctl --user status librepods-daemon.service"
+    echo "  systemctl --user status earport-daemon.service"
     echo ""
     echo "To view daemon logs:"
-    echo "  journalctl --user -u librepods-daemon.service -f"
+    echo "  journalctl --user -u earport-daemon.service -f"
     echo ""
 }
 
 uninstall() {
     print_header
-    print_step "Uninstalling LibrePods GNOME..."
+    print_step "Uninstalling EarPort..."
 
     # Stop and disable service
     print_step "Stopping daemon service..."
-    systemctl --user disable --now librepods-daemon.service 2>/dev/null || true
+    systemctl --user disable --now earport-daemon.service 2>/dev/null || true
     print_success "Daemon service stopped"
 
     # Uninstall daemon
@@ -225,7 +241,7 @@ uninstall() {
 }
 
 show_help() {
-    echo "LibrePods GNOME - Installation Script"
+    echo "EarPort - Installation Script"
     echo ""
     echo "Usage: $0 [OPTION]"
     echo ""
@@ -247,6 +263,7 @@ main() {
         --daemon)
             print_header
             check_dependencies
+            remove_legacy_install
             build_daemon
             install_daemon
             enable_daemon_service
@@ -255,6 +272,7 @@ main() {
             ;;
         --extension)
             print_header
+            remove_legacy_install
             install_extension
             enable_extension
             echo ""
@@ -267,6 +285,7 @@ main() {
         --install|"")
             print_header
             check_dependencies
+            remove_legacy_install
             build_daemon
             install_daemon
             enable_daemon_service

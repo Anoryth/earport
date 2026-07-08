@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * BlueZ D-Bus monitoring for AirPods detection
  */

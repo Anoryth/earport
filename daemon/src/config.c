@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Configuration file management
  */
@@ -10,8 +10,10 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <glib/gstdio.h>
 
-#define CONFIG_DIR_NAME "librepods"
+#define CONFIG_DIR_NAME "earport"
+#define LEGACY_CONFIG_DIR_NAME "librepods"  /* Pre-rename directory */
 #define CONFIG_FILE_NAME "daemon.conf"
 #define CONFIG_GROUP "Settings"
 
@@ -19,6 +21,33 @@ static gchar *get_config_dir(void)
 {
     const gchar *config_home = g_get_user_config_dir();
     return g_build_filename(config_home, CONFIG_DIR_NAME, NULL);
+}
+
+/* One-time migration of the configuration directory from the project's
+ * former name. Only runs when the new directory does not exist yet. */
+static void migrate_legacy_config_dir(void)
+{
+    static bool migration_checked = false;
+
+    if (migration_checked)
+        return;
+    migration_checked = true;
+
+    gchar *new_dir = get_config_dir();
+    if (!g_file_test(new_dir, G_FILE_TEST_EXISTS)) {
+        gchar *old_dir = g_build_filename(g_get_user_config_dir(),
+                                          LEGACY_CONFIG_DIR_NAME, NULL);
+        if (g_file_test(old_dir, G_FILE_TEST_IS_DIR)) {
+            if (g_rename(old_dir, new_dir) == 0) {
+                g_message("Migrated configuration from %s to %s", old_dir, new_dir);
+            } else {
+                g_warning("Failed to migrate configuration from %s: %s",
+                          old_dir, g_strerror(errno));
+            }
+        }
+        g_free(old_dir);
+    }
+    g_free(new_dir);
 }
 
 static gchar *get_config_path(void)
@@ -43,15 +72,17 @@ static bool ensure_config_dir(void)
     return true;
 }
 
-void config_get_defaults(LibrePodsConfig *config)
+void config_get_defaults(EarPortConfig *config)
 {
     config->ear_pause_mode = 1;  /* EAR_PAUSE_ONE_OUT */
 }
 
-bool config_load(LibrePodsConfig *config)
+bool config_load(EarPortConfig *config)
 {
     /* Start with defaults */
     config_get_defaults(config);
+
+    migrate_legacy_config_dir();
 
     gchar *config_path = get_config_path();
     GKeyFile *keyfile = g_key_file_new();
@@ -89,7 +120,7 @@ bool config_load(LibrePodsConfig *config)
     return true;
 }
 
-bool config_save(const LibrePodsConfig *config)
+bool config_save(const EarPortConfig *config)
 {
     if (!ensure_config_dir()) {
         return false;
@@ -102,7 +133,7 @@ bool config_save(const LibrePodsConfig *config)
 
     /* Add comment */
     g_key_file_set_comment(keyfile, CONFIG_GROUP, NULL,
-                           "LibrePods daemon configuration\n"
+                           "EarPort daemon configuration\n"
                            "ear_pause_mode: 0=disabled, 1=pause when one removed, 2=pause when both removed",
                            NULL);
 

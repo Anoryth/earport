@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Configuration file management
  */
@@ -15,7 +15,7 @@
 /* Configuration data structure */
 typedef struct {
     int ear_pause_mode;   /* 0=disabled, 1=one_out, 2=both_out */
-} LibrePodsConfig;
+} EarPortConfig;
 
 /**
  * Load configuration from file
@@ -24,7 +24,7 @@ typedef struct {
  * @param config Pointer to config structure to fill
  * @return true on success
  */
-bool config_load(LibrePodsConfig *config);
+bool config_load(EarPortConfig *config);
 
 /**
  * Save configuration to file
@@ -32,14 +32,14 @@ bool config_load(LibrePodsConfig *config);
  * @param config Pointer to config structure to save
  * @return true on success
  */
-bool config_save(const LibrePodsConfig *config);
+bool config_save(const EarPortConfig *config);
 
 /**
  * Get default configuration values
  *
  * @param config Pointer to config structure to fill with defaults
  */
-void config_get_defaults(LibrePodsConfig *config);
+void config_get_defaults(EarPortConfig *config);
 
 /* Complete device profile (per-device settings) */
 typedef struct {

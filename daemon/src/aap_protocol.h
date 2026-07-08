@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Apple AirPods Protocol (AAP) implementation
  * Based on reverse-engineered protocol from LibrePods project

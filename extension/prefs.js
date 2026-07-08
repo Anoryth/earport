@@ -1,8 +1,8 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
- * LibrePods Preferences Window
+ * EarPort Preferences Window
  */
 
 import Gio from 'gi://Gio';
@@ -65,7 +65,7 @@ class ShortcutDialog extends Adw.Window {
     }
 });
 
-export default class LibrePodsPreferences extends ExtensionPreferences {
+export default class EarPortPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         this._proxy = null;
         this._propertiesChangedId = 0;
@@ -76,7 +76,7 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
         });
 
         const page = new Adw.PreferencesPage({
-            title: 'LibrePods',
+            title: 'EarPort',
             icon_name: 'audio-headphones-symbolic',
         });
         window.add(page);
@@ -257,7 +257,7 @@ export default class LibrePodsPreferences extends ExtensionPreferences {
         page.add(aboutGroup);
 
         const aboutRow = new Adw.ActionRow({
-            title: 'LibrePods',
+            title: 'EarPort',
             subtitle: _('AirPods integration for GNOME'),
             icon_name: 'audio-headphones-symbolic',
         });

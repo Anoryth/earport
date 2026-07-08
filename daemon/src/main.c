@@ -1,8 +1,8 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
- * LibrePods Daemon - AirPods integration for Linux
+ * EarPort Daemon - AirPods integration for Linux
  */
 
 #include <glib.h>
@@ -28,7 +28,7 @@ typedef struct {
     BluezMonitor *bluez_monitor;
     DbusService *dbus_service;
     MediaControl *media_control;
-    LibrePodsConfig config;
+    EarPortConfig config;
 
     /* Pending connect info */
     char *pending_address;
@@ -713,7 +713,7 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    g_message("LibrePods Daemon %s starting...", LIBREPODS_VERSION);
+    g_message("EarPort Daemon %s starting...", EARPORT_VERSION);
 
     /* Load configuration */
     config_load(&app.config);
@@ -780,7 +780,7 @@ int main(int argc, char *argv[])
     /* Check for already connected devices */
     bluez_monitor_check_existing_devices(app.bluez_monitor);
 
-    g_message("LibrePods Daemon running. Press Ctrl+C to quit.");
+    g_message("EarPort Daemon running. Press Ctrl+C to quit.");
 
     /* Run main loop */
     g_main_loop_run(app.main_loop);
@@ -788,6 +788,6 @@ int main(int argc, char *argv[])
     /* Cleanup */
     cleanup();
 
-    g_message("LibrePods Daemon stopped.");
+    g_message("EarPort Daemon stopped.");
     return 0;
 }

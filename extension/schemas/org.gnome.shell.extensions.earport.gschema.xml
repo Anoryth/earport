@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="org.gnome.shell.extensions.librepods" path="/org/gnome/shell/extensions/librepods/">
+  <schema id="org.gnome.shell.extensions.earport" path="/org/gnome/shell/extensions/earport/">
     <key name="low-battery-threshold" type="i">
       <default>20</default>
       <summary>Low battery threshold</summary>

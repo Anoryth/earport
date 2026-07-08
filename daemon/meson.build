@@ -1,4 +1,4 @@
-project('librepods-daemon', 'c',
+project('earport-daemon', 'c',
     version: '0.2.0',
     license: 'GPL-3.0-or-later',
     default_options: [
@@ -9,7 +9,7 @@ project('librepods-daemon', 'c',
 
 # Expose the project version to the sources (single source of truth)
 add_project_arguments(
-    '-DLIBREPODS_VERSION="@0@"'.format(meson.project_version()),
+    '-DEARPORT_VERSION="@0@"'.format(meson.project_version()),
     language: 'c'
 )
 
@@ -38,7 +38,7 @@ sources = files(
 )
 
 # Build executable
-executable('librepods-daemon',
+executable('earport-daemon',
     sources,
     dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep],
     install: true,
@@ -46,11 +46,11 @@ executable('librepods-daemon',
 )
 
 # Install systemd user service
-install_data('data/librepods-daemon.service',
+install_data('data/earport-daemon.service',
     install_dir: join_paths(get_option('prefix'), 'lib', 'systemd', 'user')
 )
 
 # Install D-Bus service file
-install_data('data/org.librepods.Daemon.service',
+install_data('data/io.github.anoryth.EarPort.service',
     install_dir: join_paths(get_option('datadir'), 'dbus-1', 'services')
 )

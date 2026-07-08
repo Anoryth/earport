@@ -1,18 +1,18 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
- * Shared D-Bus interface definition for org.librepods.AirPods1.
+ * Shared D-Bus interface definition for io.github.anoryth.EarPort1.
  * Single source of truth used by both extension.js and prefs.js —
  * keep in sync with daemon/src/dbus_service.c.
  */
 
-export const BUS_NAME = 'org.librepods.Daemon';
-export const OBJECT_PATH = '/org/librepods/AirPods';
+export const BUS_NAME = 'io.github.anoryth.EarPort';
+export const OBJECT_PATH = '/io/github/anoryth/EarPort';
 
 export const AirPodsInterface = `
 <node>
-  <interface name="org.librepods.AirPods1">
+  <interface name="io.github.anoryth.EarPort1">
     <property name="Connected" type="b" access="read"/>
     <property name="DeviceName" type="s" access="read"/>
     <property name="DeviceAddress" type="s" access="read"/>

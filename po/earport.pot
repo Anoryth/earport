@@ -1,11 +1,11 @@
-# Translation template for LibrePods GNOME.
+# Translation template for EarPort.
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024 LibrePods Contributors
+# SPDX-FileCopyrightText: 2024 EarPort Contributors
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: librepods 0.2.0\n"
-"Report-Msgid-Bugs-To: https://github.com/Anoryth/librepods-gnome/issues\n"
+"Project-Id-Version: earport 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
 "POT-Creation-Date: 2026-07-08 23:02+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"

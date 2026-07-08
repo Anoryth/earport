@@ -1,14 +1,14 @@
-# French translation for LibrePods GNOME.
+# French translation for EarPort.
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2024 LibrePods Contributors
+# SPDX-FileCopyrightText: 2024 EarPort Contributors
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: librepods 0.2.0\n"
-"Report-Msgid-Bugs-To: https://github.com/Anoryth/librepods-gnome/issues\n"
+"Project-Id-Version: earport 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
 "POT-Creation-Date: 2026-07-08 23:02+0200\n"
 "PO-Revision-Date: 2026-07-07 12:00+0200\n"
-"Last-Translator: LibrePods Contributors\n"
+"Last-Translator: EarPort Contributors\n"
 "Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"

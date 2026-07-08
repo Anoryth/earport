@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-or-later
- * SPDX-FileCopyrightText: 2024 LibrePods Contributors
+ * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * D-Bus service interface for GNOME extension communication
  */
@@ -13,9 +13,9 @@
 #include "airpods_state.h"
 
 /* D-Bus service constants */
-#define DBUS_SERVICE_NAME       "org.librepods.Daemon"
-#define DBUS_OBJECT_PATH        "/org/librepods/AirPods"
-#define DBUS_INTERFACE_NAME     "org.librepods.AirPods1"
+#define DBUS_SERVICE_NAME       "io.github.anoryth.EarPort"
+#define DBUS_OBJECT_PATH        "/io/github/anoryth/EarPort"
+#define DBUS_INTERFACE_NAME     "io.github.anoryth.EarPort1"
 
 /* Callback for noise control mode change request */
 typedef void (*DbusNoiseControlCallback)(NoiseControlMode mode, void *user_data);
