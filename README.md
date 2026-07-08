@@ -2,7 +2,7 @@
 
 AirPods integration for GNOME Shell on Linux. This project provides full support for Apple AirPods features including battery status, noise control modes, and automatic media pause on ear detection.
 
-![GNOME 45+](https://img.shields.io/badge/GNOME-45%2B-blue)
+![GNOME 46+](https://img.shields.io/badge/GNOME-46%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL--3.0-green)
 
 ![LibrePods GNOME Extension](extension.png)
@@ -14,8 +14,11 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Long press customization** - Configure which noise control modes cycle on stem long press
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
 - **Quick Settings integration** - Native GNOME Shell Quick Settings panel
+- **Quick mode switching** - Click the Quick Settings tile or use a configurable keyboard shortcut (default `Super+Shift+N`) to cycle noise control modes, with OSD feedback
+- **Notifications** - Connection/disconnection and low battery notifications
 - **Model detection** - Automatic detection of AirPods model with feature adaptation
 - **Per-device settings** - Settings are saved individually for each paired AirPods
+- **Translations** - Fully translatable (French included)
 
 ### Supported Models
 
@@ -54,7 +57,7 @@ sudo pacman -S meson ninja glib2 bluez-libs
 
 ### Runtime Dependencies
 
-- GNOME Shell 45 or later
+- GNOME Shell 46 or later
 - BlueZ (Bluetooth stack)
 - AirPods paired via Bluetooth settings
 

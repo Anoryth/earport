@@ -713,7 +713,7 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    g_message("LibrePods Daemon starting...");
+    g_message("LibrePods Daemon %s starting...", LIBREPODS_VERSION);
 
     /* Load configuration */
     config_load(&app.config);

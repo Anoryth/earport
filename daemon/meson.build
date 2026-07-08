@@ -1,10 +1,16 @@
 project('librepods-daemon', 'c',
-    version: '0.1.0',
+    version: '0.2.0',
     license: 'GPL-3.0-or-later',
     default_options: [
         'c_std=c11',
         'warning_level=2',
     ]
+)
+
+# Expose the project version to the sources (single source of truth)
+add_project_arguments(
+    '-DLIBREPODS_VERSION="@0@"'.format(meson.project_version()),
+    language: 'c'
 )
 
 # Dependencies

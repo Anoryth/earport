@@ -5,7 +5,7 @@
     "version": 2,
     "version-name": "0.2.0",
     "shell-version": ["46", "47", "48", "49", "50"],
-    "url": "https://github.com/librepods/librepods",
+    "url": "https://github.com/Anoryth/librepods-gnome",
     "settings-schema": "org.gnome.shell.extensions.librepods",
     "gettext-domain": "librepods"
 }
