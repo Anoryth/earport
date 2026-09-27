@@ -41,11 +41,11 @@ msgstr "Вимкнено"
 
 #: extension/extension.js:347
 msgid "ANC"
-msgstr "Шумозаглушення"
+msgstr "ANC"
 
 #: extension/extension.js:348
 msgid "Hear"
-msgstr "Прозорість"
+msgstr "Проникність"
 
 #: extension/extension.js:349
 msgid "Auto"
@@ -76,15 +76,15 @@ msgstr "Акумулятор"
 
 #: extension/extension.js:645
 msgid "Noise Control Off"
-msgstr "Керування шумом вимкнено"
+msgstr "Режим слухання вимкнено"
 
 #: extension/extension.js:646 extension/prefs.js:166
 msgid "Noise Cancellation"
-msgstr "Шумозаглушення"
+msgstr "Шумогасіння"
 
 #: extension/extension.js:647 extension/prefs.js:160
 msgid "Transparency"
-msgstr "Прозорість"
+msgstr "Проникність"
 
 #: extension/extension.js:648 extension/prefs.js:172
 msgid "Adaptive"
@@ -150,7 +150,7 @@ msgstr "Додаткові функції для ваших AirPods"
 
 #: extension/prefs.js:128
 msgid "Conversational Awareness"
-msgstr "Розпізнавання розмови"
+msgstr "Виявлення розмови"
 
 #: extension/prefs.js:129
 msgid "Automatically lower volume when you speak"
@@ -162,7 +162,7 @@ msgstr "Адаптивний рівень шуму"
 
 #: extension/prefs.js:136
 msgid "Adjust the transparency level (0-100)"
-msgstr "Налаштування рівня прозорості (0-100)"
+msgstr "Налаштування рівня проникності (0-100)"
 
 #: extension/prefs.js:148
 msgid "Long Press Actions"
@@ -174,19 +174,19 @@ msgstr "Налаштуйте режими, які перемикаються п�
 
 #: extension/prefs.js:155
 msgid "Include Off mode in long press cycle"
-msgstr "Додати режим \"Вимкнено\" до циклу довгого натискання"
+msgstr "Додати режим «Вимкнено» до циклу довгого натискання"
 
 #: extension/prefs.js:161
 msgid "Include Transparency mode in long press cycle"
-msgstr "Додати режим \"Прозорість\" до циклу довгого натискання"
+msgstr "Додати режим «Проникність» до циклу довгого натискання"
 
 #: extension/prefs.js:167
 msgid "Include ANC mode in long press cycle"
-msgstr "Додати режим \"Шумозаглушення\" до циклу довгого натискання"
+msgstr "Додати режим «Шумогасіння» до циклу довгого натискання"
 
 #: extension/prefs.js:173
 msgid "Include Adaptive mode in long press cycle"
-msgstr "Додати режим \"Адаптивний\" до циклу довгого натискання"
+msgstr "Додати режим «Адаптивний» до циклу довгого натискання"
 
 #: extension/prefs.js:179
 msgid "Media Control"
@@ -254,7 +254,7 @@ msgstr "Комбінації клавіш"
 
 #: extension/prefs.js:239
 msgid "Cycle noise control mode"
-msgstr "Перемикання режиму керування шумом"
+msgstr "Перемикання режиму слухання"
 
 #: extension/prefs.js:240
 msgid "Also works when the Quick Settings menu is closed"
