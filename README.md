@@ -18,7 +18,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Notifications** - Connection/disconnection and low battery notifications
 - **Model detection** - Automatic detection of AirPods model with feature adaptation
 - **Per-device settings** - Settings are saved individually for each paired AirPods
-- **Translations** - Fully translatable (French included)
+- **Translations** - Fully translatable (French and Ukrainian included)
 
 ### Supported Models
 
