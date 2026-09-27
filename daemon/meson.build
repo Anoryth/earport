@@ -45,6 +45,14 @@ executable('earport-daemon',
     install_dir: get_option('bindir'),
 )
 
+# Tests
+test_aap_protocol = executable('test-aap-protocol',
+    files('tests/test_aap_protocol.c', 'src/aap_protocol.c', 'src/airpods_state.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep],
+)
+test('aap-protocol', test_aap_protocol)
+
 # Install systemd user service
 install_data('data/earport-daemon.service',
     install_dir: join_paths(get_option('prefix'), 'lib', 'systemd', 'user')
