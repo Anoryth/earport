@@ -38,12 +38,27 @@ typedef struct {
     guint reconnect_timeout_id;
     int reconnect_attempts;
     bool bluez_connected;   /* Device still connected at BlueZ level */
+
+    /* Notification request retries (until the first battery packet) */
+    guint notif_retry_timeout_id;
+    int notif_retry_attempts;
+    bool battery_received;
 } AppContext;
 
 /* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
  * right after the BlueZ link comes up, so retry with exponential backoff. */
 #define RECONNECT_MAX_ATTEMPTS 5
 #define RECONNECT_BASE_DELAY_SEC 2
+
+/* When another Apple device (e.g. a nearby iPhone) is also connected to the
+ * AirPods, they sometimes ignore our notification request: control commands
+ * still flow, but battery and ear detection never arrive. Re-send the
+ * request until the first battery packet shows up. */
+#define NOTIF_RETRY_MAX_ATTEMPTS 5
+#define NOTIF_RETRY_INTERVAL_SEC 2
+
+/* Opcode of the AirPods' acknowledgement of our SET_FEATURES packet */
+#define AAP_OPCODE_FEATURES_ACK 0x2B
 
 static AppContext app = {0};
 
@@ -54,6 +69,7 @@ static void apply_device_profile(const char *address);
 static gboolean apply_saved_settings_idle(gpointer user_data);
 static void schedule_reconnect(void);
 static void cancel_reconnect(void);
+static void cancel_notif_retry(void);
 
 /* ============================================================================
  * Bluetooth data handling
@@ -62,6 +78,15 @@ static void cancel_reconnect(void);
 static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data)
 {
     (void)user_data;
+
+    /* Our notification request may have reached the AirPods before they
+     * processed SET_FEATURES: request again once they acknowledge it. */
+    if (aap_has_valid_header(data, len) &&
+        aap_get_opcode(data, len) == AAP_OPCODE_FEATURES_ACK &&
+        !app.battery_received) {
+        g_debug("Features acknowledged, requesting notifications again");
+        bt_connection_send_request_notifications(app.bt_conn);
+    }
 
     AapParsedPacket packet;
     AapParseResult result = aap_parse_packet(data, len, &packet);
@@ -75,6 +100,9 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
 
     switch (packet.type) {
     case AAP_PKT_TYPE_BATTERY:
+        app.battery_received = true;
+        cancel_notif_retry();
+
         g_message("Battery: L=%d%% (status=%d) R=%d%% (status=%d) Case=%d%% (status=%d)",
                   packet.data.battery.left_level,
                   packet.data.battery.left_status,
@@ -270,6 +298,55 @@ static void cancel_reconnect(void)
     app.reconnect_attempts = 0;
 }
 
+/* ============================================================================
+ * Notification request retries
+ * ========================================================================== */
+
+static gboolean notif_retry_timeout_cb(gpointer user_data)
+{
+    (void)user_data;
+
+    if (app.battery_received || !app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+        app.notif_retry_timeout_id = 0;
+        return G_SOURCE_REMOVE;
+    }
+
+    if (app.notif_retry_attempts >= NOTIF_RETRY_MAX_ATTEMPTS) {
+        g_warning("No battery info after %d notification requests "
+                  "(another Apple device may own the AirPods connection)",
+                  app.notif_retry_attempts);
+        app.notif_retry_timeout_id = 0;
+        return G_SOURCE_REMOVE;
+    }
+
+    app.notif_retry_attempts++;
+    g_message("No battery info yet, re-requesting notifications (%d/%d)",
+              app.notif_retry_attempts, NOTIF_RETRY_MAX_ATTEMPTS);
+
+    bt_connection_send_set_features(app.bt_conn);
+    g_usleep(50000);
+    bt_connection_send_request_notifications(app.bt_conn);
+
+    return G_SOURCE_CONTINUE;
+}
+
+static void cancel_notif_retry(void)
+{
+    if (app.notif_retry_timeout_id > 0) {
+        g_source_remove(app.notif_retry_timeout_id);
+        app.notif_retry_timeout_id = 0;
+    }
+}
+
+static void start_notif_retry(void)
+{
+    cancel_notif_retry();
+    app.battery_received = false;
+    app.notif_retry_attempts = 0;
+    app.notif_retry_timeout_id = g_timeout_add_seconds(NOTIF_RETRY_INTERVAL_SEC,
+                                                       notif_retry_timeout_cb, NULL);
+}
+
 static void on_bt_state_changed(BluetoothState state, const char *error, void *user_data)
 {
     (void)user_data;
@@ -291,6 +368,8 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
         g_usleep(50000);
         bt_connection_send_request_notifications(app.bt_conn);
+
+        start_notif_retry();
 
         /* Update state */
         airpods_state_set_device(&app.state,
@@ -326,6 +405,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
                                                    app.state.device_name);
         }
 
+        cancel_notif_retry();
         airpods_state_reset(&app.state);
         dbus_service_emit_properties_changed(app.dbus_service, "Connected");
 
@@ -676,6 +756,7 @@ static void cleanup(void)
     g_message("Cleaning up...");
 
     cancel_reconnect();
+    cancel_notif_retry();
 
     if (app.bt_conn) {
         bt_connection_free(app.bt_conn);

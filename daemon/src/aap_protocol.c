@@ -189,14 +189,14 @@ AapParseResult aap_parse_noise_control(const uint8_t *data, size_t len, NoiseCon
 
 static AapParseResult aap_parse_metadata(const uint8_t *data, size_t len, AapMetadata *metadata)
 {
-    /* Metadata packet: 04 00 04 00 1D 00 [6 bytes] [device_name\0] [model_number\0] [manufacturer\0] */
-    if (len < 12)
+    /* Metadata packet: 04 00 04 00 1D 00 [5 bytes] [device_name\0] [model_number\0] [manufacturer\0] */
+    if (len < 11)
         return AAP_PARSE_INCOMPLETE;
 
     memset(metadata, 0, sizeof(AapMetadata));
 
-    /* Skip header (4) + opcode (1) + 00 (1) + 6 unknown bytes = position 12 */
-    size_t pos = 12;
+    /* Skip header (4) + opcode (1) + 00 (1) + 5 unknown bytes = position 11 */
+    size_t pos = 11;
 
     /* Extract null-terminated strings */
     size_t i;
