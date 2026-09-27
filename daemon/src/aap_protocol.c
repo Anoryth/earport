@@ -113,6 +113,11 @@ AapParseResult aap_parse_battery(const uint8_t *data, size_t len, AapBatteryData
             break;
         }
 
+        /* A disconnected component (e.g. the case once both pods are out)
+         * reports level 0: treat it as unavailable rather than empty. */
+        if (bat_status == BATTERY_STATUS_DISCONNECTED)
+            level = 0xFF;
+
         switch (component) {
         case AAP_BATTERY_SINGLE:
             /* AirPods Max: single battery, store in left_level */
