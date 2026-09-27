@@ -211,6 +211,8 @@ const char *airpods_model_to_string(AirPodsModel model)
         return "AirPods 4th Gen";
     case AIRPODS_MODEL_4_ANC:
         return "AirPods 4th Gen (ANC)";
+    case AIRPODS_MODEL_5:
+        return "AirPods 5";
     case AIRPODS_MODEL_PRO:
         return "AirPods Pro";
     case AIRPODS_MODEL_PRO_2:
@@ -223,6 +225,8 @@ const char *airpods_model_to_string(AirPodsModel model)
         return "AirPods Max";
     case AIRPODS_MODEL_MAX_USBC:
         return "AirPods Max (USB-C)";
+    case AIRPODS_MODEL_MAX_2:
+        return "AirPods Max 2";
     default:
         return "Unknown AirPods";
     }
@@ -273,7 +277,9 @@ bool airpods_model_supports_anc(AirPodsModel model)
     case AIRPODS_MODEL_PRO_3:
     case AIRPODS_MODEL_MAX:
     case AIRPODS_MODEL_MAX_USBC:
+    case AIRPODS_MODEL_MAX_2:
     case AIRPODS_MODEL_4_ANC:
+    case AIRPODS_MODEL_5:
         return true;
     default:
         return false;
@@ -287,6 +293,7 @@ bool airpods_model_supports_adaptive(AirPodsModel model)
     case AIRPODS_MODEL_PRO_2_USBC:
     case AIRPODS_MODEL_PRO_3:
     case AIRPODS_MODEL_4_ANC:
+    case AIRPODS_MODEL_5:
         return true;
     default:
         return false;
@@ -298,6 +305,7 @@ bool airpods_model_is_headphones(AirPodsModel model)
     switch (model) {
     case AIRPODS_MODEL_MAX:
     case AIRPODS_MODEL_MAX_USBC:
+    case AIRPODS_MODEL_MAX_2:
         return true;
     default:
         return false;
@@ -331,6 +339,14 @@ AirPodsModel airpods_model_from_number(const char *model_number)
         {"A3056", AIRPODS_MODEL_4_ANC},
         {"A3055", AIRPODS_MODEL_4_ANC},
         {"A3057", AIRPODS_MODEL_4_ANC},
+        /* AirPods 5 */
+        {"A3531", AIRPODS_MODEL_5},
+        {"A3532", AIRPODS_MODEL_5},
+        {"A3533", AIRPODS_MODEL_5},
+        /* AirPods 5 with Wireless Charging Case */
+        {"A3439", AIRPODS_MODEL_5},
+        {"A3440", AIRPODS_MODEL_5},
+        {"A3441", AIRPODS_MODEL_5},
         /* AirPods Pro */
         {"A2084", AIRPODS_MODEL_PRO},
         {"A2083", AIRPODS_MODEL_PRO},
@@ -350,6 +366,8 @@ AirPodsModel airpods_model_from_number(const char *model_number)
         {"A2096", AIRPODS_MODEL_MAX},
         /* AirPods Max (USB-C) */
         {"A3184", AIRPODS_MODEL_MAX_USBC},
+        /* AirPods Max 2 */
+        {"A3454", AIRPODS_MODEL_MAX_2},
         {NULL, AIRPODS_MODEL_UNKNOWN}
     };
 

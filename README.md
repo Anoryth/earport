@@ -18,7 +18,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Notifications** - Connection/disconnection and low battery notifications
 - **Model detection** - Automatic detection of AirPods model with feature adaptation
 - **Per-device settings** - Settings are saved individually for each paired AirPods
-- **Translations** - Fully translatable (French included)
+- **Translations** - Fully translatable (French and Ukrainian included)
 
 ### Supported Models
 
@@ -28,10 +28,12 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 | AirPods 3rd Gen | ✓ | - | - | - |
 | AirPods 4th Gen | ✓ | - | - | - |
 | AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ |
+| AirPods 5 | ✓ | ✓ | ✓ | ✓ |
 | AirPods Pro | ✓ | ✓ | ✓ | - |
 | AirPods Pro 2 | ✓ | ✓ | ✓ | ✓ |
 | AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ |
 | AirPods Max | ✓ | ✓ | ✓ | - |
+| AirPods Max 2 | ✓ | ✓ | ✓ | - |
 
 ## Architecture
 
@@ -166,6 +168,20 @@ journalctl --user -u earport-daemon.service -f
    journalctl --user -u earport-daemon.service | grep -i airpods
    ```
 
+### Collecting debug logs
+
+Raw AirPods packets are only logged in debug mode. To include them in the service logs (useful when reporting a bug):
+
+```bash
+systemctl --user edit earport-daemon.service
+# Add the following lines, then save:
+#   [Service]
+#   Environment=G_MESSAGES_DEBUG=all
+systemctl --user restart earport-daemon.service
+```
+
+Remove the override afterwards with `systemctl --user revert earport-daemon.service`.
+
 ## Development
 
 ### Testing the Daemon
@@ -173,6 +189,9 @@ journalctl --user -u earport-daemon.service -f
 ```bash
 # Run daemon in foreground with debug output
 G_MESSAGES_DEBUG=all ./daemon/build/earport-daemon
+
+# Run the protocol parser tests
+meson test -C daemon/build
 ```
 
 ### D-Bus Interface

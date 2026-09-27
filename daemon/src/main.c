@@ -530,9 +530,10 @@ static void connect_to_airpods(const char *address, const char *name)
         bt_connection_set_state_callback(app.bt_conn, on_bt_state_changed, NULL);
     }
 
-    g_message("Connecting to AirPods: %s (%s)", name, address);
+    /* address/name may have just been freed: only use the copies from here */
+    g_message("Connecting to AirPods: %s (%s)", app.pending_name, app.pending_address);
 
-    if (!bt_connection_connect(app.bt_conn, address)) {
+    if (!bt_connection_connect(app.bt_conn, app.pending_address)) {
         g_warning("Failed to initiate connection");
     }
 }

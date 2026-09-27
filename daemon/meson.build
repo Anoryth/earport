@@ -45,12 +45,31 @@ executable('earport-daemon',
     install_dir: get_option('bindir'),
 )
 
+# Tests
+test_aap_protocol = executable('test-aap-protocol',
+    files('tests/test_aap_protocol.c', 'src/aap_protocol.c', 'src/airpods_state.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep],
+)
+test('aap-protocol', test_aap_protocol)
+
+# Service files point to the installed daemon (/usr/local/bin by default,
+# /usr/bin for distribution packages)
+service_conf = configuration_data()
+service_conf.set('bindir', get_option('prefix') / get_option('bindir'))
+
 # Install systemd user service
-install_data('data/earport-daemon.service',
-    install_dir: join_paths(get_option('prefix'), 'lib', 'systemd', 'user')
+configure_file(
+    input: 'data/earport-daemon.service.in',
+    output: 'earport-daemon.service',
+    configuration: service_conf,
+    install_dir: get_option('prefix') / 'lib' / 'systemd' / 'user',
 )
 
 # Install D-Bus service file
-install_data('data/io.github.anoryth.EarPort.service',
-    install_dir: join_paths(get_option('datadir'), 'dbus-1', 'services')
+configure_file(
+    input: 'data/io.github.anoryth.EarPort.service.in',
+    output: 'io.github.anoryth.EarPort.service',
+    configuration: service_conf,
+    install_dir: get_option('datadir') / 'dbus-1' / 'services',
 )

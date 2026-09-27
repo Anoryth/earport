@@ -6,7 +6,7 @@ After=bluetooth.target
 [Service]
 Type=dbus
 BusName=io.github.anoryth.EarPort
-ExecStart=/usr/local/bin/earport-daemon
+ExecStart=@bindir@/earport-daemon
 Restart=on-failure
 RestartSec=5
 

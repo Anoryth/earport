@@ -465,7 +465,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
 
         if (isHeadphones) {
             /* For AirPods Max, only check left (main battery) */
-            if (left >= 0 && left <= threshold && !this._lowBatteryNotified.left) {
+            if (left > 0 && left <= threshold && !this._lowBatteryNotified.left) {
                 this._lowBatteryNotified.left = true;
                 this._showNotification(
                     _('%s Low Battery').replace('%s', displayName),
@@ -478,14 +478,14 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             /* For earbuds, check both */
             let messages = [];
 
-            if (left >= 0 && left <= threshold && !this._lowBatteryNotified.left) {
+            if (left > 0 && left <= threshold && !this._lowBatteryNotified.left) {
                 this._lowBatteryNotified.left = true;
                 messages.push(`${_('Left')}: ${left}%`);
             } else if (left > threshold) {
                 this._lowBatteryNotified.left = false;
             }
 
-            if (right >= 0 && right <= threshold && !this._lowBatteryNotified.right) {
+            if (right > 0 && right <= threshold && !this._lowBatteryNotified.right) {
                 this._lowBatteryNotified.right = true;
                 messages.push(`${_('Right')}: ${right}%`);
             } else if (right > threshold) {

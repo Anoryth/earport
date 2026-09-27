@@ -4,8 +4,8 @@
  */
 
 #include "aap_protocol.h"
+#include <glib.h>
 #include <string.h>
-#include <stdio.h>
 
 /* Pre-built packets */
 const uint8_t AAP_PKT_HANDSHAKE[AAP_HANDSHAKE_SIZE] = {
@@ -112,6 +112,11 @@ AapParseResult aap_parse_battery(const uint8_t *data, size_t len, AapBatteryData
             bat_status = BATTERY_STATUS_UNKNOWN;
             break;
         }
+
+        /* A disconnected component (e.g. the case once both pods are out)
+         * reports level 0: treat it as unavailable rather than empty. */
+        if (bat_status == BATTERY_STATUS_DISCONNECTED)
+            level = 0xFF;
 
         switch (component) {
         case AAP_BATTERY_SINGLE:
@@ -361,12 +366,14 @@ void aap_build_listening_modes_cmd(uint8_t modes, uint8_t *buffer)
 
 void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)
 {
-    fprintf(stderr, "%s: ", prefix);
+    /* Raw packet dumps are verbose: only shown with G_MESSAGES_DEBUG set */
+    GString *hex = g_string_sized_new(3 * 64 + 32);
     for (size_t i = 0; i < len && i < 64; i++) {
-        fprintf(stderr, "%02X ", data[i]);
+        g_string_append_printf(hex, "%02X ", data[i]);
     }
     if (len > 64) {
-        fprintf(stderr, "... (%zu more bytes)", len - 64);
+        g_string_append_printf(hex, "... (%zu more bytes)", len - 64);
     }
-    fprintf(stderr, "\n");
+    g_debug("%s: %s", prefix, hex->str);
+    g_string_free(hex, TRUE);
 }
