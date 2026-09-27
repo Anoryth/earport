@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=io.github.anoryth.EarPort
 Exec=@bindir@/earport-daemon
+SystemdService=earport-daemon.service
