@@ -168,6 +168,20 @@ journalctl --user -u earport-daemon.service -f
    journalctl --user -u earport-daemon.service | grep -i airpods
    ```
 
+### Collecting debug logs
+
+Raw AirPods packets are only logged in debug mode. To include them in the service logs (useful when reporting a bug):
+
+```bash
+systemctl --user edit earport-daemon.service
+# Add the following lines, then save:
+#   [Service]
+#   Environment=G_MESSAGES_DEBUG=all
+systemctl --user restart earport-daemon.service
+```
+
+Remove the override afterwards with `systemctl --user revert earport-daemon.service`.
+
 ## Development
 
 ### Testing the Daemon
@@ -175,6 +189,9 @@ journalctl --user -u earport-daemon.service -f
 ```bash
 # Run daemon in foreground with debug output
 G_MESSAGES_DEBUG=all ./daemon/build/earport-daemon
+
+# Run the protocol parser tests
+meson test -C daemon/build
 ```
 
 ### D-Bus Interface

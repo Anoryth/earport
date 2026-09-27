@@ -4,8 +4,8 @@
  */
 
 #include "aap_protocol.h"
+#include <glib.h>
 #include <string.h>
-#include <stdio.h>
 
 /* Pre-built packets */
 const uint8_t AAP_PKT_HANDSHAKE[AAP_HANDSHAKE_SIZE] = {
@@ -194,14 +194,14 @@ AapParseResult aap_parse_noise_control(const uint8_t *data, size_t len, NoiseCon
 
 static AapParseResult aap_parse_metadata(const uint8_t *data, size_t len, AapMetadata *metadata)
 {
-    /* Metadata packet: 04 00 04 00 1D 00 [6 bytes] [device_name\0] [model_number\0] [manufacturer\0] */
-    if (len < 12)
+    /* Metadata packet: 04 00 04 00 1D 00 [5 bytes] [device_name\0] [model_number\0] [manufacturer\0] */
+    if (len < 11)
         return AAP_PARSE_INCOMPLETE;
 
     memset(metadata, 0, sizeof(AapMetadata));
 
-    /* Skip header (4) + opcode (1) + 00 (1) + 6 unknown bytes = position 12 */
-    size_t pos = 12;
+    /* Skip header (4) + opcode (1) + 00 (1) + 5 unknown bytes = position 11 */
+    size_t pos = 11;
 
     /* Extract null-terminated strings */
     size_t i;
@@ -366,12 +366,14 @@ void aap_build_listening_modes_cmd(uint8_t modes, uint8_t *buffer)
 
 void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)
 {
-    fprintf(stderr, "%s: ", prefix);
+    /* Raw packet dumps are verbose: only shown with G_MESSAGES_DEBUG set */
+    GString *hex = g_string_sized_new(3 * 64 + 32);
     for (size_t i = 0; i < len && i < 64; i++) {
-        fprintf(stderr, "%02X ", data[i]);
+        g_string_append_printf(hex, "%02X ", data[i]);
     }
     if (len > 64) {
-        fprintf(stderr, "... (%zu more bytes)", len - 64);
+        g_string_append_printf(hex, "... (%zu more bytes)", len - 64);
     }
-    fprintf(stderr, "\n");
+    g_debug("%s: %s", prefix, hex->str);
+    g_string_free(hex, TRUE);
 }
