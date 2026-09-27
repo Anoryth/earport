@@ -28,10 +28,12 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 | AirPods 3rd Gen | ✓ | - | - | - |
 | AirPods 4th Gen | ✓ | - | - | - |
 | AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ |
+| AirPods 5 | ✓ | ✓ | ✓ | ✓ |
 | AirPods Pro | ✓ | ✓ | ✓ | - |
 | AirPods Pro 2 | ✓ | ✓ | ✓ | ✓ |
 | AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ |
 | AirPods Max | ✓ | ✓ | ✓ | - |
+| AirPods Max 2 | ✓ | ✓ | ✓ | - |
 
 ## Architecture
 
