@@ -38,12 +38,35 @@ typedef struct {
     guint reconnect_timeout_id;
     int reconnect_attempts;
     bool bluez_connected;   /* Device still connected at BlueZ level */
+
+    /* Notification request retries (until the first battery packet) */
+    guint notif_retry_timeout_id;
+    int notif_retry_attempts;
+    bool battery_received;
+
+    /* Silent L2CAP reconnect when battery info never arrives */
+    bool silent_reconnect;       /* Reconnect in progress, hidden from clients */
+    bool silent_reconnect_done;  /* Already tried for this BlueZ connection */
 } AppContext;
 
 /* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
  * right after the BlueZ link comes up, so retry with exponential backoff. */
 #define RECONNECT_MAX_ATTEMPTS 5
 #define RECONNECT_BASE_DELAY_SEC 2
+
+/* When another Apple device (e.g. a nearby iPhone) is also connected to the
+ * AirPods, they sometimes ignore our notification request: control commands
+ * still flow, but battery and ear detection never arrive. Re-send the
+ * request until the first battery packet shows up. */
+#define NOTIF_RETRY_MAX_ATTEMPTS 5
+#define NOTIF_RETRY_INTERVAL_SEC 2
+
+/* If retries are not enough, re-open the L2CAP link once: a fresh
+ * connection has been seen to restore battery updates. */
+#define SILENT_RECONNECT_DELAY_MS 500
+
+/* Opcode of the AirPods' acknowledgement of our SET_FEATURES packet */
+#define AAP_OPCODE_FEATURES_ACK 0x2B
 
 static AppContext app = {0};
 
@@ -54,6 +77,8 @@ static void apply_device_profile(const char *address);
 static gboolean apply_saved_settings_idle(gpointer user_data);
 static void schedule_reconnect(void);
 static void cancel_reconnect(void);
+static void cancel_notif_retry(void);
+static void report_disconnected(void);
 
 /* ============================================================================
  * Bluetooth data handling
@@ -62,6 +87,15 @@ static void cancel_reconnect(void);
 static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data)
 {
     (void)user_data;
+
+    /* Our notification request may have reached the AirPods before they
+     * processed SET_FEATURES: request again once they acknowledge it. */
+    if (aap_has_valid_header(data, len) &&
+        aap_get_opcode(data, len) == AAP_OPCODE_FEATURES_ACK &&
+        !app.battery_received) {
+        g_debug("Features acknowledged, requesting notifications again");
+        bt_connection_send_request_notifications(app.bt_conn);
+    }
 
     AapParsedPacket packet;
     AapParseResult result = aap_parse_packet(data, len, &packet);
@@ -75,6 +109,9 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
 
     switch (packet.type) {
     case AAP_PKT_TYPE_BATTERY:
+        app.battery_received = true;
+        cancel_notif_retry();
+
         g_message("Battery: L=%d%% (status=%d) R=%d%% (status=%d) Case=%d%% (status=%d)",
                   packet.data.battery.left_level,
                   packet.data.battery.left_status,
@@ -270,6 +307,95 @@ static void cancel_reconnect(void)
     app.reconnect_attempts = 0;
 }
 
+/* ============================================================================
+ * Notification request retries
+ * ========================================================================== */
+
+static gboolean notif_retry_timeout_cb(gpointer user_data)
+{
+    (void)user_data;
+
+    if (app.battery_received || !app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+        app.notif_retry_timeout_id = 0;
+        return G_SOURCE_REMOVE;
+    }
+
+    if (app.notif_retry_attempts >= NOTIF_RETRY_MAX_ATTEMPTS) {
+        app.notif_retry_timeout_id = 0;
+
+        if (!app.silent_reconnect_done) {
+            g_message("No battery info after %d notification requests, "
+                      "re-opening the AirPods link", app.notif_retry_attempts);
+            app.silent_reconnect = true;
+            app.silent_reconnect_done = true;
+            bt_connection_disconnect(app.bt_conn);
+        } else {
+            g_warning("No battery info after %d notification requests "
+                      "(another Apple device may own the AirPods connection)",
+                      app.notif_retry_attempts);
+        }
+        return G_SOURCE_REMOVE;
+    }
+
+    app.notif_retry_attempts++;
+    g_message("No battery info yet, re-requesting notifications (%d/%d)",
+              app.notif_retry_attempts, NOTIF_RETRY_MAX_ATTEMPTS);
+
+    bt_connection_send_set_features(app.bt_conn);
+    g_usleep(50000);
+    bt_connection_send_request_notifications(app.bt_conn);
+
+    return G_SOURCE_CONTINUE;
+}
+
+static void cancel_notif_retry(void)
+{
+    if (app.notif_retry_timeout_id > 0) {
+        g_source_remove(app.notif_retry_timeout_id);
+        app.notif_retry_timeout_id = 0;
+    }
+}
+
+static void start_notif_retry(void)
+{
+    cancel_notif_retry();
+    app.battery_received = false;
+    app.notif_retry_attempts = 0;
+    app.notif_retry_timeout_id = g_timeout_add_seconds(NOTIF_RETRY_INTERVAL_SEC,
+                                                       notif_retry_timeout_cb, NULL);
+}
+
+static gboolean silent_reconnect_cb(gpointer user_data)
+{
+    (void)user_data;
+
+    if (!app.silent_reconnect)
+        return G_SOURCE_REMOVE;
+
+    if (app.bluez_connected && app.pending_address != NULL)
+        connect_to_airpods(app.pending_address, app.pending_name);
+    else
+        report_disconnected();
+
+    return G_SOURCE_REMOVE;
+}
+
+/* Tell clients the AirPods are gone and forget their state */
+static void report_disconnected(void)
+{
+    app.silent_reconnect = false;
+
+    if (app.state.connected) {
+        dbus_service_emit_device_disconnected(app.dbus_service,
+                                               app.state.device_address,
+                                               app.state.device_name);
+    }
+
+    cancel_notif_retry();
+    airpods_state_reset(&app.state);
+    dbus_service_emit_properties_changed(app.dbus_service, "Connected");
+}
+
 static void on_bt_state_changed(BluetoothState state, const char *error, void *user_data)
 {
     (void)user_data;
@@ -291,6 +417,16 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
         g_usleep(50000);
         bt_connection_send_request_notifications(app.bt_conn);
+
+        start_notif_retry();
+
+        if (app.silent_reconnect) {
+            /* Clients never saw the link go down: keep the current state
+             * and don't announce a new connection. */
+            app.silent_reconnect = false;
+            g_message("AirPods link re-opened");
+            break;
+        }
 
         /* Update state */
         airpods_state_set_device(&app.state,
@@ -320,14 +456,12 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
     case BT_STATE_DISCONNECTED:
         g_message("Bluetooth disconnected");
 
-        if (app.state.connected) {
-            dbus_service_emit_device_disconnected(app.dbus_service,
-                                                   app.state.device_address,
-                                                   app.state.device_name);
+        if (app.silent_reconnect) {
+            g_timeout_add(SILENT_RECONNECT_DELAY_MS, silent_reconnect_cb, NULL);
+            break;
         }
 
-        airpods_state_reset(&app.state);
-        dbus_service_emit_properties_changed(app.dbus_service, "Connected");
+        report_disconnected();
 
         /* L2CAP dropped but the device is still connected at BlueZ level
          * (e.g. AirPods went idle): try to re-establish the link. */
@@ -336,6 +470,11 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
     case BT_STATE_ERROR:
         g_warning("Bluetooth error: %s", error ? error : "unknown");
+
+        /* The silent reconnect failed: the link is really down now */
+        if (app.silent_reconnect)
+            report_disconnected();
+
         schedule_reconnect();
         break;
 
@@ -475,6 +614,7 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
     g_message("BlueZ: AirPods connected - %s (%s)", device->name, device->address);
     app.bluez_connected = true;
     app.reconnect_attempts = 0;
+    app.silent_reconnect_done = false;
     connect_to_airpods(device->address, device->name);
 }
 
@@ -484,6 +624,12 @@ static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *us
     g_message("BlueZ: AirPods disconnected - %s (%s)", device->name, device->address);
     app.bluez_connected = false;
     cancel_reconnect();
+
+    /* The AirPods left during a silent reconnect: clients still think
+     * they are connected, so report it now. */
+    if (app.silent_reconnect)
+        report_disconnected();
+
     disconnect_from_airpods();
 }
 
@@ -677,6 +823,7 @@ static void cleanup(void)
     g_message("Cleaning up...");
 
     cancel_reconnect();
+    cancel_notif_retry();
 
     if (app.bt_conn) {
         bt_connection_free(app.bt_conn);
