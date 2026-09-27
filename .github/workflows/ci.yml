@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  daemon:
+    name: Build and test daemon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config libglib2.0-dev libbluetooth-dev
+
+      - name: Build
+        run: |
+          meson setup daemon/build daemon
+          ninja -C daemon/build
+
+      - name: Test
+        run: meson test -C daemon/build --print-errorlogs
+
+  translations:
+    name: Check translations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gettext
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+
+      - name: Check .po files
+        run: |
+          for po in po/*.po; do
+            msgfmt --check -o /dev/null "$po"
+          done
+
+      - name: Check every translation is compiled
+        run: |
+          for po in po/*.po; do
+            lang=$(basename "$po" .po)
+            mo="extension/locale/$lang/LC_MESSAGES/earport.mo"
+            if [ ! -f "$mo" ]; then
+              echo "::error file=$po::Missing $mo (run: msgfmt --check -o $mo $po)"
+              exit 1
+            fi
+          done
