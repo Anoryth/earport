@@ -62,13 +62,13 @@ typedef struct {
     char *irk_address;           /* AirPods the IRK belongs to */
     uint8_t irk[AAP_PROXIMITY_KEY_SIZE];
     bool has_irk;
-    guint scan_timer_id;         /* Scan on/off duty cycle */
+    guint scan_timer_id;         /* Periodic short scans */
+    guint burst_timer_id;        /* End of the current short scan */
     guint playback_window_id;    /* Waiting for an advert after playback started */
     bool playback_pending;
+    bool playback_seen_busy;     /* Saw them in use while waiting */
     bool prev_in_ear_known;
     bool prev_in_ear;
-    ProximityInfo last_info;
-    gint64 last_info_us;
     gint64 last_autoconnect_us;
 } AppContext;
 
@@ -93,13 +93,15 @@ typedef struct {
 
 static AppContext app = {0};
 
-/* Automatic connection: scan for BLE adverts on/off while the AirPods are
- * not connected, look at the latest advert when playback starts, and don't
- * insist when a connection attempt fails */
-#define SCAN_ON_SEC 10
-#define SCAN_OFF_SEC 20
-#define PLAYBACK_WINDOW_SEC 10
-#define ADVERT_FRESH_SEC 15
+/* Automatic connection. Scanning keeps bluetoothd, the system bus and the
+ * shell's Bluetooth code busy (measured: ~4% CPU for bluetoothd when
+ * continuous), but AirPods nearby answer within 0.5 s. So scan in short
+ * bursts that end at their first advert, and scan right away when playback
+ * starts. Don't insist when a connection attempt fails. */
+#define SCAN_INTERVAL_SEC 30
+#define SCAN_BURST_SEC 3
+/* Long enough for AirPods paused on another device to report it (2-3 s) */
+#define PLAYBACK_WINDOW_SEC 8
 #define AUTOCONNECT_COOLDOWN_SEC 30
 #define DEFAULT_ADAPTER_PATH "/org/bluez/hci0"
 
@@ -206,19 +208,31 @@ static bool ble_address_is_ours(const char *address, void *user_data)
     return app.has_irk && proximity_address_matches(app.irk, address);
 }
 
-/* Decide on playback started here, now that we know what the AirPods do */
-static void evaluate_playback_trigger(const ProximityInfo *info)
+static void end_playback_wait(void)
 {
     app.playback_pending = false;
     if (app.playback_window_id > 0) {
         g_source_remove(app.playback_window_id);
         app.playback_window_id = 0;
     }
+    ble_scanner_stop(app.ble_scanner);
+}
 
-    if (autoconnect_allowed(info, AUTOCONNECT_TRIGGER_PLAYBACK))
+/* Decide on playback started here, now that we know what the AirPods do */
+static void evaluate_playback_trigger(const ProximityInfo *info)
+{
+    if (autoconnect_allowed(info, AUTOCONNECT_TRIGGER_PLAYBACK)) {
+        end_playback_wait();
         try_autoconnect("playback started");
-    else if (info->in_ear)
-        g_message("Not connecting: the AirPods are in use by another device");
+    } else if (autoconnect_worth_waiting(info)) {
+        /* Maybe just paused on the other device: keep watching until the
+         * end of the window */
+        app.playback_seen_busy = true;
+    } else {
+        end_playback_wait();
+        g_message(info->in_ear ? "Not connecting: the AirPods are in use by another device"
+                               : "Not connecting: the AirPods are not in the ears");
+    }
 }
 
 static void on_ble_advert(const char *address, const uint8_t *data, size_t len, void *user_data)
@@ -230,9 +244,6 @@ static void on_ble_advert(const char *address, const uint8_t *data, size_t len, 
     if (!proximity_parse(data, len, &info) || app.bluez_connected)
         return;
 
-    app.last_info = info;
-    app.last_info_us = g_get_monotonic_time();
-
     /* React to the pods being put in, not to them being in: after a manual
      * disconnection, AirPods still in the ears must stay disconnected */
     if (app.prev_in_ear_known && !app.prev_in_ear && info.in_ear &&
@@ -241,8 +252,12 @@ static void on_ble_advert(const char *address, const uint8_t *data, size_t len, 
     app.prev_in_ear = info.in_ear;
     app.prev_in_ear_known = true;
 
-    if (app.playback_pending)
+    if (app.playback_pending) {
         evaluate_playback_trigger(&info);
+    } else {
+        /* One advert is all a periodic scan needs */
+        ble_scanner_stop(app.ble_scanner);
+    }
 }
 
 static gboolean playback_window_cb(gpointer user_data)
@@ -250,6 +265,9 @@ static gboolean playback_window_cb(gpointer user_data)
     (void)user_data;
     app.playback_window_id = 0;
     app.playback_pending = false;
+    ble_scanner_stop(app.ble_scanner);
+    g_message(app.playback_seen_busy ? "Not connecting: the AirPods are in use by another device"
+                                     : "Not connecting: the AirPods were not seen nearby");
     return G_SOURCE_REMOVE;
 }
 
@@ -260,33 +278,36 @@ static void on_playback_started(void *user_data)
     if (!app.config.auto_connect || !app.has_irk || app.bluez_connected)
         return;
 
-    if (app.last_info_us > 0 &&
-        g_get_monotonic_time() - app.last_info_us < ADVERT_FRESH_SEC * G_USEC_PER_SEC) {
-        evaluate_playback_trigger(&app.last_info);
-        return;
-    }
-
-    /* No recent advert: listen right away for a short while */
+    /* The AirPods' state may have changed since the last periodic scan:
+     * look at them now, it takes about half a second */
     app.playback_pending = true;
+    app.playback_seen_busy = false;
     if (app.playback_window_id > 0)
         g_source_remove(app.playback_window_id);
     app.playback_window_id = g_timeout_add_seconds(PLAYBACK_WINDOW_SEC, playback_window_cb, NULL);
     ble_scanner_start(app.ble_scanner);
 }
 
+static gboolean burst_end_cb(gpointer user_data)
+{
+    (void)user_data;
+    app.burst_timer_id = 0;
+    /* AirPods away: no advert came, stop anyway */
+    if (!app.playback_pending)
+        ble_scanner_stop(app.ble_scanner);
+    return G_SOURCE_REMOVE;
+}
+
+/* Periodic short scan, to notice the pods being put in */
 static gboolean scan_cycle_cb(gpointer user_data)
 {
     (void)user_data;
 
-    /* Keep listening while waiting for an advert after playback started */
-    if (ble_scanner_is_running(app.ble_scanner) && !app.playback_pending) {
-        ble_scanner_stop(app.ble_scanner);
-        app.scan_timer_id = g_timeout_add_seconds(SCAN_OFF_SEC, scan_cycle_cb, NULL);
-    } else {
-        ble_scanner_start(app.ble_scanner);
-        app.scan_timer_id = g_timeout_add_seconds(SCAN_ON_SEC, scan_cycle_cb, NULL);
-    }
-    return G_SOURCE_REMOVE;
+    ble_scanner_start(app.ble_scanner);
+    if (app.burst_timer_id > 0)
+        g_source_remove(app.burst_timer_id);
+    app.burst_timer_id = g_timeout_add_seconds(SCAN_BURST_SEC, burst_end_cb, NULL);
+    return G_SOURCE_CONTINUE;
 }
 
 /* Scan only when it can lead somewhere: option on, keys known, AirPods
@@ -301,9 +322,14 @@ static void autoconnect_update(void)
     if (wanted && app.scan_timer_id == 0 && app.ble_scanner != NULL) {
         g_message("Watching for the AirPods to connect automatically");
         scan_cycle_cb(NULL);
+        app.scan_timer_id = g_timeout_add_seconds(SCAN_INTERVAL_SEC, scan_cycle_cb, NULL);
     } else if (!wanted && app.scan_timer_id > 0) {
         g_source_remove(app.scan_timer_id);
         app.scan_timer_id = 0;
+        if (app.burst_timer_id > 0) {
+            g_source_remove(app.burst_timer_id);
+            app.burst_timer_id = 0;
+        }
         ble_scanner_stop(app.ble_scanner);
     }
 
@@ -1187,6 +1213,8 @@ static void cleanup(void)
 
     if (app.scan_timer_id > 0)
         g_source_remove(app.scan_timer_id);
+    if (app.burst_timer_id > 0)
+        g_source_remove(app.burst_timer_id);
     if (app.playback_window_id > 0)
         g_source_remove(app.playback_window_id);
     ble_scanner_free(app.ble_scanner);

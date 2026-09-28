@@ -63,6 +63,12 @@ bool proximity_address_matches(const uint8_t *irk, const char *address)
     return out[13] == b[3] && out[14] == b[4] && out[15] == b[5];
 }
 
+bool autoconnect_worth_waiting(const ProximityInfo *info)
+{
+    /* A call is not paused in a few seconds */
+    return info->in_ear && info->connection_state == PROXIMITY_CONN_MUSIC;
+}
+
 bool autoconnect_allowed(const ProximityInfo *info, AutoConnectTrigger trigger)
 {
     /* Audio must not jump to AirPods lying on the desk */

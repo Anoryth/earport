@@ -51,4 +51,8 @@ typedef enum {
  * so that is only done when playback starts here (an explicit choice). */
 bool autoconnect_allowed(const ProximityInfo *info, AutoConnectTrigger trigger);
 
+/* Whether the AirPods may soon be free for playback here: right after a
+ * pause on the other device they still report music for 2-3 s */
+bool autoconnect_worth_waiting(const ProximityInfo *info);
+
 #endif /* BLE_PROXIMITY_H */

@@ -104,6 +104,18 @@ static void test_autoconnect_rules(void)
     }
 }
 
+static void test_worth_waiting(void)
+{
+    ProximityInfo music = { .model = 0x2420, .in_ear = true, .connection_state = PROXIMITY_CONN_MUSIC };
+    ProximityInfo call = { .model = 0x2420, .in_ear = true, .connection_state = PROXIMITY_CONN_CALL };
+    ProximityInfo not_worn = { .model = 0x2420, .in_ear = false, .connection_state = PROXIMITY_CONN_MUSIC };
+
+    /* Music just paused on the iPhone still reads "music" for 2-3 s */
+    g_assert_true(autoconnect_worth_waiting(&music));
+    g_assert_false(autoconnect_worth_waiting(&call));
+    g_assert_false(autoconnect_worth_waiting(&not_worn));
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -111,6 +123,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/proximity/parse", test_parse);
     g_test_add_func("/proximity/address-resolution", test_address_resolution);
     g_test_add_func("/proximity/autoconnect-rules", test_autoconnect_rules);
+    g_test_add_func("/proximity/worth-waiting", test_worth_waiting);
 
     return g_test_run();
 }
