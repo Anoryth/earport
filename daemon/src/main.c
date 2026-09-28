@@ -222,6 +222,19 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeAdaptive");
         break;
 
+    case AAP_PKT_TYPE_CONTROL_SETTING: {
+        const AirPodsSettingDef *def = airpods_setting_by_id(packet.data.control_setting.id);
+        if (def == NULL)
+            break;  /* Not exposed yet */
+
+        uint8_t value = packet.data.control_setting.value[0];
+        g_message("Setting %s: 0x%02X", def->key, value);
+
+        if (airpods_state_set_setting(&app.state, def->id, value))
+            dbus_service_emit_properties_changed(app.dbus_service, "Settings");
+        break;
+    }
+
     case AAP_PKT_TYPE_METADATA:
         g_message("Metadata received: device='%s' model='%s' manufacturer='%s'",
                   packet.data.metadata.device_name,
@@ -394,6 +407,7 @@ static void report_disconnected(void)
     cancel_notif_retry();
     airpods_state_reset(&app.state);
     dbus_service_emit_properties_changed(app.dbus_service, "Connected");
+    dbus_service_emit_properties_changed(app.dbus_service, "Settings");
 }
 
 static void on_bt_state_changed(BluetoothState state, const char *error, void *user_data)
@@ -768,6 +782,27 @@ static void on_set_listening_modes(bool off, bool transparency, bool anc, bool a
     dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeAdaptive");
 }
 
+static bool on_set_setting(const AirPodsSettingDef *def, uint8_t byte, void *user_data)
+{
+    (void)user_data;
+
+    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+        g_warning("Cannot set %s: not connected", def->key);
+        return false;
+    }
+
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    aap_build_control_cmd(def->id, &byte, 1, packet);
+    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+
+    /* The AirPods don't echo settings back: update the state right away.
+     * No need to save it in the profile, the AirPods remember it. */
+    if (airpods_state_set_setting(&app.state, def->id, byte))
+        dbus_service_emit_properties_changed(app.dbus_service, "Settings");
+
+    return true;
+}
+
 static void on_set_display_name(const char *name, void *user_data)
 {
     (void)user_data;
@@ -890,6 +925,7 @@ int main(int argc, char *argv[])
     dbus_service_set_ear_pause_mode_callback(app.dbus_service, on_set_ear_pause_mode, NULL);
     dbus_service_set_listening_modes_callback(app.dbus_service, on_set_listening_modes, NULL);
     dbus_service_set_display_name_callback(app.dbus_service, on_set_display_name, NULL);
+    dbus_service_set_setting_callback(app.dbus_service, on_set_setting, NULL);
 
     if (!dbus_service_start(app.dbus_service)) {
         g_error("Failed to start D-Bus service");

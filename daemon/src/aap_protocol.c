@@ -262,8 +262,13 @@ static AapParseResult parse_control_packet(const uint8_t *data, size_t len, AapP
         return AAP_PARSE_OK;
 
     default:
-        result->type = AAP_PKT_TYPE_UNKNOWN;
-        return AAP_PARSE_OK;  /* Not an error, just unhandled */
+        /* Other settings: keep the raw value, missing bytes read as zero */
+        result->type = AAP_PKT_TYPE_CONTROL_SETTING;
+        result->data.control_setting.id = ctrl_id;
+        memset(result->data.control_setting.value, 0, sizeof(result->data.control_setting.value));
+        for (size_t i = 0; i < 4 && 7 + i < len; i++)
+            result->data.control_setting.value[i] = data[7 + i];
+        return AAP_PARSE_OK;
     }
 }
 
@@ -327,20 +332,26 @@ void aap_build_noise_control_cmd(NoiseControlMode mode, uint8_t *buffer)
     memcpy(buffer, src, AAP_CONTROL_CMD_SIZE);
 }
 
+void aap_build_control_cmd(uint8_t id, const uint8_t *value, size_t value_len, uint8_t *buffer)
+{
+    /* 04 00 04 00 09 00 [id] [v0 v1 v2 v3] */
+    memset(buffer, 0, AAP_CONTROL_CMD_SIZE);
+    buffer[0] = AAP_HEADER_BYTE0;
+    buffer[1] = AAP_HEADER_BYTE1;
+    buffer[2] = AAP_HEADER_BYTE2;
+    buffer[3] = AAP_HEADER_BYTE3;
+    buffer[4] = AAP_OPCODE_CONTROL;
+    buffer[6] = id;
+    if (value_len > 4)
+        value_len = 4;
+    if (value_len > 0)
+        memcpy(buffer + 7, value, value_len);
+}
+
 void aap_build_adaptive_level_cmd(int level, uint8_t *buffer)
 {
-    /* 04 00 04 00 09 00 2E [level] 00 00 00 */
-    buffer[0] = 0x04;
-    buffer[1] = 0x00;
-    buffer[2] = 0x04;
-    buffer[3] = 0x00;
-    buffer[4] = 0x09;
-    buffer[5] = 0x00;
-    buffer[6] = AAP_CTRL_ADAPTIVE_LEVEL;
-    buffer[7] = (uint8_t)(level < 0 ? 0 : (level > 100 ? 100 : level));
-    buffer[8] = 0x00;
-    buffer[9] = 0x00;
-    buffer[10] = 0x00;
+    uint8_t value = (uint8_t)(level < 0 ? 0 : (level > 100 ? 100 : level));
+    aap_build_control_cmd(AAP_CTRL_ADAPTIVE_LEVEL, &value, 1, buffer);
 }
 
 void aap_build_conv_awareness_cmd(bool enable, uint8_t *buffer)
@@ -350,18 +361,7 @@ void aap_build_conv_awareness_cmd(bool enable, uint8_t *buffer)
 
 void aap_build_listening_modes_cmd(uint8_t modes, uint8_t *buffer)
 {
-    /* 04 00 04 00 09 00 1A [modes] 00 00 00 */
-    buffer[0] = 0x04;
-    buffer[1] = 0x00;
-    buffer[2] = 0x04;
-    buffer[3] = 0x00;
-    buffer[4] = 0x09;
-    buffer[5] = 0x00;
-    buffer[6] = AAP_CTRL_LISTENING_MODES;
-    buffer[7] = modes;
-    buffer[8] = 0x00;
-    buffer[9] = 0x00;
-    buffer[10] = 0x00;
+    aap_build_control_cmd(AAP_CTRL_LISTENING_MODES, &modes, 1, buffer);
 }
 
 void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)

@@ -99,6 +99,7 @@ typedef enum {
     AAP_PKT_TYPE_CA_DETECTION,
     AAP_PKT_TYPE_METADATA,
     AAP_PKT_TYPE_LISTENING_MODES,
+    AAP_PKT_TYPE_CONTROL_SETTING,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -134,6 +135,12 @@ typedef struct {
     uint8_t raw_value;  /* Raw bitmask for debugging */
 } AapListeningModes;
 
+/* Any other control command: identifier and its (up to 4) value bytes */
+typedef struct {
+    uint8_t id;
+    uint8_t value[4];
+} AapControlSetting;
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;
@@ -145,6 +152,7 @@ typedef struct {
         int ca_volume_level;
         AapMetadata metadata;
         AapListeningModes listening_modes;
+        AapControlSetting control_setting;
     } data;
 } AapParsedPacket;
 
@@ -182,6 +190,17 @@ AapParseResult aap_parse_ear_detection(const uint8_t *data, size_t len, AapEarDe
  * Parse noise control response
  */
 AapParseResult aap_parse_noise_control(const uint8_t *data, size_t len, NoiseControlMode *mode);
+
+/**
+ * Build a control command packet: 04 00 04 00 09 00 [id] [value...] padded
+ * with zeros
+ *
+ * @param id Control command identifier
+ * @param value Value bytes (at most 4 are used)
+ * @param value_len Number of value bytes
+ * @param buffer Output buffer (must be AAP_CONTROL_CMD_SIZE bytes)
+ */
+void aap_build_control_cmd(uint8_t id, const uint8_t *value, size_t value_len, uint8_t *buffer);
 
 /**
  * Build noise control command packet

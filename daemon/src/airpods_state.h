@@ -9,6 +9,7 @@
 #include <glib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "airpods_settings.h"
 
 /* AirPods model identifiers (from BLE advertisement) */
 typedef enum {
@@ -90,8 +91,11 @@ typedef struct {
     NoiseControlMode noise_control_mode;
     bool conversational_awareness;
     int adaptive_noise_level;   /* 0-100 */
-    bool one_bud_anc_enabled;
     ListeningModesConfig listening_modes;  /* Long-press modes config */
+
+    /* Generic settings, indexed like the airpods_settings table */
+    uint8_t setting_values[AIRPODS_SETTING_COUNT];
+    bool setting_announced[AIRPODS_SETTING_COUNT];  /* Sent by the AirPods */
 
     /* Ear detection */
     EarDetectionState ear_detection;
@@ -151,6 +155,13 @@ void airpods_state_set_listening_modes(AirPodsState *state,
                                         bool transparency_enabled,
                                         bool anc_enabled,
                                         bool adaptive_enabled);
+
+/* Store a setting value received from (or sent to) the AirPods.
+ * Returns true if the stored value changed; unknown IDs are ignored. */
+bool airpods_state_set_setting(AirPodsState *state, uint8_t id, uint8_t value);
+
+/* Get a setting value, false if the AirPods have not announced it */
+bool airpods_state_get_setting(AirPodsState *state, uint8_t id, uint8_t *value);
 
 /* Get model name as string */
 const char *airpods_model_to_string(AirPodsModel model);

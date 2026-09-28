@@ -36,6 +36,10 @@ typedef void (*DbusListeningModesCallback)(bool off, bool transparency, bool anc
 typedef void (*DbusDisplayNameCallback)(const char *name, void *user_data);
 
 /* D-Bus service context */
+/* Callback for generic settings: byte is the validated value to send.
+ * Returns false if it could not be sent (AirPods not connected). */
+typedef bool (*DbusSettingCallback)(const AirPodsSettingDef *def, uint8_t byte, void *user_data);
+
 typedef struct DbusService DbusService;
 
 /**
@@ -97,6 +101,13 @@ void dbus_service_set_ear_pause_mode_callback(DbusService *service,
 void dbus_service_set_listening_modes_callback(DbusService *service,
                                                 DbusListeningModesCallback callback,
                                                 void *user_data);
+
+/**
+ * Set callback for generic setting change requests (SetSetting)
+ */
+void dbus_service_set_setting_callback(DbusService *service,
+                                        DbusSettingCallback callback,
+                                        void *user_data);
 
 /**
  * Set callback for display name change requests

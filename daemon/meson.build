@@ -29,6 +29,7 @@ endif
 sources = files(
     'src/main.c',
     'src/airpods_state.c',
+    'src/airpods_settings.c',
     'src/aap_protocol.c',
     'src/bluetooth.c',
     'src/bluez_monitor.c',
@@ -47,11 +48,18 @@ executable('earport-daemon',
 
 # Tests
 test_aap_protocol = executable('test-aap-protocol',
-    files('tests/test_aap_protocol.c', 'src/aap_protocol.c', 'src/airpods_state.c'),
+    files('tests/test_aap_protocol.c', 'src/aap_protocol.c', 'src/airpods_settings.c', 'src/airpods_state.c'),
     include_directories: include_directories('src'),
     dependencies: [glib_dep],
 )
 test('aap-protocol', test_aap_protocol)
+
+test_airpods_settings = executable('test-airpods-settings',
+    files('tests/test_airpods_settings.c', 'src/airpods_settings.c', 'src/airpods_state.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep],
+)
+test('airpods-settings', test_airpods_settings)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

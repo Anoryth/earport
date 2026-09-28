@@ -27,7 +27,6 @@ void airpods_state_init(AirPodsState *state)
     state->noise_control_mode = NOISE_CONTROL_OFF;
     state->conversational_awareness = false;
     state->adaptive_noise_level = 50;
-    state->one_bud_anc_enabled = false;
 
     /* Default: Transparency and ANC enabled for long press */
     state->listening_modes.off_enabled = false;
@@ -82,6 +81,9 @@ void airpods_state_reset(AirPodsState *state)
 
     state->ear_detection.left_in_ear = false;
     state->ear_detection.right_in_ear = false;
+
+    memset(state->setting_values, 0, sizeof(state->setting_values));
+    memset(state->setting_announced, 0, sizeof(state->setting_announced));
 
     g_mutex_unlock(&state->lock);
 }
@@ -182,6 +184,37 @@ void airpods_state_set_adaptive_noise_level(AirPodsState *state, int level)
     g_mutex_lock(&state->lock);
     state->adaptive_noise_level = CLAMP(level, 0, 100);
     g_mutex_unlock(&state->lock);
+}
+
+bool airpods_state_set_setting(AirPodsState *state, uint8_t id, uint8_t value)
+{
+    int index = airpods_setting_index(airpods_setting_by_id(id));
+    if (index < 0)
+        return false;
+
+    g_mutex_lock(&state->lock);
+    bool changed = !state->setting_announced[index] ||
+                   state->setting_values[index] != value;
+    state->setting_values[index] = value;
+    state->setting_announced[index] = true;
+    g_mutex_unlock(&state->lock);
+
+    return changed;
+}
+
+bool airpods_state_get_setting(AirPodsState *state, uint8_t id, uint8_t *value)
+{
+    int index = airpods_setting_index(airpods_setting_by_id(id));
+    if (index < 0)
+        return false;
+
+    g_mutex_lock(&state->lock);
+    bool announced = state->setting_announced[index];
+    if (announced)
+        *value = state->setting_values[index];
+    g_mutex_unlock(&state->lock);
+
+    return announced;
 }
 
 void airpods_state_set_listening_modes(AirPodsState *state,

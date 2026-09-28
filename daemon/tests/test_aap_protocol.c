@@ -175,6 +175,51 @@ static void test_listening_modes(void)
     g_assert_false(p.data.listening_modes.adaptive_enabled);
 }
 
+static void test_control_settings(void)
+{
+    /* Settings announced by AirPods Pro 2 USB-C right after the handshake */
+    const struct {
+        uint8_t id;
+        uint8_t v0;
+        uint8_t v1;
+    } cases[] = {
+        { 0x17, 0x00, 0x00 },  /* DOUBLE_CLICK_INTERVAL */
+        { 0x18, 0x00, 0x00 },  /* CLICK_HOLD_INTERVAL */
+        { 0x1B, 0x02, 0x00 },  /* ONE_BUD_ANC_MODE */
+        { 0x1F, 0x50, 0x50 },  /* CHIME_VOLUME */
+        { 0x23, 0x00, 0x00 },  /* VOLUME_SWIPE_INTERVAL */
+        { 0x24, 0x00, 0x03 },  /* CALL_MANAGEMENT_CONFIG */
+        { 0x25, 0x01, 0x00 },  /* VOLUME_SWIPE_MODE */
+        { 0x26, 0x01, 0x00 },  /* ADAPTIVE_VOLUME_CONFIG */
+        { 0x35, 0x01, 0x00 },  /* SLEEP_DETECTION_CONFIG */
+    };
+
+    for (size_t i = 0; i < G_N_ELEMENTS(cases); i++) {
+        uint8_t pkt[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, cases[i].id,
+                          cases[i].v0, cases[i].v1, 0x00, 0x00 };
+        AapParsedPacket p;
+
+        g_assert_cmpint(PARSE(pkt, &p), ==, AAP_PARSE_OK);
+        g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_CONTROL_SETTING);
+        g_assert_cmpuint(p.data.control_setting.id, ==, cases[i].id);
+        g_assert_cmpuint(p.data.control_setting.value[0], ==, cases[i].v0);
+        g_assert_cmpuint(p.data.control_setting.value[1], ==, cases[i].v1);
+    }
+}
+
+static void test_control_setting_short(void)
+{
+    /* Value bytes missing from a short packet read as zero */
+    const uint8_t pkt[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x26, 0x02 };
+    AapParsedPacket p;
+
+    g_assert_cmpint(PARSE(pkt, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_CONTROL_SETTING);
+    g_assert_cmpuint(p.data.control_setting.value[0], ==, 0x02);
+    g_assert_cmpuint(p.data.control_setting.value[1], ==, 0x00);
+    g_assert_cmpuint(p.data.control_setting.value[3], ==, 0x00);
+}
+
 /* ============================================================================
  * Metadata
  * ========================================================================== */
@@ -243,6 +288,21 @@ static void test_build_commands(void)
     g_assert_cmpuint(buf[7], ==, 0);
 }
 
+static void test_build_control_cmd(void)
+{
+    uint8_t buf[AAP_CONTROL_CMD_SIZE];
+    const uint8_t one_byte[] = { 0x02 };
+    const uint8_t two_bytes[] = { 0x00, 0x03 };
+    const uint8_t pv_off[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x26, 0x02, 0x00, 0x00, 0x00 };
+    const uint8_t calls[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x24, 0x00, 0x03, 0x00, 0x00 };
+
+    aap_build_control_cmd(0x26, one_byte, sizeof(one_byte), buf);
+    g_assert_cmpmem(buf, sizeof(buf), pv_off, sizeof(pv_off));
+
+    aap_build_control_cmd(0x24, two_bytes, sizeof(two_bytes), buf);
+    g_assert_cmpmem(buf, sizeof(buf), calls, sizeof(calls));
+}
+
 /* ============================================================================
  * Model detection
  * ========================================================================== */
@@ -277,9 +337,12 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/control/noise-control", test_noise_control);
     g_test_add_func("/aap/control/conversational-awareness", test_conversational_awareness);
     g_test_add_func("/aap/control/listening-modes", test_listening_modes);
+    g_test_add_func("/aap/control/settings", test_control_settings);
+    g_test_add_func("/aap/control/setting-short", test_control_setting_short);
     g_test_add_func("/aap/metadata", test_metadata);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
+    g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);
     g_test_add_func("/model/from-number", test_model_from_number);
 
     return g_test_run();

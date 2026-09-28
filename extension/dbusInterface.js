@@ -37,6 +37,7 @@ export const AirPodsInterface = `
     <property name="ListeningModeTransparency" type="b" access="read"/>
     <property name="ListeningModeANC" type="b" access="read"/>
     <property name="ListeningModeAdaptive" type="b" access="read"/>
+    <property name="Settings" type="a{sv}" access="read"/>
     <method name="SetNoiseControlMode">
       <arg type="s" name="mode" direction="in"/>
     </method>
@@ -54,6 +55,10 @@ export const AirPodsInterface = `
       <arg type="b" name="transparency" direction="in"/>
       <arg type="b" name="anc" direction="in"/>
       <arg type="b" name="adaptive" direction="in"/>
+    </method>
+    <method name="SetSetting">
+      <arg type="s" name="key" direction="in"/>
+      <arg type="v" name="value" direction="in"/>
     </method>
     <method name="SetDisplayName">
       <arg type="s" name="name" direction="in"/>

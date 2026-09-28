@@ -6,6 +6,7 @@
  */
 
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
 import Adw from 'gi://Adw';
@@ -270,6 +271,8 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         aboutGroup.add(versionRow);
 
+        this._buildAirPodsSettingsPage(window);
+
         /* Load settings */
         this._settings = this.getSettings();
         this._connectionNotifRow.active = this._settings.get_boolean('enable-connection-notifications');
@@ -445,16 +448,133 @@ export default class EarPortPreferences extends ExtensionPreferences {
             this._lpANCRow.active = this._proxy.ListeningModeANC;
             this._lpAdaptiveRow.active = this._proxy.ListeningModeAdaptive;
 
+            this._updateAirPodsSettings();
             this._setSensitive(true);
         } else {
             this._statusRow.subtitle = _('Disconnected');
             this._earDetectionRow.subtitle = _('No device connected');
             this._displayNameRow.text = '';
+            this._updateAirPodsSettings();
             this._setSensitive(false);
         }
 
         this._updatingFromProxy = false;
         this._updatingListeningModes = false;
+    }
+
+    /* Settings stored on the AirPods themselves: a row is only shown when the
+     * AirPods announced the setting, which handles model differences. */
+    _buildAirPodsSettingsPage(window) {
+        const page = new Adw.PreferencesPage({
+            title: _('AirPods Settings'),
+            icon_name: 'emblem-system-symbolic',
+        });
+        window.add(page);
+
+        this._airpodsSettingsEmptyGroup = new Adw.PreferencesGroup({
+            title: _('No settings available'),
+            description: _('Connect your AirPods to change the settings stored on them'),
+        });
+        page.add(this._airpodsSettingsEmptyGroup);
+
+        const switchRow = (title, subtitle) => new Adw.SwitchRow({title, subtitle});
+        const comboRow = (title, subtitle, choices) => new Adw.ComboRow({
+            title,
+            subtitle,
+            model: Gtk.StringList.new(choices),
+        });
+
+        const groups = [
+            {
+                title: _('Noise Control'),
+                settings: [
+                    ['OneBudANC', switchRow(_('Noise Control with One AirPod'),
+                        _('Allow noise cancellation with only one AirPod in your ear'))],
+                ],
+            },
+            {
+                title: _('Audio'),
+                settings: [
+                    ['PersonalizedVolume', switchRow(_('Personalized Volume'),
+                        _('Adjust media volume based on your environment'))],
+                    ['SleepDetection', switchRow(_('Pause Media When Falling Asleep'),
+                        _('Pause playback when you fall asleep'))],
+                ],
+            },
+            {
+                title: _('Stem Controls'),
+                settings: [
+                    ['PressSpeed', comboRow(_('Press Speed'),
+                        _('Speed required to press two or three times'),
+                        [_('Default'), _('Slower'), _('Slowest')])],
+                    ['PressHoldDuration', comboRow(_('Press and Hold Duration'),
+                        _('Time required to press and hold'),
+                        [_('Default'), _('Shorter'), _('Shortest')])],
+                    ['VolumeSwipe', switchRow(_('Volume Control'),
+                        _('Swipe up or down on the stem to adjust the volume'))],
+                    ['VolumeSwipeSpeed', comboRow(_('Volume Swipe Duration'),
+                        _('Wait time between swipes to prevent unintended changes'),
+                        [_('Default'), _('Longer'), _('Longest')])],
+                ],
+            },
+        ];
+
+        this._airpodsSettingsGroups = [];
+        this._airpodsSettingRows = new Map();
+
+        for (const {title, settings} of groups) {
+            const group = new Adw.PreferencesGroup({title});
+            page.add(group);
+            this._airpodsSettingsGroups.push({group, keys: settings.map(([key]) => key)});
+
+            for (const [key, row] of settings) {
+                group.add(row);
+                this._airpodsSettingRows.set(key, row);
+
+                const isSwitch = row instanceof Adw.SwitchRow;
+                row.connect(isSwitch ? 'notify::active' : 'notify::selected', () => {
+                    if (this._updatingFromProxy || !this._proxy?.Connected)
+                        return;
+                    const value = isSwitch
+                        ? new GLib.Variant('b', row.active)
+                        : new GLib.Variant('i', row.selected);
+                    this._proxy.SetSettingRemote(key, value, (result, error) => {
+                        /* Rejected: show the real value again */
+                        if (error)
+                            this._updateState();
+                    });
+                });
+            }
+        }
+
+        /* Nothing announced until the daemon answers */
+        this._updateAirPodsSettings();
+    }
+
+    _updateAirPodsSettings() {
+        const settings = this._proxy?.Connected
+            ? this._proxy.get_cached_property('Settings')?.recursiveUnpack() ?? {}
+            : {};
+
+        for (const [key, row] of this._airpodsSettingRows) {
+            const value = settings[key];
+            row.visible = value !== undefined;
+            if (value === undefined)
+                continue;
+            if (row instanceof Adw.SwitchRow)
+                row.active = value;
+            else
+                row.selected = value;
+        }
+
+        for (const {group, keys} of this._airpodsSettingsGroups)
+            group.visible = keys.some(key => settings[key] !== undefined);
+
+        /* The swipe duration only matters when swiping changes the volume */
+        const swipeSpeedRow = this._airpodsSettingRows.get('VolumeSwipeSpeed');
+        swipeSpeedRow.sensitive = settings.VolumeSwipe !== false;
+
+        this._airpodsSettingsEmptyGroup.visible = Object.keys(settings).length === 0;
     }
 
     _setSensitive(sensitive) {

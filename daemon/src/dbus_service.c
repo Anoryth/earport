@@ -34,6 +34,7 @@ static const gchar introspection_xml[] =
     "    <property name='ListeningModeTransparency' type='b' access='read'/>"
     "    <property name='ListeningModeANC' type='b' access='read'/>"
     "    <property name='ListeningModeAdaptive' type='b' access='read'/>"
+    "    <property name='Settings' type='a{sv}' access='read'/>"
     "    <method name='SetNoiseControlMode'>"
     "      <arg type='s' name='mode' direction='in'/>"
     "    </method>"
@@ -51,6 +52,10 @@ static const gchar introspection_xml[] =
     "      <arg type='b' name='transparency' direction='in'/>"
     "      <arg type='b' name='anc' direction='in'/>"
     "      <arg type='b' name='adaptive' direction='in'/>"
+    "    </method>"
+    "    <method name='SetSetting'>"
+    "      <arg type='s' name='key' direction='in'/>"
+    "      <arg type='v' name='value' direction='in'/>"
     "    </method>"
     "    <method name='SetDisplayName'>"
     "      <arg type='s' name='name' direction='in'/>"
@@ -103,7 +108,92 @@ struct DbusService {
 
     DbusDisplayNameCallback display_name_callback;
     void *display_name_user_data;
+
+    DbusSettingCallback setting_callback;
+    void *setting_user_data;
 };
+
+/* Settings announced by the AirPods, as {key: b|i}. Caller holds the lock. */
+static GVariant *build_settings_variant(AirPodsState *state)
+{
+    GVariantBuilder builder;
+    g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sv}"));
+
+    for (int i = 0; i < AIRPODS_SETTING_COUNT; i++) {
+        const AirPodsSettingDef *def = airpods_setting_at(i);
+        if (!state->setting_announced[i])
+            continue;
+
+        int value = airpods_setting_decode(def, state->setting_values[i]);
+        if (value < 0)
+            continue;  /* Unexpected byte: better hidden than wrong */
+
+        if (def->kind == AIRPODS_SETTING_BOOL)
+            g_variant_builder_add(&builder, "{sv}", def->key, g_variant_new_boolean(value));
+        else
+            g_variant_builder_add(&builder, "{sv}", def->key, g_variant_new_int32(value));
+    }
+
+    return g_variant_builder_end(&builder);
+}
+
+static void handle_set_setting(DbusService *service,
+                               GVariant *parameters,
+                               GDBusMethodInvocation *invocation)
+{
+    const gchar *key = NULL;
+    GVariant *value = NULL;
+    g_variant_get(parameters, "(&sv)", &key, &value);
+
+    const AirPodsSettingDef *def = airpods_setting_by_key(key);
+    int int_value = -1;
+
+    if (def == NULL) {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                              "Unknown setting: %s", key);
+        goto out;
+    }
+
+    if (def->kind == AIRPODS_SETTING_BOOL && g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN)) {
+        int_value = g_variant_get_boolean(value) ? 1 : 0;
+    } else if (def->kind == AIRPODS_SETTING_CHOICE && g_variant_is_of_type(value, G_VARIANT_TYPE_INT32)) {
+        int_value = g_variant_get_int32(value);
+    } else {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                              "Wrong value type for %s: expected %s, got %s", key,
+                                              def->kind == AIRPODS_SETTING_BOOL ? "b" : "i",
+                                              g_variant_get_type_string(value));
+        goto out;
+    }
+
+    uint8_t byte;
+    if (!airpods_setting_encode(def, int_value, &byte)) {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                              "Value out of range for %s: %d", key, int_value);
+        goto out;
+    }
+
+    uint8_t current;
+    if (!airpods_state_get_setting(service->state, def->id, &current)) {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_NOT_SUPPORTED,
+                                              "Setting not available on these AirPods: %s", key);
+        goto out;
+    }
+
+    g_message("D-Bus: SetSetting(%s, %d)", key, int_value);
+
+    if (service->setting_callback == NULL ||
+        !service->setting_callback(def, byte, service->setting_user_data)) {
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+                                              "AirPods not connected");
+        goto out;
+    }
+
+    g_dbus_method_invocation_return_value(invocation, NULL);
+
+out:
+    g_variant_unref(value);
+}
 
 static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
                                const gchar *sender G_GNUC_UNUSED,
@@ -168,6 +258,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(state->listening_modes.anc_enabled);
     } else if (g_strcmp0(property_name, "ListeningModeAdaptive") == 0) {
         result = g_variant_new_boolean(state->listening_modes.adaptive_enabled);
+    } else if (g_strcmp0(property_name, "Settings") == 0) {
+        result = build_settings_variant(state);
     }
 
     g_mutex_unlock(&state->lock);
@@ -251,6 +343,9 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
         }
 
         g_dbus_method_invocation_return_value(invocation, NULL);
+
+    } else if (g_strcmp0(method_name, "SetSetting") == 0) {
+        handle_set_setting(service, parameters, invocation);
 
     } else if (g_strcmp0(method_name, "SetDisplayName") == 0) {
         const gchar *name = NULL;
@@ -430,6 +525,14 @@ void dbus_service_set_display_name_callback(DbusService *service,
 {
     service->display_name_callback = callback;
     service->display_name_user_data = user_data;
+}
+
+void dbus_service_set_setting_callback(DbusService *service,
+                                        DbusSettingCallback callback,
+                                        void *user_data)
+{
+    service->setting_callback = callback;
+    service->setting_user_data = user_data;
 }
 
 static void emit_signal(DbusService *service,
