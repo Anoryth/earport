@@ -36,6 +36,7 @@ static const gchar introspection_xml[] =
     "    <property name='ListeningModeANC' type='b' access='read'/>"
     "    <property name='ListeningModeAdaptive' type='b' access='read'/>"
     "    <property name='Settings' type='a{sv}' access='read'/>"
+    "    <property name='AutoConnect' type='b' access='read'/>"
     "    <method name='SetNoiseControlMode'>"
     "      <arg type='s' name='mode' direction='in'/>"
     "    </method>"
@@ -57,6 +58,9 @@ static const gchar introspection_xml[] =
     "    <method name='SetSetting'>"
     "      <arg type='s' name='key' direction='in'/>"
     "      <arg type='v' name='value' direction='in'/>"
+    "    </method>"
+    "    <method name='SetAutoConnect'>"
+    "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
     "    <method name='SetDisplayName'>"
     "      <arg type='s' name='name' direction='in'/>"
@@ -115,6 +119,10 @@ struct DbusService {
 
     DbusSettingCallback setting_callback;
     void *setting_user_data;
+
+    DbusAutoConnectCallback auto_connect_callback;
+    void *auto_connect_user_data;
+    bool auto_connect;
 };
 
 /* Settings announced by the AirPods, as {key: b|i}. Caller holds the lock. */
@@ -264,6 +272,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(state->listening_modes.anc_enabled);
     } else if (g_strcmp0(property_name, "ListeningModeAdaptive") == 0) {
         result = g_variant_new_boolean(state->listening_modes.adaptive_enabled);
+    } else if (g_strcmp0(property_name, "AutoConnect") == 0) {
+        result = g_variant_new_boolean(service->auto_connect);
     } else if (g_strcmp0(property_name, "Settings") == 0) {
         result = build_settings_variant(state);
     }
@@ -348,6 +358,15 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
                                                service->listening_modes_user_data);
         }
 
+        g_dbus_method_invocation_return_value(invocation, NULL);
+
+    } else if (g_strcmp0(method_name, "SetAutoConnect") == 0) {
+        gboolean enabled = FALSE;
+        g_variant_get(parameters, "(b)", &enabled);
+        g_message("D-Bus: SetAutoConnect(%s)", enabled ? "true" : "false");
+
+        if (service->auto_connect_callback)
+            service->auto_connect_callback(enabled, service->auto_connect_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
     } else if (g_strcmp0(method_name, "SetSetting") == 0) {
@@ -539,6 +558,20 @@ void dbus_service_set_setting_callback(DbusService *service,
 {
     service->setting_callback = callback;
     service->setting_user_data = user_data;
+}
+
+void dbus_service_set_auto_connect_callback(DbusService *service,
+                                            DbusAutoConnectCallback callback,
+                                            void *user_data)
+{
+    service->auto_connect_callback = callback;
+    service->auto_connect_user_data = user_data;
+}
+
+void dbus_service_set_auto_connect(DbusService *service, bool enabled)
+{
+    service->auto_connect = enabled;
+    dbus_service_emit_properties_changed(service, "AutoConnect");
 }
 
 static void emit_signal(DbusService *service,

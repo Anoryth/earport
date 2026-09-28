@@ -195,6 +195,18 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         mediaGroup.add(this._earPauseRow);
 
+        /* Connection group */
+        const connectionGroup = new Adw.PreferencesGroup({
+            title: _('Connection'),
+        });
+        page.add(connectionGroup);
+
+        this._autoConnectRow = new Adw.SwitchRow({
+            title: _('Automatic Connection'),
+            subtitle: _('Connect when you put your AirPods in or start playing, unless another device is using them'),
+        });
+        connectionGroup.add(this._autoConnectRow);
+
         /* Notifications group */
         const notificationsGroup = new Adw.PreferencesGroup({
             title: _('Notifications'),
@@ -316,6 +328,12 @@ export default class EarPortPreferences extends ExtensionPreferences {
             }
         });
 
+        this._autoConnectRow.connect('notify::active', () => {
+            if (this._updatingFromProxy)
+                return;
+            this._proxy?.SetAutoConnectRemote(this._autoConnectRow.active, () => {});
+        });
+
         this._earPauseRow.connect('notify::selected', () => {
             if (this._updatingFromProxy)
                 return;
@@ -402,6 +420,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
         /* Initialize ear pause mode (available even when AirPods are not connected) */
         this._updatingFromProxy = true;
         this._earPauseRow.selected = this._proxy.EarPauseMode;
+        this._updateAutoConnect();
         this._updatingFromProxy = false;
 
         this._updateState();
@@ -425,6 +444,8 @@ export default class EarPortPreferences extends ExtensionPreferences {
          * fire notify handlers that push values back to the daemon. */
         this._updatingFromProxy = true;
         this._updatingListeningModes = true;
+
+        this._updateAutoConnect();
 
         if (connected) {
             const displayName = this._proxy.DisplayName || this._proxy.DeviceModel || 'AirPods';
@@ -582,6 +603,15 @@ export default class EarPortPreferences extends ExtensionPreferences {
         swipeSpeedRow.sensitive = settings.VolumeSwipe !== false;
 
         this._airpodsSettingsEmptyGroup.visible = Object.keys(settings).length === 0;
+    }
+
+    /* Available while disconnected: that is when it matters */
+    _updateAutoConnect() {
+        const enabled = this._proxy?.AutoConnect;
+        /* null with a daemon older than the preferences */
+        this._autoConnectRow.visible = typeof enabled === 'boolean';
+        if (this._autoConnectRow.visible)
+            this._autoConnectRow.active = enabled;
     }
 
     _setSensitive(sensitive) {

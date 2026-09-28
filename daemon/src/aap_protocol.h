@@ -34,6 +34,13 @@
 #define AAP_OPCODE_METADATA      0x1D
 #define AAP_OPCODE_CA_DETECTION  0x4B
 #define AAP_OPCODE_SET_FEATURES  0x4D
+#define AAP_OPCODE_PROXIMITY_KEYS_REQ 0x30
+#define AAP_OPCODE_PROXIMITY_KEYS_RSP 0x31
+
+/* Proximity key types (opcode 0x31) */
+#define AAP_PROXIMITY_KEY_IRK 0x01  /* Resolves the BLE random address */
+#define AAP_PROXIMITY_KEY_ENC 0x04  /* Decrypts BLE battery data */
+#define AAP_PROXIMITY_KEY_SIZE 16
 
 /* Control command identifiers (byte after opcode 0x09) */
 #define AAP_CTRL_NOISE_CONTROL       0x0D
@@ -100,6 +107,7 @@ typedef enum {
     AAP_PKT_TYPE_METADATA,
     AAP_PKT_TYPE_LISTENING_MODES,
     AAP_PKT_TYPE_CONTROL_SETTING,
+    AAP_PKT_TYPE_PROXIMITY_KEYS,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -141,6 +149,14 @@ typedef struct {
     uint8_t value[4];
 } AapControlSetting;
 
+/* Keys used to recognize the AirPods' BLE advertisements */
+typedef struct {
+    bool has_irk;
+    bool has_enc;
+    uint8_t irk[AAP_PROXIMITY_KEY_SIZE];  /* As sent: little-endian */
+    uint8_t enc[AAP_PROXIMITY_KEY_SIZE];
+} AapProximityKeys;
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;
@@ -153,6 +169,7 @@ typedef struct {
         AapMetadata metadata;
         AapListeningModes listening_modes;
         AapControlSetting control_setting;
+        AapProximityKeys proximity_keys;
     } data;
 } AapParsedPacket;
 
@@ -190,6 +207,10 @@ AapParseResult aap_parse_ear_detection(const uint8_t *data, size_t len, AapEarDe
  * Parse noise control response
  */
 AapParseResult aap_parse_noise_control(const uint8_t *data, size_t len, NoiseControlMode *mode);
+
+/* Proximity keys request: 04 00 04 00 30 00 05 00 */
+#define AAP_PROXIMITY_KEYS_REQ_SIZE 8
+extern const uint8_t AAP_PKT_REQUEST_PROXIMITY_KEYS[AAP_PROXIMITY_KEYS_REQ_SIZE];
 
 /**
  * Interpret a conversation awareness event level (opcode 0x4B)

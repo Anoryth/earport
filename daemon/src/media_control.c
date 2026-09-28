@@ -25,7 +25,34 @@ struct MediaControl {
     bool prev_left_in_ear;
     bool prev_right_in_ear;
     bool prev_state_valid;
+
+    /* Any MPRIS player starting to play */
+    guint playback_subscription_id;
+    MediaPlaybackStartedCallback playback_started_callback;
+    void *playback_started_user_data;
 };
+
+static void on_player_properties_changed(GDBusConnection *connection G_GNUC_UNUSED,
+                                         const gchar *sender_name G_GNUC_UNUSED,
+                                         const gchar *object_path G_GNUC_UNUSED,
+                                         const gchar *interface_name G_GNUC_UNUSED,
+                                         const gchar *signal_name G_GNUC_UNUSED,
+                                         GVariant *parameters,
+                                         gpointer user_data)
+{
+    MediaControl *mc = user_data;
+    GVariant *changed = NULL;
+    const gchar *status = NULL;
+
+    if (mc->playback_started_callback == NULL)
+        return;
+
+    g_variant_get(parameters, "(&s@a{sv}@as)", NULL, &changed, NULL);
+    if (g_variant_lookup(changed, "PlaybackStatus", "&s", &status) &&
+        g_strcmp0(status, "Playing") == 0)
+        mc->playback_started_callback(mc->playback_started_user_data);
+    g_variant_unref(changed);
+}
 
 /* ============================================================================
  * Helper functions
@@ -179,6 +206,18 @@ MediaControl *media_control_new(void)
     mc->paused_players = NULL;
     mc->prev_state_valid = false;
 
+    mc->playback_subscription_id = g_dbus_connection_signal_subscribe(
+        mc->connection,
+        NULL,
+        DBUS_PROPERTIES_INTERFACE,
+        "PropertiesChanged",
+        MPRIS_DBUS_PATH,
+        MPRIS_PLAYER_INTERFACE,
+        G_DBUS_SIGNAL_FLAGS_NONE,
+        on_player_properties_changed,
+        mc,
+        NULL);
+
     return mc;
 }
 
@@ -192,10 +231,22 @@ void media_control_free(MediaControl *mc)
     g_list_free_full(mc->paused_players, g_free);
 
     if (mc->connection) {
+        if (mc->playback_subscription_id > 0)
+            g_dbus_connection_signal_unsubscribe(mc->connection, mc->playback_subscription_id);
         g_object_unref(mc->connection);
     }
 
     g_free(mc);
+}
+
+void media_control_set_playback_started_callback(MediaControl *mc,
+                                                 MediaPlaybackStartedCallback callback,
+                                                 void *user_data)
+{
+    if (mc == NULL)
+        return;
+    mc->playback_started_callback = callback;
+    mc->playback_started_user_data = user_data;
 }
 
 void media_control_set_ear_pause_mode(MediaControl *mc, EarPauseMode mode)

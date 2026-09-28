@@ -15,6 +15,9 @@
 /* Media control context */
 typedef struct MediaControl MediaControl;
 
+/* Called when any MPRIS player starts playing */
+typedef void (*MediaPlaybackStartedCallback)(void *user_data);
+
 /* Ear detection mode for auto-pause behavior */
 typedef enum {
     EAR_PAUSE_DISABLED = 0,    /* Don't pause on ear removal */
@@ -41,6 +44,11 @@ void media_control_on_ear_detection_changed(MediaControl *mc,
 
 /* Pause all playing media players */
 void media_control_pause_all(MediaControl *mc);
+
+/* Be told when a player starts playing (e.g. to connect the AirPods) */
+void media_control_set_playback_started_callback(MediaControl *mc,
+                                                 MediaPlaybackStartedCallback callback,
+                                                 void *user_data);
 
 /* Resume media players that were paused by us */
 void media_control_resume(MediaControl *mc);

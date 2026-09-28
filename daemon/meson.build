@@ -23,6 +23,7 @@ bluetooth_dep = dependency('bluez', required: false)
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required: false)
+nettle_dep = dependency('nettle')
 
 # Without the bluez pkg-config file, just check the headers are there
 if bluetooth_dep.found()
@@ -39,6 +40,8 @@ sources = files(
     'src/airpods_settings.c',
     'src/aap_protocol.c',
     'src/battery_estimator.c',
+    'src/ble_proximity.c',
+    'src/ble_scanner.c',
     'src/bluetooth.c',
     'src/bluez_monitor.c',
     'src/config.c',
@@ -49,7 +52,7 @@ sources = files(
 # Build executable
 executable('earport-daemon',
     sources,
-    dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep, m_dep],
+    dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep, m_dep, nettle_dep],
     install: true,
     install_dir: get_option('bindir'),
 )
@@ -75,6 +78,13 @@ test_battery_estimator = executable('test-battery-estimator',
     dependencies: [glib_dep, m_dep],
 )
 test('battery-estimator', test_battery_estimator)
+
+test_ble_proximity = executable('test-ble-proximity',
+    files('tests/test_ble_proximity.c', 'src/ble_proximity.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, nettle_dep],
+)
+test('ble-proximity', test_ble_proximity)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

@@ -15,6 +15,7 @@
 /* Configuration data structure */
 typedef struct {
     int ear_pause_mode;   /* 0=disabled, 1=one_out, 2=both_out */
+    bool auto_connect;    /* Connect when the AirPods are put in or playback starts */
 } EarPortConfig;
 
 /**
@@ -107,5 +108,12 @@ bool config_save_device_listening_modes(const char *device_address, const Listen
  * @param modes Pointer to structure to fill with defaults
  */
 void config_get_default_listening_modes(ListeningModesConfig *modes);
+
+/**
+ * IRK of the AirPods used last, to recognize their BLE advertisements.
+ * Kept in keys.conf, readable by the user only.
+ */
+bool config_save_proximity_irk(const char *device_address, const uint8_t *irk);
+bool config_load_proximity_irk(char **device_address, uint8_t *irk);
 
 #endif /* CONFIG_H */

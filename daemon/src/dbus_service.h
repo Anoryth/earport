@@ -40,6 +40,9 @@ typedef void (*DbusDisplayNameCallback)(const char *name, void *user_data);
  * Returns false if it could not be sent (AirPods not connected). */
 typedef bool (*DbusSettingCallback)(const AirPodsSettingDef *def, uint8_t byte, void *user_data);
 
+/* Callback for the automatic connection option */
+typedef void (*DbusAutoConnectCallback)(bool enabled, void *user_data);
+
 typedef struct DbusService DbusService;
 
 /**
@@ -108,6 +111,14 @@ void dbus_service_set_listening_modes_callback(DbusService *service,
 void dbus_service_set_setting_callback(DbusService *service,
                                         DbusSettingCallback callback,
                                         void *user_data);
+
+/**
+ * Set callback and current value of the automatic connection option
+ */
+void dbus_service_set_auto_connect_callback(DbusService *service,
+                                            DbusAutoConnectCallback callback,
+                                            void *user_data);
+void dbus_service_set_auto_connect(DbusService *service, bool enabled);
 
 /**
  * Set callback for display name change requests

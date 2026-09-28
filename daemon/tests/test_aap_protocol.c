@@ -254,6 +254,37 @@ static void test_conversation_events(void)
 }
 
 /* ============================================================================
+ * Proximity keys
+ * ========================================================================== */
+
+static void test_proximity_keys(void)
+{
+    /* Same layout as the AirPods' answer, with made-up keys */
+    uint8_t pkt[7 + 2 * (4 + 16)] = { 0x04, 0x00, 0x04, 0x00, 0x31, 0x00, 0x02 };
+    uint8_t *p = pkt + 7;
+    *p++ = 0x01; *p++ = 0x00; *p++ = 0x10; *p++ = 0x00;
+    for (int i = 0; i < 16; i++) *p++ = (uint8_t)i;
+    *p++ = 0x04; *p++ = 0x00; *p++ = 0x10; *p++ = 0x00;
+    for (int i = 0; i < 16; i++) *p++ = (uint8_t)(0xF0 + i);
+    AapParsedPacket parsed;
+
+    g_assert_cmpint(PARSE(pkt, &parsed), ==, AAP_PARSE_OK);
+    g_assert_cmpint(parsed.type, ==, AAP_PKT_TYPE_PROXIMITY_KEYS);
+    g_assert_true(parsed.data.proximity_keys.has_irk);
+    g_assert_true(parsed.data.proximity_keys.has_enc);
+    g_assert_cmpuint(parsed.data.proximity_keys.irk[0], ==, 0x00);
+    g_assert_cmpuint(parsed.data.proximity_keys.irk[15], ==, 0x0F);
+    g_assert_cmpuint(parsed.data.proximity_keys.enc[15], ==, 0xFF);
+
+    /* Truncated in the middle of the second key */
+    g_assert_cmpint(aap_parse_packet(pkt, sizeof(pkt) - 5, &parsed), ==, AAP_PARSE_INCOMPLETE);
+
+    const uint8_t request[] = { 0x04, 0x00, 0x04, 0x00, 0x30, 0x00, 0x05, 0x00 };
+    g_assert_cmpmem(AAP_PKT_REQUEST_PROXIMITY_KEYS, AAP_PROXIMITY_KEYS_REQ_SIZE,
+                    request, sizeof(request));
+}
+
+/* ============================================================================
  * Metadata
  * ========================================================================== */
 
@@ -373,6 +404,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/control/settings", test_control_settings);
     g_test_add_func("/aap/control/setting-short", test_control_setting_short);
     g_test_add_func("/aap/conversation-events", test_conversation_events);
+    g_test_add_func("/aap/proximity-keys", test_proximity_keys);
     g_test_add_func("/aap/metadata", test_metadata);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);

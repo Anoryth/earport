@@ -46,6 +46,10 @@ const uint8_t AAP_PKT_CA_DISABLE[AAP_CONTROL_CMD_SIZE] = {
     0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x02, 0x00, 0x00, 0x00
 };
 
+const uint8_t AAP_PKT_REQUEST_PROXIMITY_KEYS[AAP_PROXIMITY_KEYS_REQ_SIZE] = {
+    0x04, 0x00, 0x04, 0x00, AAP_OPCODE_PROXIMITY_KEYS_REQ, 0x00, 0x05, 0x00
+};
+
 bool aap_has_valid_header(const uint8_t *data, size_t len)
 {
     if (data == NULL || len < AAP_HEADER_SIZE)
@@ -232,6 +236,39 @@ static AapParseResult aap_parse_metadata(const uint8_t *data, size_t len, AapMet
     return AAP_PARSE_OK;
 }
 
+static AapParseResult aap_parse_proximity_keys(const uint8_t *data, size_t len,
+                                              AapProximityKeys *keys)
+{
+    /* 04 00 04 00 31 00 [count] then per key: [type] 00 [length] 00 [key] */
+    if (len < 7)
+        return AAP_PARSE_INCOMPLETE;
+
+    memset(keys, 0, sizeof(*keys));
+    size_t offset = 7;
+
+    for (uint8_t i = 0; i < data[6]; i++) {
+        if (offset + 4 > len)
+            return AAP_PARSE_INCOMPLETE;
+
+        uint8_t type = data[offset];
+        size_t key_len = data[offset + 2];
+        offset += 4;
+        if (offset + key_len > len)
+            return AAP_PARSE_INCOMPLETE;
+
+        if (key_len == AAP_PROXIMITY_KEY_SIZE && type == AAP_PROXIMITY_KEY_IRK) {
+            memcpy(keys->irk, data + offset, AAP_PROXIMITY_KEY_SIZE);
+            keys->has_irk = true;
+        } else if (key_len == AAP_PROXIMITY_KEY_SIZE && type == AAP_PROXIMITY_KEY_ENC) {
+            memcpy(keys->enc, data + offset, AAP_PROXIMITY_KEY_SIZE);
+            keys->has_enc = true;
+        }
+        offset += key_len;
+    }
+
+    return AAP_PARSE_OK;
+}
+
 static AapParseResult parse_control_packet(const uint8_t *data, size_t len, AapParsedPacket *result)
 {
     if (len < 8)
@@ -302,6 +339,10 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
             return AAP_PARSE_INCOMPLETE;
         result->data.ca_volume_level = data[9];
         return AAP_PARSE_OK;
+
+    case AAP_OPCODE_PROXIMITY_KEYS_RSP:
+        result->type = AAP_PKT_TYPE_PROXIMITY_KEYS;
+        return aap_parse_proximity_keys(data, len, &result->data.proximity_keys);
 
     case AAP_OPCODE_METADATA:
         result->type = AAP_PKT_TYPE_METADATA;

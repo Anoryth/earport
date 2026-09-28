@@ -11,6 +11,8 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <glib/gstdio.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define CONFIG_DIR_NAME "earport"
 #define LEGACY_CONFIG_DIR_NAME "librepods"  /* Pre-rename directory */
@@ -97,6 +99,7 @@ static bool ensure_config_dir(void)
 void config_get_defaults(EarPortConfig *config)
 {
     config->ear_pause_mode = 1;  /* EAR_PAUSE_ONE_OUT */
+    config->auto_connect = false;
 }
 
 bool config_load(EarPortConfig *config)
@@ -135,7 +138,11 @@ bool config_load(EarPortConfig *config)
         }
     }
 
-    g_message("Config loaded: ear_pause_mode=%d", config->ear_pause_mode);
+    if (g_key_file_has_key(keyfile, CONFIG_GROUP, "auto_connect", NULL))
+        config->auto_connect = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "auto_connect", NULL);
+
+    g_message("Config loaded: ear_pause_mode=%d auto_connect=%d",
+              config->ear_pause_mode, config->auto_connect);
 
     g_key_file_free(keyfile);
     g_free(config_path);
@@ -152,11 +159,13 @@ bool config_save(const EarPortConfig *config)
 
     /* Write settings */
     g_key_file_set_integer(keyfile, CONFIG_GROUP, "ear_pause_mode", config->ear_pause_mode);
+    g_key_file_set_boolean(keyfile, CONFIG_GROUP, "auto_connect", config->auto_connect);
 
     /* Add comment */
     g_key_file_set_comment(keyfile, CONFIG_GROUP, NULL,
                            "EarPort daemon configuration\n"
-                           "ear_pause_mode: 0=disabled, 1=pause when one removed, 2=pause when both removed",
+                           "ear_pause_mode: 0=disabled, 1=pause when one removed, 2=pause when both removed\n"
+                           "auto_connect: connect when the AirPods are put in or playback starts",
                            NULL);
 
     gchar *config_path = get_config_path();
@@ -533,5 +542,89 @@ bool config_save_drain_rate(const char *device_address, double drain_rate)
     g_key_file_free(keyfile);
     g_free(group);
     g_free(config_path);
+    return ok;
+}
+
+/* ============================================================================
+ * Proximity keys (keys.conf, mode 0600)
+ * ========================================================================== */
+
+#define KEYS_FILE_NAME "keys.conf"
+#define KEYS_GENERAL_GROUP "General"
+
+static gchar *get_keys_path(void)
+{
+    gchar *config_dir = get_config_dir();
+    gchar *path = g_build_filename(config_dir, KEYS_FILE_NAME, NULL);
+    g_free(config_dir);
+    return path;
+}
+
+bool config_save_proximity_irk(const char *device_address, const uint8_t *irk)
+{
+    if (device_address == NULL || device_address[0] == '\0' || !ensure_config_dir())
+        return false;
+
+    gchar *path = get_keys_path();
+    gchar *group = address_to_group(device_address);
+    gchar *hex = g_malloc(2 * 16 + 1);
+    for (int i = 0; i < 16; i++)
+        g_snprintf(hex + 2 * i, 3, "%02x", irk[i]);
+
+    GKeyFile *keyfile = g_key_file_new();
+    g_key_file_load_from_file(keyfile, path, G_KEY_FILE_NONE, NULL);
+    g_key_file_set_string(keyfile, group, "irk", hex);
+    g_key_file_set_string(keyfile, KEYS_GENERAL_GROUP, "last_device", device_address);
+
+    gsize len;
+    gchar *data = g_key_file_to_data(keyfile, &len, NULL);
+
+    /* Never readable by others, not even for a moment */
+    bool ok = false;
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    if (fd >= 0) {
+        ok = fchmod(fd, 0600) == 0 && write(fd, data, len) == (ssize_t)len;
+        ok = (close(fd) == 0) && ok;
+    }
+    if (!ok)
+        g_warning("Failed to save the AirPods keys: %s", g_strerror(errno));
+
+    g_free(data);
+    g_key_file_free(keyfile);
+    g_free(hex);
+    g_free(group);
+    g_free(path);
+    return ok;
+}
+
+bool config_load_proximity_irk(char **device_address, uint8_t *irk)
+{
+    gchar *path = get_keys_path();
+    GKeyFile *keyfile = g_key_file_new();
+    bool ok = false;
+
+    if (g_key_file_load_from_file(keyfile, path, G_KEY_FILE_NONE, NULL)) {
+        gchar *address = g_key_file_get_string(keyfile, KEYS_GENERAL_GROUP, "last_device", NULL);
+        gchar *group = address ? address_to_group(address) : NULL;
+        gchar *hex = group ? g_key_file_get_string(keyfile, group, "irk", NULL) : NULL;
+
+        if (hex != NULL && strlen(hex) == 32) {
+            ok = true;
+            for (int i = 0; i < 16 && ok; i++) {
+                unsigned int byte;
+                ok = sscanf(hex + 2 * i, "%2x", &byte) == 1;
+                irk[i] = (uint8_t)byte;
+            }
+        }
+
+        if (ok)
+            *device_address = g_steal_pointer(&address);
+        g_free(hex);
+        g_free(group);
+        g_free(address);
+    }
+
+    g_key_file_free(keyfile);
+    g_free(path);
     return ok;
 }
