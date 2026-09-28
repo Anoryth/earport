@@ -3,7 +3,9 @@
  * Text colors are inherited from the shell theme so the extension follows
  * light/dark themes automatically. Accent-colored elements declare a static
  * fallback first, then -st-accent-color (GNOME 47+) which wins when
- * supported. State colors (low/charging) use the GNOME palette.
+ * supported. State colors (low/charging) use the GNOME palette, picked
+ * to keep at least 3:1 contrast on both light and dark shell themes.
+ * Font sizes are in em so they follow the "Large Text" setting.
  */
 
 /* ============================================
@@ -12,17 +14,22 @@
 
 /* Subtle pill next to the headphones icon */
 .earport-panel-battery {
-    font-size: 11px;
+    font-size: 0.818em;
     font-weight: 600;
     margin-left: 5px;
     padding: 1px 8px;
+    spacing: 2px;
     border-radius: 99px;
     background-color: rgba(128, 128, 128, 0.2);
     transition-duration: 200ms;
 }
 
+.earport-panel-charging-icon {
+    icon-size: 0.9em;
+}
+
 .earport-panel-battery.low {
-    color: #ff7800;
+    color: #e66100;
 }
 
 .earport-panel-battery.critical {
@@ -30,7 +37,7 @@
 }
 
 .earport-panel-battery.charging {
-    color: #2ec27e;
+    color: #26a269;
 }
 
 /* ============================================
@@ -58,7 +65,7 @@
 }
 
 .earport-battery-ring.low {
-    color: #ff7800;
+    color: #e66100;
 }
 
 .earport-battery-ring.critical {
@@ -66,21 +73,29 @@
 }
 
 .earport-battery-ring.charging {
-    color: #2ec27e;
+    color: #26a269;
 }
 
 .earport-battery-icon {
     transition-duration: 200ms;
 }
 
+.earport-battery-level-box {
+    spacing: 2px;
+}
+
+.earport-battery-charging-icon {
+    icon-size: 12px;
+}
+
 .earport-battery-level {
-    font-size: 13px;
+    font-size: 0.909em;
     font-weight: bold;
     text-align: center;
 }
 
 .earport-battery-name {
-    font-size: 11px;
+    font-size: 0.818em;
     font-weight: 500;
     text-align: center;
 }
@@ -106,15 +121,23 @@
     background-color: rgba(128, 128, 128, 0.3);
 }
 
-.earport-nc-button:active,
-.earport-nc-button:focus {
+.earport-nc-button:active {
     background-color: rgba(128, 128, 128, 0.35);
 }
 
-/* Active/selected noise control mode: system accent color */
-.earport-nc-button.active,
-.earport-nc-button.active:hover,
-.earport-nc-button.active:focus {
+/* Keyboard focus: same ring as the shell's own buttons */
+.earport-nc-button:focus {
+    box-shadow: inset 0 0 0 2px rgba(153, 193, 241, 0.8);
+    box-shadow: inset 0 0 0 2px st-transparentize(st-mix(-st-accent-color, #ffffff, 60%), 0.2);
+}
+
+.earport-nc-button:insensitive {
+    background-color: rgba(128, 128, 128, 0.1);
+}
+
+/* Selected noise control mode: system accent color */
+.earport-nc-button:checked,
+.earport-nc-button:checked:hover {
     background-color: #3584e4;
     background-color: -st-accent-color;
 }
@@ -124,16 +147,18 @@
 }
 
 .earport-nc-label {
-    font-size: 11px;
+    font-size: 0.818em;
     font-weight: 500;
     margin-top: 5px;
 }
 
-.earport-nc-button.active .earport-nc-icon,
-.earport-nc-button.active .earport-nc-label {
+/* Text on the accent color: the shell picks black or white for contrast */
+.earport-nc-button:checked .earport-nc-icon,
+.earport-nc-button:checked .earport-nc-label {
     color: #ffffff;
+    color: -st-accent-fg-color;
 }
 
-.earport-nc-button.active .earport-nc-label {
+.earport-nc-button:checked .earport-nc-label {
     font-weight: 600;
 }

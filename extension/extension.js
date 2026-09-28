@@ -5,6 +5,7 @@
  * EarPort Shell Extension
  */
 
+import Atk from 'gi://Atk';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import St from 'gi://St';
@@ -38,7 +39,7 @@ const CONVERSATION_VOLUME_RATIO = 0.2;
  * themed foreground color, so all state styling lives in the stylesheet. */
 const BatteryIndicator = GObject.registerClass(
 class BatteryIndicator extends St.BoxLayout {
-    _init(type, label, gicon) {
+    _init(type, label, gicon, chargingGicon) {
         super._init({
             style_class: 'earport-battery-indicator',
             vertical: true,
@@ -73,10 +74,26 @@ class BatteryIndicator extends St.BoxLayout {
         this._ringBin.add_child(this._ring);
         this._ringBin.add_child(this._icon);
 
-        this._levelLabel = new St.Label({
-            text: '--',
-            style_class: 'earport-battery-level',
+        /* Charging is shown by a bolt, not only by the ring color */
+        this._chargingIcon = new St.Icon({
+            gicon: chargingGicon,
+            style_class: 'earport-battery-charging-icon',
+            y_align: Clutter.ActorAlign.CENTER,
+            visible: false,
         });
+
+        this._levelLabel = new St.Label({
+            text: '—',
+            style_class: 'earport-battery-level',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const levelBox = new St.BoxLayout({
+            style_class: 'earport-battery-level-box',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        levelBox.add_child(this._chargingIcon);
+        levelBox.add_child(this._levelLabel);
 
         this._nameLabel = new St.Label({
             text: label,
@@ -85,7 +102,7 @@ class BatteryIndicator extends St.BoxLayout {
         });
 
         this.add_child(this._ringBin);
-        this.add_child(this._levelLabel);
+        this.add_child(levelBox);
         this.add_child(this._nameLabel);
 
         this._level = -1;
@@ -120,8 +137,10 @@ class BatteryIndicator extends St.BoxLayout {
         this._level = level;
         this._charging = charging;
 
+        this._chargingIcon.visible = level >= 0 && charging;
+
         if (level < 0) {
-            this._levelLabel.text = '--';
+            this._levelLabel.text = '—';
             this._ringBin.opacity = 128;
             this._setStyleState(null);
         } else {
@@ -140,6 +159,15 @@ class BatteryIndicator extends St.BoxLayout {
         }
 
         this._ring.queue_repaint();
+    }
+
+    /* Spoken summary, e.g. "Left 16%, charging" */
+    get accessibleText() {
+        const name = this._nameLabel.text;
+        if (this._level < 0)
+            return `${name} ${_('unavailable')}`;
+        const text = `${name} ${this._level}%`;
+        return this._charging ? `${text}, ${_('charging')}` : text;
     }
 
     _setStyleState(state) {
@@ -195,6 +223,7 @@ class NoiseControlButton extends St.Button {
             style_class: 'earport-nc-button',
             can_focus: true,
             accessible_name: label,
+            accessible_role: Atk.Role.TOGGLE_BUTTON,
             child: new St.BoxLayout({
                 vertical: true,
                 x_align: Clutter.ActorAlign.CENTER,
@@ -223,12 +252,9 @@ class NoiseControlButton extends St.Button {
         return this._mode;
     }
 
+    /* Checked state is exposed to screen readers and styled with :checked */
     setActive(active) {
-        if (active) {
-            this.add_style_class_name('active');
-        } else {
-            this.remove_style_class_name('active');
-        }
+        this.checked = active;
     }
 });
 
@@ -262,6 +288,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             right: Gio.icon_new_for_string(`${iconsDir}/earport-bud-right-symbolic.svg`),
             case: Gio.icon_new_for_string(`${iconsDir}/earport-case-symbolic.svg`),
         };
+        this._chargingIcon = Gio.icon_new_for_string(`${iconsDir}/earport-charging-symbolic.svg`);
 
         /* Load settings */
         this._settings = extensionObject.getSettings();
@@ -322,20 +349,23 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             x_align: Clutter.ActorAlign.CENTER,
         });
 
-        this._leftBattery = new BatteryIndicator('left', _('Left'), this._batteryIcons.left);
-        this._rightBattery = new BatteryIndicator('right', _('Right'), this._batteryIcons.right);
-        this._caseBattery = new BatteryIndicator('case', _('Case'), this._batteryIcons.case);
+        this._leftBattery = new BatteryIndicator('left', _('Left'), this._batteryIcons.left, this._chargingIcon);
+        this._rightBattery = new BatteryIndicator('right', _('Right'), this._batteryIcons.right, this._chargingIcon);
+        this._caseBattery = new BatteryIndicator('case', _('Case'), this._batteryIcons.case, this._chargingIcon);
 
         this._batteryBox.add_child(this._leftBattery);
         this._batteryBox.add_child(this._rightBattery);
         this._batteryBox.add_child(this._caseBattery);
 
-        const batteryItem = new PopupMenu.PopupBaseMenuItem({
+        /* Not clickable, but reachable with the keyboard so screen readers
+         * can read the battery levels */
+        this._batteryItem = new PopupMenu.PopupBaseMenuItem({
             reactive: false,
-            can_focus: false,
+            can_focus: true,
         });
-        batteryItem.add_child(this._batteryBox);
-        this.menu.addMenuItem(batteryItem);
+        this._batteryItem.accessible_role = Atk.Role.LABEL;
+        this._batteryItem.add_child(this._batteryBox);
+        this.menu.addMenuItem(this._batteryItem);
 
         /* Separator */
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -514,6 +544,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._leftBattery.setLevel(left, this._proxy.ChargingLeft);
         this._rightBattery.setLevel(right, this._proxy.ChargingRight);
         this._caseBattery.setLevel(caseBattery, this._proxy.ChargingCase);
+        this._updateBatteryAccessibleName();
 
         /* Check for low battery notifications */
         this._checkLowBattery(left, right);
@@ -604,6 +635,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
                 this._caseBattery.setLevel(this._proxy.BatteryCase, this._proxy.ChargingCase);
             }
 
+            this._updateBatteryAccessibleName();
+
             /* Check for low battery on state update */
             this._checkLowBattery(batteryLeft, batteryRight);
 
@@ -611,6 +644,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             this._updateNoiseControlVisibility(supportsANC, supportsAdaptive);
 
             /* Update noise control */
+            this._setNoiseControlSensitive(true);
             this._updateNoiseControlButtons(this._proxy.NoiseControlMode);
         } else {
             this._updateDisconnectedState();
@@ -634,12 +668,30 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._leftBattery.setLevel(-1);
         this._rightBattery.setLevel(-1);
         this._caseBattery.setLevel(-1);
+        this._batteryItem.accessible_name = _('Disconnected');
 
         /* Show all noise control buttons and section when disconnected */
         this._ncBox.visible = true;
         for (const button of Object.values(this._ncButtons)) {
             button.visible = true;
             button.setActive(false);
+        }
+        this._setNoiseControlSensitive(false);
+    }
+
+    _updateBatteryAccessibleName() {
+        this._batteryItem.accessible_name =
+            [this._leftBattery, this._rightBattery, this._caseBattery]
+                .filter(indicator => indicator.visible)
+                .map(indicator => indicator.accessibleText)
+                .join(', ');
+    }
+
+    /* Keyboard focus must not land on buttons that do nothing */
+    _setNoiseControlSensitive(sensitive) {
+        for (const button of Object.values(this._ncButtons)) {
+            button.reactive = sensitive;
+            button.can_focus = sensitive;
         }
     }
 
@@ -756,16 +808,27 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
         this._indicator.icon_name = 'audio-headphones-symbolic';
         this._indicator.visible = false;
 
-        /* Create battery label for panel */
+        /* Battery pill for the panel: bolt when charging + lowest level */
+        this._batteryPill = new St.BoxLayout({
+            style_class: 'earport-panel-battery',
+            y_align: Clutter.ActorAlign.CENTER,
+            visible: false,
+        });
+        this._chargingIcon = new St.Icon({
+            gicon: Gio.icon_new_for_string(`${extensionObject.path}/icons/earport-charging-symbolic.svg`),
+            style_class: 'earport-panel-charging-icon',
+            y_align: Clutter.ActorAlign.CENTER,
+            visible: false,
+        });
         this._batteryLabel = new St.Label({
             text: '',
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'earport-panel-battery',
         });
-        this._batteryLabel.visible = false;
+        this._batteryPill.add_child(this._chargingIcon);
+        this._batteryPill.add_child(this._batteryLabel);
 
-        /* Add label after indicator icon */
-        this.add_child(this._batteryLabel);
+        /* Add pill after indicator icon */
+        this.add_child(this._batteryPill);
 
         this._proxy = null;
         this._propertiesChangedId = 0;
@@ -817,7 +880,7 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
 
         const connected = this._proxy.Connected;
         this._indicator.visible = connected;
-        this._batteryLabel.visible = connected;
+        this._batteryPill.visible = connected;
 
         if (connected) {
             const isHeadphones = this._proxy.IsHeadphones || false;
@@ -845,21 +908,23 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
                     ? this._proxy.ChargingLeft
                     : (this._proxy.ChargingLeft || this._proxy.ChargingRight);
 
+                this._chargingIcon.visible = charging;
+
                 /* Update style based on battery level */
-                this._batteryLabel.remove_style_class_name('low');
-                this._batteryLabel.remove_style_class_name('critical');
-                this._batteryLabel.remove_style_class_name('charging');
+                this._batteryPill.remove_style_class_name('low');
+                this._batteryPill.remove_style_class_name('critical');
+                this._batteryPill.remove_style_class_name('charging');
 
                 if (charging) {
-                    this._batteryLabel.add_style_class_name('charging');
+                    this._batteryPill.add_style_class_name('charging');
                 } else if (lowestBattery <= 10) {
-                    this._batteryLabel.add_style_class_name('critical');
+                    this._batteryPill.add_style_class_name('critical');
                 } else if (lowestBattery <= 20) {
-                    this._batteryLabel.add_style_class_name('low');
+                    this._batteryPill.add_style_class_name('low');
                 }
             } else {
                 this._batteryLabel.text = '';
-                this._batteryLabel.visible = false;
+                this._batteryPill.visible = false;
             }
         }
     }
