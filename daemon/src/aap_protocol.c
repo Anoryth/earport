@@ -298,9 +298,9 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
     case AAP_OPCODE_CA_DETECTION:
         result->type = AAP_PKT_TYPE_CA_DETECTION;
         /* Packet: 04 00 04 00 4B 00 02 00 01 [level] */
-        if (len >= 10) {
-            result->data.ca_volume_level = data[9];
-        }
+        if (len < 10)
+            return AAP_PARSE_INCOMPLETE;
+        result->data.ca_volume_level = data[9];
         return AAP_PARSE_OK;
 
     case AAP_OPCODE_METADATA:
@@ -330,6 +330,23 @@ void aap_build_noise_control_cmd(NoiseControlMode mode, uint8_t *buffer)
         break;
     }
     memcpy(buffer, src, AAP_CONTROL_CMD_SIZE);
+}
+
+int aap_ca_speaking_from_level(uint8_t level)
+{
+    /* Seen while speaking: 01 02, then 03 0B 04 08 09 once quiet.
+     * Same interpretation as LibrePods Android. */
+    switch (level) {
+    case 0x01:
+    case 0x02:
+        return 1;
+    case 0x06:
+    case 0x08:
+    case 0x09:
+        return 0;
+    default:
+        return -1;
+    }
 }
 
 void aap_build_control_cmd(uint8_t id, const uint8_t *value, size_t value_len, uint8_t *buffer)

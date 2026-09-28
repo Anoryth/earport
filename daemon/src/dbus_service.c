@@ -80,6 +80,9 @@ static const gchar introspection_xml[] =
     "      <arg type='b' name='leftInEar'/>"
     "      <arg type='b' name='rightInEar'/>"
     "    </signal>"
+    "    <signal name='SpeakingChanged'>"
+    "      <arg type='b' name='speaking'/>"
+    "    </signal>"
     "  </interface>"
     "</node>";
 
@@ -595,6 +598,11 @@ void dbus_service_emit_ear_detection_changed(DbusService *service,
 {
     emit_signal(service, "EarDetectionChanged",
                 g_variant_new("(bb)", left_in_ear, right_in_ear));
+}
+
+void dbus_service_emit_speaking_changed(DbusService *service, bool speaking)
+{
+    emit_signal(service, "SpeakingChanged", g_variant_new("(b)", speaking));
 }
 
 void dbus_service_emit_properties_changed(DbusService *service,

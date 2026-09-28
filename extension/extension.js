@@ -17,6 +17,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
+import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
@@ -28,6 +29,9 @@ const AirPodsProxy = Gio.DBusProxy.makeProxyWrapper(AirPodsInterface);
 /* Ring geometry (logical px; the widget size comes from CSS) */
 const RING_LINE_WIDTH = 4;
 const RING_ICON_SIZE = 20;
+
+/* Share of the volume kept while conversation awareness detects speech */
+const CONVERSATION_VOLUME_RATIO = 0.2;
 
 /* Battery indicator widget: circular progress ring around a symbolic icon,
  * with percentage and name below. The ring color comes from the widget's
@@ -243,6 +247,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._proxy = null;
         this._propertiesChangedId = 0;
         this._signalIds = [];
+        this._conversationVolume = null;
 
         /* Custom symbolic icons shipped with the extension */
         const iconsDir = `${extensionObject.path}/icons`;
@@ -399,6 +404,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._signalIds.push(
             this._proxy.connectSignal('NoiseControlModeChanged', this._onNoiseControlChanged.bind(this))
         );
+        this._signalIds.push(
+            this._proxy.connectSignal('SpeakingChanged', this._onSpeakingChanged.bind(this))
+        );
 
         /* Initial state update */
         this._updateState();
@@ -444,6 +452,62 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         }
 
         this._updateDisconnectedState();
+    }
+
+    /* Conversation awareness: the AirPods detect speech, lowering the
+     * volume is up to the host (as an iPhone does). */
+    _onSpeakingChanged(proxy, sender, [speaking]) {
+        if (speaking)
+            this._lowerVolumeForConversation();
+        else
+            this._restoreVolumeAfterConversation();
+    }
+
+    /* Default output, only if it is these AirPods */
+    _getAirPodsSink() {
+        const address = this._proxy?.DeviceAddress;
+        const sink = Volume.getMixerControl().get_default_sink();
+        if (!address || !sink)
+            return null;
+
+        /* bluez_output.AC_07_75_F0_31_02.1 (PipeWire), bluez_sink.… (PulseAudio) */
+        const id = address.replace(/:/g, '_').toUpperCase();
+        return sink.get_name()?.toUpperCase().includes(id) ? sink : null;
+    }
+
+    _lowerVolumeForConversation() {
+        if (this._conversationVolume)
+            return;
+
+        const sink = this._getAirPodsSink();
+        if (!sink)
+            return;
+
+        const saved = sink.volume;
+        const lowered = Math.round(saved * CONVERSATION_VOLUME_RATIO);
+        this._conversationVolume = {sink, saved, lowered};
+        sink.volume = lowered;
+        sink.push_volume();
+    }
+
+    _restoreVolumeAfterConversation() {
+        if (!this._conversationVolume)
+            return;
+
+        const {sink, saved, lowered} = this._conversationVolume;
+        this._conversationVolume = null;
+
+        const control = Volume.getMixerControl();
+        if (control.lookup_stream_id(sink.id) !== sink)
+            return;  /* The AirPods output is gone */
+
+        /* Leave the volume alone if the user changed it meanwhile */
+        const tolerance = control.get_vol_max_norm() / 100;
+        if (Math.abs(sink.volume - lowered) > tolerance)
+            return;
+
+        sink.volume = saved;
+        sink.push_volume();
     }
 
     _onBatteryChanged(proxy, sender, [left, right, caseBattery]) {
@@ -661,6 +725,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     destroy() {
+        this._restoreVolumeAfterConversation();
+
         if (this._proxy) {
             if (this._propertiesChangedId > 0) {
                 this._proxy.disconnect(this._propertiesChangedId);

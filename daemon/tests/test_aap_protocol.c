@@ -220,6 +220,39 @@ static void test_control_setting_short(void)
     g_assert_cmpuint(p.data.control_setting.value[3], ==, 0x00);
 }
 
+static void test_conversation_events(void)
+{
+    /* Sequence captured while speaking then going quiet (level in byte 9) */
+    const struct {
+        uint8_t level;
+        int speaking;
+    } cases[] = {
+        { 0x01, 1 },   /* Voice detected */
+        { 0x02, 1 },
+        { 0x03, -1 },  /* Intermediate steps: keep the volume as is */
+        { 0x0B, -1 },
+        { 0x04, -1 },
+        { 0x08, 0 },   /* Conversation over: restore the volume */
+        { 0x09, 0 },
+    };
+
+    for (size_t i = 0; i < G_N_ELEMENTS(cases); i++) {
+        uint8_t pkt[] = { 0x04, 0x00, 0x04, 0x00, 0x4B, 0x00, 0x02, 0x00, 0x01, cases[i].level };
+        AapParsedPacket p;
+
+        g_assert_cmpint(PARSE(pkt, &p), ==, AAP_PARSE_OK);
+        g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_CA_DETECTION);
+        g_assert_cmpint(p.data.ca_volume_level, ==, cases[i].level);
+        g_assert_cmpint(aap_ca_speaking_from_level(cases[i].level), ==, cases[i].speaking);
+    }
+
+    g_assert_cmpint(aap_ca_speaking_from_level(0x06), ==, 0);
+
+    const uint8_t truncated[] = { 0x04, 0x00, 0x04, 0x00, 0x4B, 0x00, 0x02, 0x00, 0x01 };
+    AapParsedPacket p;
+    g_assert_cmpint(PARSE(truncated, &p), ==, AAP_PARSE_INCOMPLETE);
+}
+
 /* ============================================================================
  * Metadata
  * ========================================================================== */
@@ -339,6 +372,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/control/listening-modes", test_listening_modes);
     g_test_add_func("/aap/control/settings", test_control_settings);
     g_test_add_func("/aap/control/setting-short", test_control_setting_short);
+    g_test_add_func("/aap/conversation-events", test_conversation_events);
     g_test_add_func("/aap/metadata", test_metadata);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);

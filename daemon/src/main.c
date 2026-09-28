@@ -46,7 +46,8 @@ typedef struct {
 
     /* Silent L2CAP reconnect when battery info never arrives */
     bool silent_reconnect;       /* Reconnect in progress, hidden from clients */
-    bool silent_reconnect_done;  /* Already tried for this BlueZ connection */
+    bool silent_reconnect_done;
+    bool ca_speaking;            /* Conversation awareness lowered the volume */  /* Already tried for this BlueZ connection */
 } AppContext;
 
 /* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
@@ -198,9 +199,17 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
         break;
 
-    case AAP_PKT_TYPE_CA_DETECTION:
-        g_debug("CA detection event: volume_level=%d", packet.data.ca_volume_level);
+    case AAP_PKT_TYPE_CA_DETECTION: {
+        int speaking = aap_ca_speaking_from_level(packet.data.ca_volume_level);
+        g_debug("CA detection event: level=%d", packet.data.ca_volume_level);
+
+        if (speaking >= 0 && (bool)speaking != app.ca_speaking) {
+            app.ca_speaking = speaking;
+            g_message("Conversation %s", speaking ? "started" : "ended");
+            dbus_service_emit_speaking_changed(app.dbus_service, app.ca_speaking);
+        }
         break;
+    }
 
     case AAP_PKT_TYPE_LISTENING_MODES:
         g_message("Listening modes: off=%s transparency=%s anc=%s adaptive=%s (raw=0x%02X)",
@@ -404,6 +413,12 @@ static void report_disconnected(void)
                                                app.state.device_name);
     }
 
+    /* Let clients restore the volume lowered for a conversation */
+    if (app.ca_speaking) {
+        app.ca_speaking = false;
+        dbus_service_emit_speaking_changed(app.dbus_service, false);
+    }
+
     cancel_notif_retry();
     airpods_state_reset(&app.state);
     dbus_service_emit_properties_changed(app.dbus_service, "Connected");
@@ -572,6 +587,12 @@ static gboolean apply_saved_settings_idle(gpointer user_data)
     aap_build_adaptive_level_cmd(profile.adaptive_noise_level, packet);
     bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
 
+    /* The values the AirPods announced on connection are now outdated */
+    airpods_state_set_conversational_awareness(&app.state, profile.conversational_awareness);
+    airpods_state_set_adaptive_noise_level(&app.state, profile.adaptive_noise_level);
+    dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
+    dbus_service_emit_properties_changed(app.dbus_service, "AdaptiveNoiseLevel");
+
     g_free((gchar *)address);
     return G_SOURCE_REMOVE;
 }
@@ -678,6 +699,10 @@ static void on_set_conv_awareness(bool enabled, void *user_data)
     aap_build_conv_awareness_cmd(enabled, packet);
     bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
 
+    /* The AirPods don't echo the change back */
+    airpods_state_set_conversational_awareness(&app.state, enabled);
+    dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
+
     /* Save to device profile */
     if (app.state.device_address && app.state.device_address[0] != '\0') {
         DeviceProfile profile;
@@ -699,6 +724,9 @@ static void on_set_adaptive_level(int level, void *user_data)
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_adaptive_level_cmd(level, packet);
     bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+
+    airpods_state_set_adaptive_noise_level(&app.state, level);
+    dbus_service_emit_properties_changed(app.dbus_service, "AdaptiveNoiseLevel");
 
     /* Save to device profile */
     if (app.state.device_address && app.state.device_address[0] != '\0') {

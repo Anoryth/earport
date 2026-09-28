@@ -83,6 +83,9 @@ export const AirPodsInterface = `
       <arg type="b" name="leftInEar"/>
       <arg type="b" name="rightInEar"/>
     </signal>
+    <signal name="SpeakingChanged">
+      <arg type="b" name="speaking"/>
+    </signal>
   </interface>
 </node>
 `;

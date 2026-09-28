@@ -150,6 +150,12 @@ void dbus_service_emit_ear_detection_changed(DbusService *service,
                                               bool right_in_ear);
 
 /**
+ * Emit SpeakingChanged: conversation awareness detected the user started
+ * (true) or stopped (false) speaking. Clients lower/restore the volume.
+ */
+void dbus_service_emit_speaking_changed(DbusService *service, bool speaking);
+
+/**
  * Notify that a property has changed (emits PropertiesChanged)
  */
 void dbus_service_emit_properties_changed(DbusService *service,

@@ -192,6 +192,14 @@ AapParseResult aap_parse_ear_detection(const uint8_t *data, size_t len, AapEarDe
 AapParseResult aap_parse_noise_control(const uint8_t *data, size_t len, NoiseControlMode *mode);
 
 /**
+ * Interpret a conversation awareness event level (opcode 0x4B)
+ *
+ * @return 1 when the user starts speaking (lower the volume), 0 when the
+ *         conversation is over (restore it), -1 for intermediate steps
+ */
+int aap_ca_speaking_from_level(uint8_t level);
+
+/**
  * Build a control command packet: 04 00 04 00 09 00 [id] [value...] padded
  * with zeros
  *
