@@ -27,6 +27,7 @@ export const AirPodsInterface = `
     <property name="ChargingLeft" type="b" access="read"/>
     <property name="ChargingRight" type="b" access="read"/>
     <property name="ChargingCase" type="b" access="read"/>
+    <property name="ListeningTimeRemaining" type="i" access="read"/>
     <property name="NoiseControlMode" type="s" access="read"/>
     <property name="ConversationalAwareness" type="b" access="read"/>
     <property name="LeftInEar" type="b" access="read"/>

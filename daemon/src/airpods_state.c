@@ -23,6 +23,7 @@ void airpods_state_init(AirPodsState *state)
     state->battery.right.available = false;
     state->battery.case_battery.level = -1;
     state->battery.case_battery.available = false;
+    state->listening_minutes_left = -1;
 
     state->noise_control_mode = NOISE_CONTROL_OFF;
     state->conversational_awareness = false;
@@ -74,6 +75,7 @@ void airpods_state_reset(AirPodsState *state)
     state->battery.case_battery.level = -1;
     state->battery.case_battery.status = BATTERY_STATUS_UNKNOWN;
     state->battery.case_battery.available = false;
+    state->listening_minutes_left = -1;
 
     state->noise_control_mode = NOISE_CONTROL_OFF;
     state->conversational_awareness = false;
@@ -151,6 +153,15 @@ void airpods_state_set_battery(AirPodsState *state,
     state->battery.case_battery.available = (case_level >= 0);
 
     g_mutex_unlock(&state->lock);
+}
+
+bool airpods_state_set_listening_minutes(AirPodsState *state, int minutes)
+{
+    g_mutex_lock(&state->lock);
+    bool changed = state->listening_minutes_left != minutes;
+    state->listening_minutes_left = minutes;
+    g_mutex_unlock(&state->lock);
+    return changed;
 }
 
 void airpods_state_set_noise_control(AirPodsState *state, NoiseControlMode mode)

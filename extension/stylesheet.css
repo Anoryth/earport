@@ -49,6 +49,12 @@
     padding: 14px 16px 10px 16px;
 }
 
+.earport-listening-time {
+    font-size: 0.818em;
+    margin-top: 8px;
+    opacity: 0.8;
+}
+
 .earport-battery-indicator {
     spacing: 6px;
     min-width: 60px;

@@ -19,9 +19,11 @@ gio_dep = dependency('gio-2.0', version: '>= 2.56')
 gio_unix_dep = dependency('gio-unix-2.0', version: '>= 2.56')
 bluetooth_dep = dependency('bluez', required: false)
 
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required: false)
+
 # If bluez pkg-config not available, use libbluetooth directly
 if not bluetooth_dep.found()
-    cc = meson.get_compiler('c')
     bluetooth_dep = cc.find_library('bluetooth', required: true)
 endif
 
@@ -31,6 +33,7 @@ sources = files(
     'src/airpods_state.c',
     'src/airpods_settings.c',
     'src/aap_protocol.c',
+    'src/battery_estimator.c',
     'src/bluetooth.c',
     'src/bluez_monitor.c',
     'src/config.c',
@@ -41,7 +44,7 @@ sources = files(
 # Build executable
 executable('earport-daemon',
     sources,
-    dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep],
+    dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep, m_dep],
     install: true,
     install_dir: get_option('bindir'),
 )
@@ -60,6 +63,13 @@ test_airpods_settings = executable('test-airpods-settings',
     dependencies: [glib_dep],
 )
 test('airpods-settings', test_airpods_settings)
+
+test_battery_estimator = executable('test-battery-estimator',
+    files('tests/test_battery_estimator.c', 'src/battery_estimator.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, m_dep],
+)
+test('battery-estimator', test_battery_estimator)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

@@ -14,6 +14,7 @@
 
 #include "airpods_state.h"
 #include "aap_protocol.h"
+#include "battery_estimator.h"
 #include "bluetooth.h"
 #include "bluez_monitor.h"
 #include "config.h"
@@ -46,8 +47,12 @@ typedef struct {
 
     /* Silent L2CAP reconnect when battery info never arrives */
     bool silent_reconnect;       /* Reconnect in progress, hidden from clients */
-    bool silent_reconnect_done;
-    bool ca_speaking;            /* Conversation awareness lowered the volume */  /* Already tried for this BlueZ connection */
+    bool silent_reconnect_done;  /* Already tried for this BlueZ connection */
+
+    bool ca_speaking;            /* Conversation awareness lowered the volume */
+
+    /* Remaining listening time, learned per device */
+    BatteryEstimator battery_estimator;
 } AppContext;
 
 /* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
@@ -80,6 +85,48 @@ static void schedule_reconnect(void);
 static void cancel_reconnect(void);
 static void cancel_notif_retry(void);
 static void report_disconnected(void);
+
+/* ============================================================================
+ * Remaining listening time
+ * ========================================================================== */
+
+/* The learned discharge rate is kept per device */
+static void save_learned_drain_rate(void)
+{
+    g_mutex_lock(&app.state.lock);
+    char *address = g_strdup(app.state.device_address);
+    g_mutex_unlock(&app.state.lock);
+
+    g_message("Learned discharge rate: %.1f %%/h", app.battery_estimator.drain_rate);
+    config_save_drain_rate(address, app.battery_estimator.drain_rate);
+    g_free(address);
+}
+
+static void update_listening_time(const AapBatteryData *battery)
+{
+    int64_t now = g_get_monotonic_time() / G_USEC_PER_SEC;
+    bool left_in_use = battery->left_status == BATTERY_STATUS_DISCHARGING;
+    bool right_in_use = battery->right_status == BATTERY_STATUS_DISCHARGING;
+    bool learned = false;
+
+    learned |= battery_estimator_update(&app.battery_estimator, BATTERY_POD_LEFT, now,
+                                        battery->left_level, left_in_use);
+    learned |= battery_estimator_update(&app.battery_estimator, BATTERY_POD_RIGHT, now,
+                                        battery->right_level, right_in_use);
+    if (learned)
+        save_learned_drain_rate();
+
+    /* The pod in use with the lowest level runs out first */
+    int level = -1;
+    if (left_in_use)
+        level = battery->left_level;
+    if (right_in_use && (level < 0 || battery->right_level < level))
+        level = battery->right_level;
+
+    int minutes = battery_estimator_minutes_left(&app.battery_estimator, level);
+    if (airpods_state_set_listening_minutes(&app.state, minutes))
+        dbus_service_emit_properties_changed(app.dbus_service, "ListeningTimeRemaining");
+}
 
 /* ============================================================================
  * Bluetooth data handling
@@ -139,6 +186,8 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         dbus_service_emit_properties_changed(app.dbus_service, "ChargingLeft");
         dbus_service_emit_properties_changed(app.dbus_service, "ChargingRight");
         dbus_service_emit_properties_changed(app.dbus_service, "ChargingCase");
+
+        update_listening_time(&packet.data.battery);
         break;
 
     case AAP_PKT_TYPE_EAR_DETECTION: {
@@ -419,6 +468,11 @@ static void report_disconnected(void)
         dbus_service_emit_speaking_changed(app.dbus_service, false);
     }
 
+    /* Learn from the sessions cut short by the disconnection (needs the
+     * device address, so before the state reset) */
+    if (battery_estimator_finish(&app.battery_estimator))
+        save_learned_drain_rate();
+
     cancel_notif_retry();
     airpods_state_reset(&app.state);
     dbus_service_emit_properties_changed(app.dbus_service, "Connected");
@@ -465,6 +519,8 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
         /* Load and apply saved device profile */
         apply_device_profile(app.pending_address);
+        battery_estimator_init(&app.battery_estimator,
+                               config_load_drain_rate(app.pending_address));
 
         /* Emit property changes BEFORE the DeviceConnected signal so the
          * extension's proxy cache is up-to-date when its handler reads
@@ -884,6 +940,9 @@ static gboolean on_sigterm(gpointer user_data)
 static void cleanup(void)
 {
     g_message("Cleaning up...");
+
+    if (battery_estimator_finish(&app.battery_estimator))
+        save_learned_drain_rate();
 
     cancel_reconnect();
     cancel_notif_retry();

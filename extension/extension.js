@@ -370,7 +370,20 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             can_focus: true,
         });
         this._batteryItem.accessible_role = Atk.Role.LABEL;
-        this._batteryItem.add_child(this._batteryBox);
+        /* Estimated listening time, below the gauges */
+        this._listeningTimeLabel = new St.Label({
+            style_class: 'earport-listening-time',
+            x_align: Clutter.ActorAlign.CENTER,
+            visible: false,
+        });
+
+        const batteryColumn = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+        });
+        batteryColumn.add_child(this._batteryBox);
+        batteryColumn.add_child(this._listeningTimeLabel);
+        this._batteryItem.add_child(batteryColumn);
         this.menu.addMenuItem(this._batteryItem);
 
         /* Separator */
@@ -648,6 +661,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
                 this._caseBattery.setLevel(this._proxy.BatteryCase, this._proxy.ChargingCase);
             }
 
+            this._updateListeningTime(this._proxy.ListeningTimeRemaining);
             this._updateBatteryAccessibleName();
 
             /* Check for low battery on state update */
@@ -681,6 +695,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._leftBattery.setLevel(-1);
         this._rightBattery.setLevel(-1);
         this._caseBattery.setLevel(-1);
+        this._updateListeningTime(-1);
         this._batteryItem.accessible_name = _('Disconnected');
 
         /* Show all noise control buttons and section when disconnected */
@@ -693,11 +708,37 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _updateBatteryAccessibleName() {
-        this._batteryItem.accessible_name =
-            [this._leftBattery, this._rightBattery, this._caseBattery]
-                .filter(indicator => indicator.visible)
-                .map(indicator => indicator.accessibleText)
-                .join(', ');
+        const parts = [this._leftBattery, this._rightBattery, this._caseBattery]
+            .filter(indicator => indicator.visible)
+            .map(indicator => indicator.accessibleText);
+        if (this._listeningTimeLabel.visible)
+            parts.push(this._listeningTimeLabel.text);
+        this._batteryItem.accessible_name = parts.join(', ');
+    }
+
+    /* The estimate is only accurate to about 10%: round it accordingly */
+    _updateListeningTime(minutes) {
+        if (minutes === undefined || minutes < 0) {
+            this._listeningTimeLabel.visible = false;
+            return;
+        }
+
+        let text;
+        if (minutes < 5) {
+            text = _('Less than 5 min of listening left');
+        } else if (minutes < 60) {
+            text = _('About %d min of listening left')
+                .replace('%d', Math.round(minutes / 5) * 5);
+        } else {
+            const rounded = Math.round(minutes / 10) * 10;
+            /* Translators: hours∶minutes, same format as the shell's battery */
+            text = _('About %d∶%02d of listening left')
+                .replace('%d', Math.floor(rounded / 60))
+                .replace('%02d', String(rounded % 60).padStart(2, '0'));
+        }
+
+        this._listeningTimeLabel.text = text;
+        this._listeningTimeLabel.visible = true;
     }
 
     /* Keyboard focus must not land on buttons that do nothing */

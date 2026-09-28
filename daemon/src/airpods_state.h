@@ -86,6 +86,7 @@ typedef struct {
 
     /* Battery */
     BatteryState battery;
+    int listening_minutes_left;   /* Estimated listening time, -1 if unknown */
 
     /* Features */
     NoiseControlMode noise_control_mode;
@@ -133,6 +134,9 @@ void airpods_state_set_battery(AirPodsState *state,
                                 int8_t left, BatteryStatus left_status,
                                 int8_t right, BatteryStatus right_status,
                                 int8_t case_level, BatteryStatus case_status);
+
+/* Update the estimated listening time; returns true if it changed */
+bool airpods_state_set_listening_minutes(AirPodsState *state, int minutes);
 
 /* Update noise control mode */
 void airpods_state_set_noise_control(AirPodsState *state, NoiseControlMode mode);

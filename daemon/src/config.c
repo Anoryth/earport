@@ -485,3 +485,53 @@ bool config_save_device_profile(const char *device_address, const DeviceProfile 
     g_free(group);
     return true;
 }
+
+double config_load_drain_rate(const char *device_address)
+{
+    if (device_address == NULL || device_address[0] == '\0')
+        return 0;
+
+    gchar *config_path = get_devices_config_path();
+    gchar *group = address_to_group(device_address);
+    GKeyFile *keyfile = g_key_file_new();
+    double rate = 0;
+
+    if (g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_NONE, NULL) &&
+        g_key_file_has_key(keyfile, group, "drain_rate", NULL)) {
+        rate = g_key_file_get_double(keyfile, group, "drain_rate", NULL);
+        if (rate < 0)
+            rate = 0;
+    }
+
+    g_key_file_free(keyfile);
+    g_free(group);
+    g_free(config_path);
+    return rate;
+}
+
+bool config_save_drain_rate(const char *device_address, double drain_rate)
+{
+    if (device_address == NULL || device_address[0] == '\0' || !ensure_config_dir())
+        return false;
+
+    gchar *config_path = get_devices_config_path();
+    gchar *group = address_to_group(device_address);
+    GKeyFile *keyfile = g_key_file_new();
+    GError *error = NULL;
+
+    /* Only this key: saving the whole profile would mark it as having saved
+     * settings, which are then pushed to the AirPods on every connection */
+    g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_KEEP_COMMENTS, NULL);
+    g_key_file_set_double(keyfile, group, "drain_rate", drain_rate);
+
+    bool ok = g_key_file_save_to_file(keyfile, config_path, &error);
+    if (!ok) {
+        g_warning("Failed to save drain rate: %s", error->message);
+        g_error_free(error);
+    }
+
+    g_key_file_free(keyfile);
+    g_free(group);
+    g_free(config_path);
+    return ok;
+}

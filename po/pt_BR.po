@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-28 20:20+0200\n"
+"POT-Creation-Date: 2026-09-28 21:18+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Brazilian Portuguese\n"
@@ -30,8 +30,8 @@ msgstr "indisponível"
 msgid "charging"
 msgstr "carregando"
 
-#: extension/extension.js:267 extension/extension.js:668
-#: extension/extension.js:684 extension/prefs.js:459
+#: extension/extension.js:267 extension/extension.js:682
+#: extension/extension.js:699 extension/prefs.js:459
 msgid "Disconnected"
 msgstr "Desconectado"
 
@@ -51,11 +51,11 @@ msgstr "Modo Ambiente"
 msgid "Adaptive"
 msgstr "Adaptativo"
 
-#: extension/extension.js:358 extension/extension.js:591 extension/prefs.js:435
+#: extension/extension.js:358 extension/extension.js:604 extension/prefs.js:435
 msgid "Left"
 msgstr "Esquerdo"
 
-#: extension/extension.js:359 extension/extension.js:598 extension/prefs.js:435
+#: extension/extension.js:359 extension/extension.js:611 extension/prefs.js:435
 msgid "Right"
 msgstr "Direito"
 
@@ -64,47 +64,62 @@ msgid "Case"
 msgstr "Estojo"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:390 extension/prefs.js:156
+#: extension/extension.js:403 extension/prefs.js:156
 msgid "Off"
 msgstr "Desligado"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:392
+#: extension/extension.js:405
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/extension.js:394
+#: extension/extension.js:407
 msgid "Hear"
 msgstr "Ambiente"
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/extension.js:397
+#: extension/extension.js:410
 msgid "Auto"
 msgstr "Auto"
 
-#: extension/extension.js:417
+#: extension/extension.js:430
 msgid "Advanced Settings"
 msgstr "Configurações avançadas"
 
-#: extension/extension.js:477
+#: extension/extension.js:490
 #, javascript-format
 msgid "%s Connected"
 msgstr "%s conectados"
 
-#: extension/extension.js:494
+#: extension/extension.js:507
 #, javascript-format
 msgid "%s Disconnected"
 msgstr "%s desconectados"
 
-#: extension/extension.js:579 extension/extension.js:605
+#: extension/extension.js:592 extension/extension.js:618
 #, javascript-format
 msgid "%s Low Battery"
 msgstr "%s: bateria fraca"
 
-#: extension/extension.js:580
+#: extension/extension.js:593
 msgid "Battery"
 msgstr "Bateria"
+
+#: extension/extension.js:728
+msgid "Less than 5 min of listening left"
+msgstr "Menos de 5 min de reprodução restantes"
+
+#: extension/extension.js:730
+#, javascript-format
+msgid "About %d min of listening left"
+msgstr "Cerca de %d min de reprodução restantes"
+
+#. Translators: hours∶minutes, same format as the shell's battery
+#: extension/extension.js:735
+#, javascript-format
+msgid "About %d∶%02d of listening left"
+msgstr "Cerca de %d∶%02d de reprodução restantes"
 
 #: extension/prefs.js:29
 msgid "Set Shortcut"

@@ -70,6 +70,13 @@ bool config_load_device_profile(const char *device_address, DeviceProfile *profi
 bool config_save_device_profile(const char *device_address, const DeviceProfile *profile);
 
 /**
+ * Learned battery discharge rate of a device (%/h), 0 if none yet.
+ * Stored apart from the profile's saved settings.
+ */
+double config_load_drain_rate(const char *device_address);
+bool config_save_drain_rate(const char *device_address, double drain_rate);
+
+/**
  * Get default device profile
  *
  * @param profile Pointer to structure to fill with defaults

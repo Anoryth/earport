@@ -24,6 +24,7 @@ static const gchar introspection_xml[] =
     "    <property name='ChargingLeft' type='b' access='read'/>"
     "    <property name='ChargingRight' type='b' access='read'/>"
     "    <property name='ChargingCase' type='b' access='read'/>"
+    "    <property name='ListeningTimeRemaining' type='i' access='read'/>"
     "    <property name='NoiseControlMode' type='s' access='read'/>"
     "    <property name='ConversationalAwareness' type='b' access='read'/>"
     "    <property name='LeftInEar' type='b' access='read'/>"
@@ -241,6 +242,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(state->battery.right.status == BATTERY_STATUS_CHARGING);
     } else if (g_strcmp0(property_name, "ChargingCase") == 0) {
         result = g_variant_new_boolean(state->battery.case_battery.status == BATTERY_STATUS_CHARGING);
+    } else if (g_strcmp0(property_name, "ListeningTimeRemaining") == 0) {
+        result = g_variant_new_int32(state->listening_minutes_left);
     } else if (g_strcmp0(property_name, "NoiseControlMode") == 0) {
         result = g_variant_new_string(noise_control_mode_to_string(state->noise_control_mode));
     } else if (g_strcmp0(property_name, "ConversationalAwareness") == 0) {
