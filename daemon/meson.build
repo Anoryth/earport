@@ -81,3 +81,11 @@ configure_file(
     configuration: service_conf,
     install_dir: get_option('datadir') / 'dbus-1' / 'services',
 )
+
+# Protocol probe for reverse-engineering (not installed):
+#   ninja -C build aap-probe
+executable('aap-probe',
+    files('tools/aap_probe.c'),
+    dependencies: [bluetooth_dep],
+    build_by_default: false,
+)
