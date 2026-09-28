@@ -718,7 +718,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
 
     /* The estimate is only accurate to about 10%: round it accordingly */
     _updateListeningTime(minutes) {
-        if (minutes === undefined || minutes < 0) {
+        /* null when the daemon is older than the extension */
+        if (typeof minutes !== 'number' || minutes < 0) {
             this._listeningTimeLabel.visible = false;
             return;
         }
