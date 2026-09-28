@@ -35,7 +35,7 @@ class ShortcutDialog extends Adw.Window {
 
         const page = new Adw.StatusPage({
             icon_name: 'preferences-desktop-keyboard-shortcuts-symbolic',
-            title: _('Press a key combination'),
+            title: _('Press a Key Combination'),
             description: _('Press Esc to cancel or Backspace to disable the shortcut'),
         });
         this.set_content(page);
@@ -68,6 +68,7 @@ class ShortcutDialog extends Adw.Window {
 
 export default class EarPortPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
+        this._window = window;
         this._proxy = null;
         this._propertiesChangedId = 0;
 
@@ -126,7 +127,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
 
         /* Conversational Awareness */
         this._caRow = new Adw.SwitchRow({
-            title: _('Conversational Awareness'),
+            title: _('Conversation Awareness'),
             subtitle: _('Automatically lower volume when you speak'),
         });
         featuresGroup.add(this._caRow);
@@ -188,7 +189,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
         pauseModeModel.append(_('When both earbuds removed'));
 
         this._earPauseRow = new Adw.ComboRow({
-            title: _('Auto-pause media'),
+            title: _('Auto-Pause Media'),
             subtitle: _('Pause playback when earbuds are removed'),
             model: pauseModeModel,
         });
@@ -202,19 +203,19 @@ export default class EarPortPreferences extends ExtensionPreferences {
         page.add(notificationsGroup);
 
         this._connectionNotifRow = new Adw.SwitchRow({
-            title: _('Connection notifications'),
+            title: _('Connection Notifications'),
             subtitle: _('Notify when AirPods connect or disconnect'),
         });
         notificationsGroup.add(this._connectionNotifRow);
 
         this._batteryNotifRow = new Adw.SwitchRow({
-            title: _('Low battery notifications'),
+            title: _('Low Battery Notifications'),
             subtitle: _('Notify when battery drops below threshold'),
         });
         notificationsGroup.add(this._batteryNotifRow);
 
         this._batteryThresholdRow = new Adw.SpinRow({
-            title: _('Low battery threshold'),
+            title: _('Low Battery Threshold'),
             subtitle: _('Notify when battery drops below this percentage'),
             adjustment: new Gtk.Adjustment({
                 lower: 5,
@@ -237,7 +238,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
 
         const shortcutRow = new Adw.ActionRow({
-            title: _('Cycle noise control mode'),
+            title: _('Cycle Noise Control Mode'),
             subtitle: _('Also works when the Quick Settings menu is closed'),
             activatable: true,
         });
@@ -333,6 +334,10 @@ export default class EarPortPreferences extends ExtensionPreferences {
                                      (this._lpAdaptiveRow.active ? 1 : 0);
 
                 if (enabledCount < 2) {
+                    this._window.add_toast(new Adw.Toast({
+                        title: _('At least two modes must stay in the cycle'),
+                    }));
+
                     /* Revert the change - restore from proxy */
                     this._updatingListeningModes = true;
                     this._lpOffRow.active = this._proxy.ListeningModeOff;
@@ -486,9 +491,9 @@ export default class EarPortPreferences extends ExtensionPreferences {
 
         const groups = [
             {
-                title: _('Noise Control'),
+                title: _('Listening Modes'),
                 settings: [
-                    ['OneBudANC', switchRow(_('Noise Control with One AirPod'),
+                    ['OneBudANC', switchRow(_('Noise Cancellation with One AirPod'),
                         _('Allow noise cancellation with only one AirPod in your ear'))],
                 ],
             },
@@ -510,7 +515,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
                     ['PressHoldDuration', comboRow(_('Press and Hold Duration'),
                         _('Time required to press and hold'),
                         [_('Default'), _('Shorter'), _('Shortest')])],
-                    ['VolumeSwipe', switchRow(_('Volume Control'),
+                    ['VolumeSwipe', switchRow(_('Volume Swipe'),
                         _('Swipe up or down on the stem to adjust the volume'))],
                     ['VolumeSwipeSpeed', comboRow(_('Volume Swipe Duration'),
                         _('Wait time between swipes to prevent unintended changes'),

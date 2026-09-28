@@ -1,425 +1,425 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the earport package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Brazilian Portuguese translation for EarPort.
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2024 EarPort Contributors
 #
-#, fuzzy
+# Machine-assisted first draft: review by a native speaker welcome.
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-28 20:15+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"POT-Creation-Date: 2026-09-28 20:07+0200\n"
+"PO-Revision-Date: 2026-09-28 20:07+0200\n"
+"Last-Translator: EarPort Contributors\n"
+"Language-Team: Brazilian Portuguese\n"
+"Language: pt_BR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: extension/extension.js:119
 msgid "Headphones"
-msgstr ""
+msgstr "Fones de ouvido"
 
 #: extension/extension.js:168
 msgid "unavailable"
-msgstr ""
+msgstr "indisponível"
 
 #: extension/extension.js:170
 msgid "charging"
-msgstr ""
+msgstr "carregando"
 
 #: extension/extension.js:267 extension/extension.js:655
 #: extension/extension.js:671 extension/prefs.js:459
 msgid "Disconnected"
-msgstr ""
+msgstr "Desconectado"
 
 #: extension/extension.js:352 extension/extension.js:578 extension/prefs.js:435
 msgid "Left"
-msgstr ""
+msgstr "Esquerdo"
 
 #: extension/extension.js:353 extension/extension.js:585 extension/prefs.js:435
 msgid "Right"
-msgstr ""
+msgstr "Direito"
 
 #: extension/extension.js:354
 msgid "Case"
-msgstr ""
+msgstr "Estojo"
 
 #: extension/extension.js:381 extension/prefs.js:156
 msgid "Off"
-msgstr ""
+msgstr "Desativado"
 
 #: extension/extension.js:382
 msgid "ANC"
-msgstr ""
+msgstr "ANC"
 
 #: extension/extension.js:383
 msgid "Hear"
-msgstr ""
+msgstr "Ambiente"
 
 #: extension/extension.js:384
 msgid "Auto"
-msgstr ""
+msgstr "Auto"
 
 #: extension/extension.js:404
 msgid "Advanced Settings"
-msgstr ""
+msgstr "Configurações avançadas"
 
 #: extension/extension.js:464
 #, javascript-format
 msgid "%s Connected"
-msgstr ""
+msgstr "%s conectados"
 
 #: extension/extension.js:481
 #, javascript-format
 msgid "%s Disconnected"
-msgstr ""
+msgstr "%s desconectados"
 
 #: extension/extension.js:566 extension/extension.js:592
 #, javascript-format
 msgid "%s Low Battery"
-msgstr ""
+msgstr "%s: bateria fraca"
 
 #: extension/extension.js:567
 msgid "Battery"
-msgstr ""
+msgstr "Bateria"
 
 #: extension/extension.js:761
 msgid "Noise Control Off"
-msgstr ""
+msgstr "Modos de audição desativados"
 
 #: extension/extension.js:762 extension/prefs.js:168
 msgid "Noise Cancellation"
-msgstr ""
+msgstr "Cancelamento ativo de ruído"
 
 #: extension/extension.js:763 extension/prefs.js:162
 msgid "Transparency"
-msgstr ""
+msgstr "Modo Ambiente"
 
 #: extension/extension.js:764 extension/prefs.js:174
 msgid "Adaptive"
-msgstr ""
+msgstr "Adaptativo"
 
 #: extension/prefs.js:29
 msgid "Set Shortcut"
-msgstr ""
+msgstr "Definir atalho"
 
 #: extension/prefs.js:38
 msgid "Press a Key Combination"
-msgstr ""
+msgstr "Pressione uma combinação de teclas"
 
 #: extension/prefs.js:39
 msgid "Press Esc to cancel or Backspace to disable the shortcut"
-msgstr ""
+msgstr "Pressione Esc para cancelar ou Backspace para desativar o atalho"
 
 #: extension/prefs.js:88
 msgid "Device Status"
-msgstr ""
+msgstr "Status do dispositivo"
 
 #: extension/prefs.js:89
 msgid "Current AirPods connection status"
-msgstr ""
+msgstr "Status atual da conexão dos AirPods"
 
 #: extension/prefs.js:94
 msgid "Connection"
-msgstr ""
+msgstr "Conexão"
 
 #: extension/prefs.js:95
 msgid "Checking…"
-msgstr ""
+msgstr "Verificando…"
 
 #: extension/prefs.js:101
 msgid "Ear Detection"
-msgstr ""
+msgstr "Detecção de uso"
 
 #: extension/prefs.js:102
 msgid "Unknown"
-msgstr ""
+msgstr "Desconhecido"
 
 #: extension/prefs.js:109
 msgid "Device Profile"
-msgstr ""
+msgstr "Perfil do dispositivo"
 
 #: extension/prefs.js:110
-msgid ""
-"Customize your AirPods. Leave the name empty to use the device model name"
-msgstr ""
+msgid "Customize your AirPods. Leave the name empty to use the device model name"
+msgstr "Personalize seus AirPods. Deixe o nome vazio para usar o nome do modelo"
 
 #: extension/prefs.js:116
 msgid "Custom Name"
-msgstr ""
+msgstr "Nome personalizado"
 
 #: extension/prefs.js:123
 msgid "AirPods Features"
-msgstr ""
+msgstr "Recursos dos AirPods"
 
 #: extension/prefs.js:124
 msgid "Advanced features for your AirPods"
-msgstr ""
+msgstr "Recursos avançados dos seus AirPods"
 
 #: extension/prefs.js:130
 msgid "Conversation Awareness"
-msgstr ""
+msgstr "Detecção de conversa"
 
 #: extension/prefs.js:131
 msgid "Automatically lower volume when you speak"
-msgstr ""
+msgstr "Diminui o volume automaticamente quando você fala"
 
 #: extension/prefs.js:137
 msgid "Adaptive Noise Level"
-msgstr ""
+msgstr "Nível do modo adaptativo"
 
 #: extension/prefs.js:138
 msgid "Adjust the transparency level (0-100)"
-msgstr ""
+msgstr "Ajusta o nível de transparência (0-100)"
 
 #: extension/prefs.js:150
 msgid "Long Press Actions"
-msgstr ""
+msgstr "Ações ao manter pressionado"
 
 #: extension/prefs.js:151
 msgid "Configure which modes are cycled when pressing and holding the stem"
-msgstr ""
+msgstr "Escolha quais modos são alternados ao manter a haste pressionada"
 
 #: extension/prefs.js:157
 msgid "Include Off mode in long press cycle"
-msgstr ""
+msgstr "Incluir o modo desligado no ciclo"
 
 #: extension/prefs.js:163
 msgid "Include Transparency mode in long press cycle"
-msgstr ""
+msgstr "Incluir o modo Ambiente no ciclo"
 
 #: extension/prefs.js:169
 msgid "Include ANC mode in long press cycle"
-msgstr ""
+msgstr "Incluir o cancelamento de ruído no ciclo"
 
 #: extension/prefs.js:175
 msgid "Include Adaptive mode in long press cycle"
-msgstr ""
+msgstr "Incluir o modo adaptativo no ciclo"
 
 #: extension/prefs.js:181
 msgid "Media Control"
-msgstr ""
+msgstr "Controle de mídia"
 
 #: extension/prefs.js:182
 msgid "Configure media playback behavior"
-msgstr ""
+msgstr "Configura o comportamento da reprodução de mídia"
 
 #: extension/prefs.js:187 extension/prefs.js:236
 msgid "Disabled"
-msgstr ""
+msgstr "Desativado"
 
 #: extension/prefs.js:188
 msgid "When one earbud removed"
-msgstr ""
+msgstr "Ao remover um fone"
 
 #: extension/prefs.js:189
 msgid "When both earbuds removed"
-msgstr ""
+msgstr "Ao remover os dois fones"
 
 #: extension/prefs.js:192
 msgid "Auto-Pause Media"
-msgstr ""
+msgstr "Pausar mídia automaticamente"
 
 #: extension/prefs.js:193
 msgid "Pause playback when earbuds are removed"
-msgstr ""
+msgstr "Pausa a reprodução ao remover os fones"
 
 #: extension/prefs.js:200
 msgid "Notifications"
-msgstr ""
+msgstr "Notificações"
 
 #: extension/prefs.js:201
 msgid "Configure notification preferences"
-msgstr ""
+msgstr "Configura as notificações"
 
 #: extension/prefs.js:206
 msgid "Connection Notifications"
-msgstr ""
+msgstr "Notificações de conexão"
 
 #: extension/prefs.js:207
 msgid "Notify when AirPods connect or disconnect"
-msgstr ""
+msgstr "Notifica quando os AirPods se conectam ou desconectam"
 
 #: extension/prefs.js:212
 msgid "Low Battery Notifications"
-msgstr ""
+msgstr "Notificações de bateria fraca"
 
 #: extension/prefs.js:213
 msgid "Notify when battery drops below threshold"
-msgstr ""
+msgstr "Notifica quando a bateria fica abaixo do limite"
 
 #: extension/prefs.js:218
 msgid "Low Battery Threshold"
-msgstr ""
+msgstr "Limite de bateria fraca"
 
 #: extension/prefs.js:219
 msgid "Notify when battery drops below this percentage"
-msgstr ""
+msgstr "Notifica quando a bateria fica abaixo desta porcentagem"
 
 #: extension/prefs.js:231
 msgid "Keyboard Shortcuts"
-msgstr ""
+msgstr "Atalhos de teclado"
 
 #: extension/prefs.js:241
 msgid "Cycle Noise Control Mode"
-msgstr ""
+msgstr "Alternar modo de controle de ruído"
 
 #: extension/prefs.js:242
 msgid "Also works when the Quick Settings menu is closed"
-msgstr ""
+msgstr "Também funciona com o menu de configurações rápidas fechado"
 
 #: extension/prefs.js:257
 msgid "About"
-msgstr ""
+msgstr "Sobre"
 
 #: extension/prefs.js:263
 msgid "AirPods integration for GNOME"
-msgstr ""
+msgstr "Integração dos AirPods ao GNOME"
 
 #: extension/prefs.js:269
 msgid "Version"
-msgstr ""
+msgstr "Versão"
 
 #: extension/prefs.js:338
 msgid "At least two modes must stay in the cycle"
-msgstr ""
+msgstr "Pelo menos dois modos devem permanecer no ciclo"
 
 #: extension/prefs.js:383
 msgid "Daemon not running"
-msgstr ""
+msgstr "Serviço não está em execução"
 
 #: extension/prefs.js:392
 msgid "Error connecting to daemon"
-msgstr ""
+msgstr "Erro ao conectar ao serviço"
 
 #: extension/prefs.js:431
 #, javascript-format
 msgid "Connected: %s"
-msgstr ""
+msgstr "Conectado: %s"
 
 #: extension/prefs.js:433 extension/prefs.js:434
 msgid "In ear"
-msgstr ""
+msgstr "No ouvido"
 
 #: extension/prefs.js:433 extension/prefs.js:434
 msgid "Out"
-msgstr ""
+msgstr "Fora"
 
 #: extension/prefs.js:445
 #, javascript-format
 msgid "Device model: %s"
-msgstr ""
+msgstr "Modelo do dispositivo: %s"
 
 #: extension/prefs.js:460
 msgid "No device connected"
-msgstr ""
+msgstr "Nenhum dispositivo conectado"
 
 #: extension/prefs.js:474
 msgid "AirPods Settings"
-msgstr ""
+msgstr "Configurações dos AirPods"
 
 #: extension/prefs.js:480
 msgid "No settings available"
-msgstr ""
+msgstr "Nenhuma configuração disponível"
 
 #: extension/prefs.js:481
 msgid "Connect your AirPods to change the settings stored on them"
-msgstr ""
+msgstr "Conecte seus AirPods para alterar as configurações salvas neles"
 
 #: extension/prefs.js:494
 msgid "Listening Modes"
-msgstr ""
+msgstr "Modos de audição"
 
 #: extension/prefs.js:496
 msgid "Noise Cancellation with One AirPod"
-msgstr ""
+msgstr "Cancelamento de ruído com um AirPod"
 
 #: extension/prefs.js:497
 msgid "Allow noise cancellation with only one AirPod in your ear"
-msgstr ""
+msgstr "Permite o cancelamento de ruído com apenas um AirPod no ouvido"
 
 #: extension/prefs.js:501
 msgid "Audio"
-msgstr ""
+msgstr "Áudio"
 
 #: extension/prefs.js:503
 msgid "Personalized Volume"
-msgstr ""
+msgstr "Volume personalizado"
 
 #: extension/prefs.js:504
 msgid "Adjust media volume based on your environment"
-msgstr ""
+msgstr "Ajusta o volume da mídia de acordo com o ambiente"
 
 #: extension/prefs.js:505
 msgid "Pause Media When Falling Asleep"
-msgstr ""
+msgstr "Pausar mídia quando eu adormecer"
 
 #: extension/prefs.js:506
 msgid "Pause playback when you fall asleep"
-msgstr ""
+msgstr "Pausa a reprodução quando você adormece"
 
 #: extension/prefs.js:510
 msgid "Stem Controls"
-msgstr ""
+msgstr "Controles da haste"
 
 #: extension/prefs.js:512
 msgid "Press Speed"
-msgstr ""
+msgstr "Velocidade para pressionar"
 
 #: extension/prefs.js:513
 msgid "Speed required to press two or three times"
-msgstr ""
+msgstr "Velocidade necessária para pressionar duas ou três vezes"
 
 #: extension/prefs.js:514 extension/prefs.js:517 extension/prefs.js:522
 msgid "Default"
-msgstr ""
+msgstr "Padrão"
 
 #: extension/prefs.js:514
 msgid "Slower"
-msgstr ""
+msgstr "Mais lenta"
 
 #: extension/prefs.js:514
 msgid "Slowest"
-msgstr ""
+msgstr "A mais lenta"
 
 #: extension/prefs.js:515
 msgid "Press and Hold Duration"
-msgstr ""
+msgstr "Duração para manter pressionado"
 
 #: extension/prefs.js:516
 msgid "Time required to press and hold"
-msgstr ""
+msgstr "Tempo necessário para manter pressionado"
 
 #: extension/prefs.js:517
 msgid "Shorter"
-msgstr ""
+msgstr "Mais curta"
 
 #: extension/prefs.js:517
 msgid "Shortest"
-msgstr ""
+msgstr "A mais curta"
 
 #: extension/prefs.js:518
 msgid "Volume Swipe"
-msgstr ""
+msgstr "Passar o dedo para ajustar volume"
 
 #: extension/prefs.js:519
 msgid "Swipe up or down on the stem to adjust the volume"
-msgstr ""
+msgstr "Passe o dedo para cima ou para baixo na haste para ajustar o volume"
 
 #: extension/prefs.js:520
 msgid "Volume Swipe Duration"
-msgstr ""
+msgstr "Extensão da passada de dedo"
 
 #: extension/prefs.js:521
 msgid "Wait time between swipes to prevent unintended changes"
-msgstr ""
+msgstr "Tempo de espera entre passadas de dedo para evitar alterações acidentais"
 
 #: extension/prefs.js:522
 msgid "Longer"
-msgstr ""
+msgstr "Mais longa"
 
 #: extension/prefs.js:522
 msgid "Longest"
-msgstr ""
+msgstr "A mais longa"

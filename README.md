@@ -18,7 +18,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Notifications** - Connection/disconnection and low battery notifications
 - **Model detection** - Automatic detection of AirPods model with feature adaptation
 - **Per-device settings** - Settings are saved individually for each paired AirPods
-- **Translations** - Fully translatable (French and Ukrainian included)
+- **Translations** - French, Ukrainian, German, Spanish, Italian, Brazilian Portuguese and Dutch
 
 ### Supported Models
 
@@ -209,6 +209,21 @@ gdbus call --session --dest io.github.anoryth.EarPort \
 gdbus call --session --dest io.github.anoryth.EarPort \
   --object-path /io/github/anoryth/EarPort \
   --method io.github.anoryth.EarPort1.SetNoiseControlMode "anc"
+```
+
+### Translations
+
+Translation sources live in `po/`. The German, Spanish, Italian, Brazilian
+Portuguese and Dutch translations are machine-assisted first drafts: corrections
+from native speakers are very welcome.
+
+```bash
+# Start a new language (here Polish)
+msginit --no-translator -l pl.UTF-8 -i po/earport.pot -o po/pl.po
+
+# Compile it (commit the .mo too, the extension ships it)
+mkdir -p extension/locale/pl/LC_MESSAGES
+msgfmt --check -o extension/locale/pl/LC_MESSAGES/earport.mo po/pl.po
 ```
 
 ## Credits
