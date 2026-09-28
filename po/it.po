@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-28 20:07+0200\n"
+"POT-Creation-Date: 2026-09-28 20:20+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Italian\n"
@@ -30,77 +30,81 @@ msgstr "non disponibile"
 msgid "charging"
 msgstr "in carica"
 
-#: extension/extension.js:267 extension/extension.js:655
-#: extension/extension.js:671 extension/prefs.js:459
+#: extension/extension.js:267 extension/extension.js:668
+#: extension/extension.js:684 extension/prefs.js:459
 msgid "Disconnected"
 msgstr "Disconnesso"
 
-#: extension/extension.js:352 extension/extension.js:578 extension/prefs.js:435
+#: extension/extension.js:287
+msgid "Noise Control Off"
+msgstr "Modalità di ascolto non attiva"
+
+#: extension/extension.js:288 extension/prefs.js:168
+msgid "Noise Cancellation"
+msgstr "Cancellazione rumore attiva"
+
+#: extension/extension.js:289 extension/prefs.js:162
+msgid "Transparency"
+msgstr "Modalità Trasparenza"
+
+#: extension/extension.js:290 extension/prefs.js:174
+msgid "Adaptive"
+msgstr "Adattivo"
+
+#: extension/extension.js:358 extension/extension.js:591 extension/prefs.js:435
 msgid "Left"
 msgstr "Sinistro"
 
-#: extension/extension.js:353 extension/extension.js:585 extension/prefs.js:435
+#: extension/extension.js:359 extension/extension.js:598 extension/prefs.js:435
 msgid "Right"
 msgstr "Destro"
 
-#: extension/extension.js:354
+#: extension/extension.js:360
 msgid "Case"
 msgstr "Custodia"
 
-#: extension/extension.js:381 extension/prefs.js:156
+#. Translators: short noise control button label, keep it under ~8 characters
+#: extension/extension.js:390 extension/prefs.js:156
 msgid "Off"
-msgstr "Non attivo"
+msgstr "Off"
 
-#: extension/extension.js:382
+#. Translators: short noise control button label, keep it under ~8 characters
+#: extension/extension.js:392
 msgid "ANC"
 msgstr "ANC"
 
-#: extension/extension.js:383
+#. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
+#: extension/extension.js:394
 msgid "Hear"
 msgstr "Trasparenza"
 
-#: extension/extension.js:384
+#. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
+#: extension/extension.js:397
 msgid "Auto"
 msgstr "Auto"
 
-#: extension/extension.js:404
+#: extension/extension.js:417
 msgid "Advanced Settings"
 msgstr "Impostazioni avanzate"
 
-#: extension/extension.js:464
+#: extension/extension.js:477
 #, javascript-format
 msgid "%s Connected"
 msgstr "%s connessi"
 
-#: extension/extension.js:481
+#: extension/extension.js:494
 #, javascript-format
 msgid "%s Disconnected"
 msgstr "%s disconnessi"
 
-#: extension/extension.js:566 extension/extension.js:592
+#: extension/extension.js:579 extension/extension.js:605
 #, javascript-format
 msgid "%s Low Battery"
 msgstr "%s: batteria scarica"
 
-#: extension/extension.js:567
+#: extension/extension.js:580
 msgid "Battery"
 msgstr "Batteria"
-
-#: extension/extension.js:761
-msgid "Noise Control Off"
-msgstr "Modalità di ascolto non attiva"
-
-#: extension/extension.js:762 extension/prefs.js:168
-msgid "Noise Cancellation"
-msgstr "Cancellazione rumore attiva"
-
-#: extension/extension.js:763 extension/prefs.js:162
-msgid "Transparency"
-msgstr "Modalità Trasparenza"
-
-#: extension/extension.js:764 extension/prefs.js:174
-msgid "Adaptive"
-msgstr "Adattivo"
 
 #: extension/prefs.js:29
 msgid "Set Shortcut"

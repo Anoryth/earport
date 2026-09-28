@@ -218,11 +218,11 @@ class BatteryIndicator extends St.BoxLayout {
 /* Noise control mode button */
 const NoiseControlButton = GObject.registerClass(
 class NoiseControlButton extends St.Button {
-    _init(mode, label, gicon) {
+    _init(mode, label, accessibleName, gicon) {
         super._init({
             style_class: 'earport-nc-button',
             can_focus: true,
-            accessible_name: label,
+            accessible_name: accessibleName,
             accessible_role: Atk.Role.TOGGLE_BUTTON,
             child: new St.BoxLayout({
                 vertical: true,
@@ -282,6 +282,12 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             anc: Gio.icon_new_for_string(`${iconsDir}/earport-nc-anc-symbolic.svg`),
             transparency: Gio.icon_new_for_string(`${iconsDir}/earport-nc-transparency-symbolic.svg`),
             adaptive: Gio.icon_new_for_string(`${iconsDir}/earport-nc-adaptive-symbolic.svg`),
+        };
+        this._modeNames = {
+            off: _('Noise Control Off'),
+            anc: _('Noise Cancellation'),
+            transparency: _('Transparency'),
+            adaptive: _('Adaptive'),
         };
         this._batteryIcons = {
             left: Gio.icon_new_for_string(`${iconsDir}/earport-bud-left-symbolic.svg`),
@@ -377,11 +383,18 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             x_align: Clutter.ActorAlign.CENTER,
         });
 
+        /* The buttons share a narrow row: short labels on screen, full
+         * mode names for screen readers */
         this._ncButtons = {
-            off: new NoiseControlButton('off', _('Off'), this._modeIcons.off),
-            anc: new NoiseControlButton('anc', _('ANC'), this._modeIcons.anc),
-            transparency: new NoiseControlButton('transparency', _('Hear'), this._modeIcons.transparency),
-            adaptive: new NoiseControlButton('adaptive', _('Auto'), this._modeIcons.adaptive),
+            /* Translators: short noise control button label, keep it under ~8 characters */
+            off: new NoiseControlButton('off', _('Off'), this._modeNames.off, this._modeIcons.off),
+            /* Translators: short noise control button label, keep it under ~8 characters */
+            anc: new NoiseControlButton('anc', _('ANC'), this._modeNames.anc, this._modeIcons.anc),
+            /* Translators: short noise control button label for Transparency mode, keep it under ~8 characters */
+            transparency: new NoiseControlButton('transparency', _('Hear'), this._modeNames.transparency,
+                this._modeIcons.transparency),
+            /* Translators: short noise control button label for Adaptive mode, keep it under ~8 characters */
+            adaptive: new NoiseControlButton('adaptive', _('Auto'), this._modeNames.adaptive, this._modeIcons.adaptive),
         };
 
         for (const [mode, button] of Object.entries(this._ncButtons)) {
@@ -757,16 +770,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _showModeOsd(mode) {
-        const labels = {
-            off: _('Noise Control Off'),
-            anc: _('Noise Cancellation'),
-            transparency: _('Transparency'),
-            adaptive: _('Adaptive'),
-        };
-
         Main.osdWindowManager.show(-1,
             this._modeIcons[mode] ?? Gio.ThemedIcon.new('audio-headphones-symbolic'),
-            labels[mode] ?? mode);
+            this._modeNames[mode] ?? mode);
     }
 
     _openSettings() {
