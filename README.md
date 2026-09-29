@@ -77,14 +77,6 @@ gnome-extensions install earport@anoryth.github.io.shell-extension.zip
 
 Log out and back in (Wayland), then enable EarPort in the Extensions app.
 
-### Arch Linux
-
-Until the AUR package is published, build it from the repository:
-
-```bash
-cd packaging/aur/earport && makepkg -si
-```
-
 ### Build from Source
 
 Build dependencies:
@@ -252,8 +244,6 @@ npm run lint    # GJS / GNOME Shell rules recommended by gjs.guide
 - `tools/pack-extension.sh` builds the extension zip for extensions.gnome.org and
   GitHub releases (only the files the extension needs, translations compiled from
   `po/`); CI builds it on every push
-- `packaging/aur/` holds the Arch Linux packages: `earport` (tagged releases) and
-  `earport-git` (latest `main`)
 
 ### Translations
 
