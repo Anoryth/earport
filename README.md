@@ -121,6 +121,7 @@ This builds and installs the service, enables it, and installs the extension.
 
    ```bash
    cp -r extension ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
+   glib-compile-schemas ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io/schemas
    gnome-extensions enable earport@anoryth.github.io
    ```
 

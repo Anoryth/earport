@@ -169,7 +169,7 @@ install_extension() {
     if command -v glib-compile-schemas &> /dev/null; then
         glib-compile-schemas "$EXTENSION_DIR/schemas"
     else
-        print_warning "glib-compile-schemas not found; using pre-compiled schemas"
+        print_warning "glib-compile-schemas not found (glib2 tools): the extension settings won't load"
     fi
 
     print_success "Extension installed to $EXTENSION_DIR"

@@ -18,8 +18,10 @@ trap 'rm -rf "$stage"' EXIT
 
 cp -r extension/metadata.json extension/*.js extension/stylesheet.css \
       extension/icons extension/schemas "$stage/"
+# GNOME Shell 45+ compiles the schema at install time: ship only the XML,
+# but make sure it compiles
 rm -f "$stage/schemas/gschemas.compiled"
-glib-compile-schemas --strict "$stage/schemas"
+glib-compile-schemas --strict --dry-run "$stage/schemas"
 
 for po in po/*.po; do
     lang=$(basename "$po" .po)
