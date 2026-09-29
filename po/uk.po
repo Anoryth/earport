@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-29 21:15+0200\n"
+"POT-Creation-Date: 2026-09-29 21:21+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -27,8 +27,8 @@ msgstr "недоступно"
 msgid "charging"
 msgstr "заряджається"
 
-#: extension/extension.js:267 extension/extension.js:682
-#: extension/extension.js:699 extension/prefs.js:459
+#: extension/extension.js:267 extension/extension.js:699
+#: extension/extension.js:716 extension/prefs.js:461
 msgid "Disconnected"
 msgstr "Відключено"
 
@@ -48,11 +48,11 @@ msgstr "Режим проникності"
 msgid "Adaptive"
 msgstr "Адаптивний"
 
-#: extension/extension.js:358 extension/extension.js:604 extension/prefs.js:435
+#: extension/extension.js:358 extension/extension.js:613 extension/prefs.js:435
 msgid "Left"
 msgstr "Лівий"
 
-#: extension/extension.js:359 extension/extension.js:611 extension/prefs.js:435
+#: extension/extension.js:359 extension/extension.js:620 extension/prefs.js:435
 msgid "Right"
 msgstr "Правий"
 
@@ -84,36 +84,44 @@ msgstr "Авто"
 msgid "Advanced Settings"
 msgstr "Додаткові налаштування"
 
-#: extension/extension.js:490
+#: extension/extension.js:439
+msgid "How to Install the EarPort Service"
+msgstr "Як установити службу EarPort"
+
+#: extension/extension.js:501
 #, javascript-format
 msgid "%s Connected"
 msgstr "%s підключено"
 
-#: extension/extension.js:507
+#: extension/extension.js:516
 #, javascript-format
 msgid "%s Disconnected"
 msgstr "%s відключено"
 
-#: extension/extension.js:592 extension/extension.js:618
+#: extension/extension.js:601 extension/extension.js:627
 #, javascript-format
 msgid "%s Low Battery"
 msgstr "%s: низький заряд"
 
-#: extension/extension.js:593
+#: extension/extension.js:602
 msgid "Battery"
 msgstr "Акумулятор"
 
-#: extension/extension.js:729
+#: extension/extension.js:699
+msgid "Service not running"
+msgstr "Службу не запущено"
+
+#: extension/extension.js:746
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/extension.js:731
+#: extension/extension.js:748
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/extension.js:736
+#: extension/extension.js:753
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"
@@ -302,7 +310,7 @@ msgstr "Версія"
 msgid "At least two modes must stay in the cycle"
 msgstr "У циклі має залишатися щонайменше два режими"
 
-#: extension/prefs.js:383
+#: extension/prefs.js:383 extension/prefs.js:461
 msgid "Daemon not running"
 msgstr "Фоновий процес не працює"
 
@@ -328,107 +336,107 @@ msgstr "Вийнято"
 msgid "Device model: %s"
 msgstr "Модель пристрою: %s"
 
-#: extension/prefs.js:460
+#: extension/prefs.js:462
 msgid "No device connected"
 msgstr "Жодного пристрою не підключено"
 
-#: extension/prefs.js:474
+#: extension/prefs.js:476
 msgid "AirPods Settings"
 msgstr "Параметри AirPods"
 
-#: extension/prefs.js:480
+#: extension/prefs.js:482
 msgid "No settings available"
 msgstr "Немає доступних параметрів"
 
-#: extension/prefs.js:481
+#: extension/prefs.js:483
 msgid "Connect your AirPods to change the settings stored on them"
 msgstr "Підключіть AirPods, щоб змінити збережені на них параметри"
 
-#: extension/prefs.js:494
+#: extension/prefs.js:496
 msgid "Listening Modes"
 msgstr "Режими слухання"
 
-#: extension/prefs.js:496
+#: extension/prefs.js:498
 msgid "Noise Cancellation with One AirPod"
 msgstr "Шумогасіння з одним AirPod"
 
-#: extension/prefs.js:497
+#: extension/prefs.js:499
 msgid "Allow noise cancellation with only one AirPod in your ear"
 msgstr "Дозволяє шумогасіння, коли у вусі лише один AirPod"
 
-#: extension/prefs.js:501
+#: extension/prefs.js:503
 msgid "Audio"
 msgstr "Аудіо"
 
-#: extension/prefs.js:503
+#: extension/prefs.js:505
 msgid "Personalized Volume"
 msgstr "Персоналізована гучність"
 
-#: extension/prefs.js:504
+#: extension/prefs.js:506
 msgid "Adjust media volume based on your environment"
 msgstr "Налаштовує гучність медіа відповідно до оточення"
 
-#: extension/prefs.js:510
+#: extension/prefs.js:512
 msgid "Stem Controls"
 msgstr "Керування на ніжці"
 
-#: extension/prefs.js:512
+#: extension/prefs.js:514
 msgid "Press Speed"
 msgstr "Темп натискання"
 
-#: extension/prefs.js:513
+#: extension/prefs.js:515
 msgid "Speed required to press two or three times"
 msgstr "Швидкість, потрібна для подвійного чи потрійного натискання"
 
-#: extension/prefs.js:514 extension/prefs.js:517 extension/prefs.js:522
+#: extension/prefs.js:516 extension/prefs.js:519 extension/prefs.js:524
 msgid "Default"
 msgstr "Стандартно"
 
-#: extension/prefs.js:514
+#: extension/prefs.js:516
 msgid "Slower"
 msgstr "Повільніше"
 
-#: extension/prefs.js:514
+#: extension/prefs.js:516
 msgid "Slowest"
 msgstr "Найповільніше"
 
-#: extension/prefs.js:515
+#: extension/prefs.js:517
 msgid "Press and Hold Duration"
 msgstr "Час натискання і тримання"
 
-#: extension/prefs.js:516
+#: extension/prefs.js:518
 msgid "Time required to press and hold"
 msgstr "Час, потрібний для натискання й утримання"
 
-#: extension/prefs.js:517
+#: extension/prefs.js:519
 msgid "Shorter"
 msgstr "Коротше"
 
-#: extension/prefs.js:517
+#: extension/prefs.js:519
 msgid "Shortest"
 msgstr "Найкоротше"
 
-#: extension/prefs.js:518
+#: extension/prefs.js:520
 msgid "Volume Swipe"
 msgstr "Змінення гучності"
 
-#: extension/prefs.js:519
+#: extension/prefs.js:521
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Проведіть по ніжці вгору чи вниз, щоб змінити гучність"
 
-#: extension/prefs.js:520
+#: extension/prefs.js:522
 msgid "Volume Swipe Duration"
 msgstr "Інтервал проведення для гучності"
 
-#: extension/prefs.js:521
+#: extension/prefs.js:523
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr "Затримка між проведеннями, щоб уникнути випадкових змін"
 
-#: extension/prefs.js:522
+#: extension/prefs.js:524
 msgid "Longer"
 msgstr "Довше"
 
-#: extension/prefs.js:522
+#: extension/prefs.js:524
 msgid "Longest"
 msgstr "Найдовше"
 

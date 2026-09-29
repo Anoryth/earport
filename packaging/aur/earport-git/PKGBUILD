@@ -1,0 +1,46 @@
+# Maintainer: Florent Pauliat <flo7634@gmail.com>
+
+pkgname=earport-git
+_pkgname=earport
+_uuid=earport@anoryth.github.io
+pkgver=0.2.0.r0.g0000000
+pkgrel=1
+pkgdesc="AirPods integration for GNOME: battery, noise control modes and ear detection"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Anoryth/earport"
+license=('GPL-3.0-or-later')
+depends=('glib2' 'bluez' 'bluez-libs' 'gnome-shell')
+makedepends=('git' 'meson' 'ninja')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+install=earport.install
+source=("git+https://github.com/Anoryth/earport.git")
+sha256sums=('SKIP')
+
+pkgver() {
+    cd "$_pkgname"
+    local version
+    version=$(sed -n "s/^[[:space:]]*version: '\([^']*\)'.*/\1/p" daemon/meson.build)
+    printf "%s.r%s.g%s" "$version" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+    arch-meson "$_pkgname/daemon" build
+    meson compile -C build
+}
+
+check() {
+    meson test -C build --print-errorlogs
+}
+
+package() {
+    meson install -C build --destdir "$pkgdir"
+
+    local extdir="$pkgdir/usr/share/gnome-shell/extensions/$_uuid"
+    install -d "$extdir"
+    cp -r --no-preserve=ownership "$_pkgname/extension/." "$extdir/"
+    glib-compile-schemas "$extdir/schemas"
+
+    install -Dm644 "$_pkgname/README.md" "$pkgdir/usr/share/doc/$_pkgname/README.md"
+    install -Dm644 "$_pkgname/CREDITS" "$pkgdir/usr/share/doc/$_pkgname/CREDITS"
+}

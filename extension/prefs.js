@@ -456,7 +456,9 @@ export default class EarPortPreferences extends ExtensionPreferences {
             this._updateAirPodsSettings();
             this._setSensitive(true);
         } else {
-            this._statusRow.subtitle = _('Disconnected');
+            /* No owner: the daemon is not installed or not running */
+            this._statusRow.subtitle = this._proxy.g_name_owner
+                ? _('Disconnected') : _('Daemon not running');
             this._earDetectionRow.subtitle = _('No device connected');
             this._displayNameRow.text = '';
             this._updateAirPodsSettings();

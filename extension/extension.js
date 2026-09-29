@@ -433,6 +433,19 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._settingsItem.connect('activate', () => this._openSettings());
         this.menu.addMenuItem(this._settingsItem);
 
+        /* Shown when the daemon is not installed: the extension alone can't
+         * talk to the AirPods */
+        this._installItem = new PopupMenu.PopupImageMenuItem(
+            _('How to Install the EarPort Service'),
+            'help-browser-symbolic'
+        );
+        this._installItem.connect('activate', () => {
+            const url = `${this._extensionObject.metadata.url}#installation`;
+            Gio.AppInfo.launch_default_for_uri(url, null);
+        });
+        this._installItem.visible = false;
+        this.menu.addMenuItem(this._installItem);
+
         /* Set initial disconnected state */
         this._updateDisconnectedState();
     }
@@ -473,8 +486,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _onDeviceConnected(proxy, sender, [address, name]) {
-        console.log(`EarPort: Device connected - ${name}`);
-
         /* Reset low battery notification state */
         this._lowBatteryNotified = {left: false, right: false};
 
@@ -494,8 +505,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _onDeviceDisconnected(proxy, sender, [address, name]) {
-        console.log(`EarPort: Device disconnected - ${name}`);
-
         /* Show disconnection notification with display name. Skip the
          * "Unknown AirPods" fallback that the daemon reports once its state
          * has already been reset. */
@@ -678,8 +687,16 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         }
     }
 
+    setServiceMissing(missing) {
+        this._serviceMissing = missing;
+        this._installItem.visible = missing;
+        this._settingsItem.visible = !missing;
+        if (missing)
+            this._updateDisconnectedState();
+    }
+
     _updateDisconnectedState() {
-        this.subtitle = _('Disconnected');
+        this.subtitle = this._serviceMissing ? _('Service not running') : _('Disconnected');
         this.checked = false;
         this._batteryBox.opacity = 128;
         this._ncBox.opacity = 128;
@@ -891,6 +908,9 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
     }
 
     _createProxy() {
+        /* Cancelled on destroy: the answer may come after the extension is
+         * disabled */
+        this._cancellable = new Gio.Cancellable();
         try {
             this._proxy = new AirPodsProxy(
                 Gio.DBus.session,
@@ -898,12 +918,16 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
                 OBJECT_PATH,
                 (proxy, error) => {
                     if (error) {
+                        if (error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                            return;
                         console.error('EarPort: Failed to connect to daemon:', error.message);
+                        this._toggle.setServiceMissing(true);
                         return;
                     }
 
                     this._onProxyReady();
-                }
+                },
+                this._cancellable
             );
         } catch (e) {
             console.error('EarPort: Error creating proxy:', e.message);
@@ -918,6 +942,12 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
         this._propertiesChangedId = this._proxy.connect('g-properties-changed', () => {
             this._updateIndicator();
         });
+
+        /* No owner: the daemon is not installed (or failed to start) */
+        this._nameOwnerId = this._proxy.connect('notify::g-name-owner', () => {
+            this._toggle.setServiceMissing(!this._proxy.g_name_owner);
+        });
+        this._toggle.setServiceMissing(!this._proxy.g_name_owner);
 
         this._updateIndicator();
     }
@@ -982,9 +1012,12 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
     }
 
     destroy() {
+        this._cancellable?.cancel();
         if (this._proxy && this._propertiesChangedId > 0) {
             this._proxy.disconnect(this._propertiesChangedId);
         }
+        if (this._proxy && this._nameOwnerId > 0)
+            this._proxy.disconnect(this._nameOwnerId);
         this.quickSettingsItems.forEach(item => item.destroy());
         this._toggle = null;
         super.destroy();

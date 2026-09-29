@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-29 21:15+0200\n"
+"POT-Creation-Date: 2026-09-29 21:21+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: German\n"
@@ -30,8 +30,8 @@ msgstr "nicht verfügbar"
 msgid "charging"
 msgstr "wird geladen"
 
-#: extension/extension.js:267 extension/extension.js:682
-#: extension/extension.js:699 extension/prefs.js:459
+#: extension/extension.js:267 extension/extension.js:699
+#: extension/extension.js:716 extension/prefs.js:461
 msgid "Disconnected"
 msgstr "Getrennt"
 
@@ -51,11 +51,11 @@ msgstr "Transparenzmodus"
 msgid "Adaptive"
 msgstr "Adaptiv"
 
-#: extension/extension.js:358 extension/extension.js:604 extension/prefs.js:435
+#: extension/extension.js:358 extension/extension.js:613 extension/prefs.js:435
 msgid "Left"
 msgstr "Links"
 
-#: extension/extension.js:359 extension/extension.js:611 extension/prefs.js:435
+#: extension/extension.js:359 extension/extension.js:620 extension/prefs.js:435
 msgid "Right"
 msgstr "Rechts"
 
@@ -87,36 +87,44 @@ msgstr "Auto"
 msgid "Advanced Settings"
 msgstr "Erweiterte Einstellungen"
 
-#: extension/extension.js:490
+#: extension/extension.js:439
+msgid "How to Install the EarPort Service"
+msgstr "So installieren Sie den EarPort-Dienst"
+
+#: extension/extension.js:501
 #, javascript-format
 msgid "%s Connected"
 msgstr "%s verbunden"
 
-#: extension/extension.js:507
+#: extension/extension.js:516
 #, javascript-format
 msgid "%s Disconnected"
 msgstr "%s getrennt"
 
-#: extension/extension.js:592 extension/extension.js:618
+#: extension/extension.js:601 extension/extension.js:627
 #, javascript-format
 msgid "%s Low Battery"
 msgstr "%s: Akku schwach"
 
-#: extension/extension.js:593
+#: extension/extension.js:602
 msgid "Battery"
 msgstr "Akku"
 
-#: extension/extension.js:729
+#: extension/extension.js:699
+msgid "Service not running"
+msgstr "Dienst läuft nicht"
+
+#: extension/extension.js:746
 msgid "Less than 5 min of listening left"
 msgstr "Weniger als 5 Min. Wiedergabe übrig"
 
-#: extension/extension.js:731
+#: extension/extension.js:748
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Noch etwa %d Min. Wiedergabe"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/extension.js:736
+#: extension/extension.js:753
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Noch etwa %d∶%02d Wiedergabe"
@@ -305,7 +313,7 @@ msgstr "Version"
 msgid "At least two modes must stay in the cycle"
 msgstr "Mindestens zwei Modi müssen im Zyklus bleiben"
 
-#: extension/prefs.js:383
+#: extension/prefs.js:383 extension/prefs.js:461
 msgid "Daemon not running"
 msgstr "Dienst läuft nicht"
 
@@ -331,107 +339,107 @@ msgstr "Nicht im Ohr"
 msgid "Device model: %s"
 msgstr "Gerätemodell: %s"
 
-#: extension/prefs.js:460
+#: extension/prefs.js:462
 msgid "No device connected"
 msgstr "Kein Gerät verbunden"
 
-#: extension/prefs.js:474
+#: extension/prefs.js:476
 msgid "AirPods Settings"
 msgstr "AirPods-Einstellungen"
 
-#: extension/prefs.js:480
+#: extension/prefs.js:482
 msgid "No settings available"
 msgstr "Keine Einstellungen verfügbar"
 
-#: extension/prefs.js:481
+#: extension/prefs.js:483
 msgid "Connect your AirPods to change the settings stored on them"
 msgstr "Verbinden Sie Ihre AirPods, um die darauf gespeicherten Einstellungen zu ändern"
 
-#: extension/prefs.js:494
+#: extension/prefs.js:496
 msgid "Listening Modes"
 msgstr "Hörmodi"
 
-#: extension/prefs.js:496
+#: extension/prefs.js:498
 msgid "Noise Cancellation with One AirPod"
 msgstr "Geräuschunterdrückung mit einem AirPod"
 
-#: extension/prefs.js:497
+#: extension/prefs.js:499
 msgid "Allow noise cancellation with only one AirPod in your ear"
 msgstr "Geräuschunterdrückung auch mit nur einem AirPod im Ohr erlauben"
 
-#: extension/prefs.js:501
+#: extension/prefs.js:503
 msgid "Audio"
 msgstr "Audio"
 
-#: extension/prefs.js:503
+#: extension/prefs.js:505
 msgid "Personalized Volume"
 msgstr "Personalisierte Lautstärke"
 
-#: extension/prefs.js:504
+#: extension/prefs.js:506
 msgid "Adjust media volume based on your environment"
 msgstr "Medienlautstärke an die Umgebung anpassen"
 
-#: extension/prefs.js:510
+#: extension/prefs.js:512
 msgid "Stem Controls"
 msgstr "Steuerung am Stiel"
 
-#: extension/prefs.js:512
+#: extension/prefs.js:514
 msgid "Press Speed"
 msgstr "Drücktempo"
 
-#: extension/prefs.js:513
+#: extension/prefs.js:515
 msgid "Speed required to press two or three times"
 msgstr "Geschwindigkeit für zweimaliges oder dreimaliges Drücken"
 
-#: extension/prefs.js:514 extension/prefs.js:517 extension/prefs.js:522
+#: extension/prefs.js:516 extension/prefs.js:519 extension/prefs.js:524
 msgid "Default"
 msgstr "Standard"
 
-#: extension/prefs.js:514
+#: extension/prefs.js:516
 msgid "Slower"
 msgstr "Langsamer"
 
-#: extension/prefs.js:514
+#: extension/prefs.js:516
 msgid "Slowest"
 msgstr "Am langsamsten"
 
-#: extension/prefs.js:515
+#: extension/prefs.js:517
 msgid "Press and Hold Duration"
 msgstr "Haltedauer"
 
-#: extension/prefs.js:516
+#: extension/prefs.js:518
 msgid "Time required to press and hold"
 msgstr "Zeit, die zum Drücken und Halten nötig ist"
 
-#: extension/prefs.js:517
+#: extension/prefs.js:519
 msgid "Shorter"
 msgstr "Kürzer"
 
-#: extension/prefs.js:517
+#: extension/prefs.js:519
 msgid "Shortest"
 msgstr "Am kürzesten"
 
-#: extension/prefs.js:518
+#: extension/prefs.js:520
 msgid "Volume Swipe"
 msgstr "Streichgeste zur Lautstärkeregelung"
 
-#: extension/prefs.js:519
+#: extension/prefs.js:521
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Zum Anpassen der Lautstärke am Stiel nach oben oder unten streichen"
 
-#: extension/prefs.js:520
+#: extension/prefs.js:522
 msgid "Volume Swipe Duration"
 msgstr "Länge der Streichgeste"
 
-#: extension/prefs.js:521
+#: extension/prefs.js:523
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr "Wartezeit zwischen Streichgesten, um versehentliche Änderungen zu vermeiden"
 
-#: extension/prefs.js:522
+#: extension/prefs.js:524
 msgid "Longer"
 msgstr "Länger"
 
-#: extension/prefs.js:522
+#: extension/prefs.js:524
 msgid "Longest"
 msgstr "Am längsten"
 
