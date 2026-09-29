@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-28 21:18+0200\n"
+"POT-Creation-Date: 2026-09-29 21:15+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Dutch\n"
@@ -106,17 +106,17 @@ msgstr "%s: batterij bijna leeg"
 msgid "Battery"
 msgstr "Batterij"
 
-#: extension/extension.js:728
+#: extension/extension.js:729
 msgid "Less than 5 min of listening left"
 msgstr "Minder dan 5 min luistertijd over"
 
-#: extension/extension.js:730
+#: extension/extension.js:731
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Nog ongeveer %d min luistertijd"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/extension.js:735
+#: extension/extension.js:736
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Nog ongeveer %d∶%02d luistertijd"
@@ -371,14 +371,6 @@ msgstr "Gepersonaliseerd volume"
 msgid "Adjust media volume based on your environment"
 msgstr "Past het mediavolume aan je omgeving aan"
 
-#: extension/prefs.js:505
-msgid "Pause Media When Falling Asleep"
-msgstr "Pauzeer media als je in slaap valt"
-
-#: extension/prefs.js:506
-msgid "Pause playback when you fall asleep"
-msgstr "Pauzeert het afspelen als je in slaap valt"
-
 #: extension/prefs.js:510
 msgid "Stem Controls"
 msgstr "Bediening op de steel"
@@ -442,3 +434,9 @@ msgstr "Langer"
 #: extension/prefs.js:522
 msgid "Longest"
 msgstr "Langst"
+
+#~ msgid "Pause Media When Falling Asleep"
+#~ msgstr "Pauzeer media als je in slaap valt"
+
+#~ msgid "Pause playback when you fall asleep"
+#~ msgstr "Pauzeert het afspelen als je in slaap valt"

@@ -256,6 +256,13 @@ show_help() {
 
 # Main
 main() {
+    # Everything goes to the user's session and home, except the daemon
+    # install, which asks for sudo itself
+    if [ "$(id -u)" -eq 0 ]; then
+        print_error "Run this script without sudo: it asks for it when needed."
+        exit 1
+    fi
+
     case "${1:-}" in
         --uninstall)
             uninstall

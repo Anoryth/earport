@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-28 21:18+0200\n"
+"POT-Creation-Date: 2026-09-29 21:15+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Spanish\n"
@@ -106,17 +106,17 @@ msgstr "%s: batería baja"
 msgid "Battery"
 msgstr "Batería"
 
-#: extension/extension.js:728
+#: extension/extension.js:729
 msgid "Less than 5 min of listening left"
 msgstr "Quedan menos de 5 min de reproducción"
 
-#: extension/extension.js:730
+#: extension/extension.js:731
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Quedan unos %d min de reproducción"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/extension.js:735
+#: extension/extension.js:736
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Quedan unas %d∶%02d de reproducción"
@@ -371,14 +371,6 @@ msgstr "Volumen personalizado"
 msgid "Adjust media volume based on your environment"
 msgstr "Ajustar el volumen multimedia según el entorno"
 
-#: extension/prefs.js:505
-msgid "Pause Media When Falling Asleep"
-msgstr "Pausar el contenido al dormirse"
-
-#: extension/prefs.js:506
-msgid "Pause playback when you fall asleep"
-msgstr "Pausar la reproducción cuando se queda dormido"
-
 #: extension/prefs.js:510
 msgid "Stem Controls"
 msgstr "Controles de la parte alargada"
@@ -442,3 +434,9 @@ msgstr "Más larga"
 #: extension/prefs.js:522
 msgid "Longest"
 msgstr "La más larga"
+
+#~ msgid "Pause Media When Falling Asleep"
+#~ msgstr "Pausar el contenido al dormirse"
+
+#~ msgid "Pause playback when you fall asleep"
+#~ msgstr "Pausar la reproducción cuando se queda dormido"

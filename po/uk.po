@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-28 21:18+0200\n"
+"POT-Creation-Date: 2026-09-29 21:15+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -103,17 +103,17 @@ msgstr "%s: низький заряд"
 msgid "Battery"
 msgstr "Акумулятор"
 
-#: extension/extension.js:728
+#: extension/extension.js:729
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/extension.js:730
+#: extension/extension.js:731
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/extension.js:735
+#: extension/extension.js:736
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"
@@ -368,14 +368,6 @@ msgstr "Персоналізована гучність"
 msgid "Adjust media volume based on your environment"
 msgstr "Налаштовує гучність медіа відповідно до оточення"
 
-#: extension/prefs.js:505
-msgid "Pause Media When Falling Asleep"
-msgstr "Призупиняти відтворення медіавмісту, коли я засинаю"
-
-#: extension/prefs.js:506
-msgid "Pause playback when you fall asleep"
-msgstr "Призупиняє відтворення, коли ви засинаєте"
-
 #: extension/prefs.js:510
 msgid "Stem Controls"
 msgstr "Керування на ніжці"
@@ -439,3 +431,9 @@ msgstr "Довше"
 #: extension/prefs.js:522
 msgid "Longest"
 msgstr "Найдовше"
+
+#~ msgid "Pause Media When Falling Asleep"
+#~ msgstr "Призупиняти відтворення медіавмісту, коли я засинаю"
+
+#~ msgid "Pause playback when you fall asleep"
+#~ msgstr "Призупиняє відтворення, коли ви засинаєте"

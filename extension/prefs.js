@@ -502,8 +502,8 @@ export default class EarPortPreferences extends ExtensionPreferences {
                 settings: [
                     ['PersonalizedVolume', switchRow(_('Personalized Volume'),
                         _('Adjust media volume based on your environment'))],
-                    ['SleepDetection', switchRow(_('Pause Media When Falling Asleep'),
-                        _('Pause playback when you fall asleep'))],
+                    /* SleepDetection is not shown: the AirPods only report
+                     * falling asleep, pausing is up to the host (not done yet) */
                 ],
             },
             {
