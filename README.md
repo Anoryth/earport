@@ -12,13 +12,17 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Battery monitoring** - Real-time battery levels for left pod, right pod, and charging case
 - **Noise control modes** - Switch between Off, ANC, Transparency, and Adaptive modes
 - **Long press customization** - Configure which noise control modes cycle on stem long press
+- **AirPods settings** - Change the settings stored on the AirPods (noise cancellation with one AirPod, personalized volume, press speed, press and hold duration, volume swipe); only the settings your model reports are shown
+- **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone
+- **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
 - **Quick Settings integration** - Native GNOME Shell Quick Settings panel
 - **Quick mode switching** - Click the Quick Settings tile or use a configurable keyboard shortcut (default `Super+Shift+N`) to cycle noise control modes, with OSD feedback
 - **Notifications** - Connection/disconnection and low battery notifications
 - **Model detection** - Automatic detection of AirPods model with feature adaptation
 - **Per-device settings** - Settings are saved individually for each paired AirPods
-- **Translations** - French, Ukrainian, German, Spanish, Italian, Brazilian Portuguese and Dutch
+- **Accessibility** - Battery levels and the active mode are read by screen readers, full keyboard navigation, follows the Large Text setting
+- **Translations** - French, Ukrainian, German, Spanish, Italian, Brazilian Portuguese and Dutch (the last five are first drafts: reviews welcome)
 
 ### Supported Models
 
