@@ -215,6 +215,13 @@ gdbus call --session --dest io.github.anoryth.EarPort \
   --method io.github.anoryth.EarPort1.SetNoiseControlMode "anc"
 ```
 
+### Linting the Extension
+
+```bash
+npm install     # ESLint, development only
+npm run lint    # GJS / GNOME Shell rules recommended by gjs.guide
+```
+
 ### Packaging
 
 - `tools/pack-extension.sh` builds the extension zip for extensions.gnome.org and

@@ -53,6 +53,18 @@ jobs:
             fi
           done
 
+  lint:
+    name: Lint extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install ESLint
+        run: npm ci
+
+      - name: ESLint
+        run: npx eslint extension
+
   extension:
     name: Pack extension
     runs-on: ubuntu-latest

@@ -39,8 +39,8 @@ const CONVERSATION_VOLUME_RATIO = 0.2;
  * themed foreground color, so all state styling lives in the stylesheet. */
 const BatteryIndicator = GObject.registerClass(
 class BatteryIndicator extends St.BoxLayout {
-    _init(type, label, gicon, chargingGicon) {
-        super._init({
+    constructor(type, label, gicon, chargingGicon) {
+        super({
             style_class: 'earport-battery-indicator',
             vertical: true,
             x_align: Clutter.ActorAlign.CENTER,
@@ -218,8 +218,8 @@ class BatteryIndicator extends St.BoxLayout {
 /* Noise control mode button */
 const NoiseControlButton = GObject.registerClass(
 class NoiseControlButton extends St.Button {
-    _init(mode, label, accessibleName, gicon) {
-        super._init({
+    constructor(mode, label, accessibleName, gicon) {
+        super({
             style_class: 'earport-nc-button',
             can_focus: true,
             accessible_name: accessibleName,
@@ -261,8 +261,8 @@ class NoiseControlButton extends St.Button {
 /* Main Quick Settings toggle */
 const EarPortToggle = GObject.registerClass(
 class EarPortToggle extends QuickSettings.QuickMenuToggle {
-    _init(extensionObject) {
-        super._init({
+    constructor(extensionObject) {
+        super({
             title: 'AirPods',
             subtitle: _('Disconnected'),
             iconName: 'audio-headphones-symbolic',
@@ -481,11 +481,11 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._updateState();
     }
 
-    _onPropertiesChanged(proxy, changed, invalidated) {
+    _onPropertiesChanged() {
         this._updateState();
     }
 
-    _onDeviceConnected(proxy, sender, [address, name]) {
+    _onDeviceConnected(_proxy, _sender, [_address, name]) {
         /* Reset low battery notification state */
         this._lowBatteryNotified = {left: false, right: false};
 
@@ -504,7 +504,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._updateState();
     }
 
-    _onDeviceDisconnected(proxy, sender, [address, name]) {
+    _onDeviceDisconnected(_proxy, _sender, [_address, name]) {
         /* Show disconnection notification with display name. Skip the
          * "Unknown AirPods" fallback that the daemon reports once its state
          * has already been reset. */
@@ -585,6 +585,20 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._checkLowBattery(left, right);
     }
 
+    /* Whether a battery just went below the threshold: true once per
+     * crossing, armed again when the level goes back above it */
+    _crossedLowThreshold(pod, level, threshold) {
+        if (level > threshold) {
+            this._lowBatteryNotified[pod] = false;
+            return false;
+        }
+        if (level <= 0 || this._lowBatteryNotified[pod])
+            return false;
+
+        this._lowBatteryNotified[pod] = true;
+        return true;
+    }
+
     _checkLowBattery(left, right) {
         if (!this._settings.get_boolean('enable-low-battery-notifications'))
             return;
@@ -592,42 +606,19 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         const threshold = this._settings.get_int('low-battery-threshold');
         const isHeadphones = this._proxy?.IsHeadphones || false;
         const displayName = this._proxy?.DisplayName || this._proxy?.DeviceModel || 'AirPods';
+        const messages = [];
 
-        if (isHeadphones) {
-            /* For AirPods Max, only check left (main battery) */
-            if (left > 0 && left <= threshold && !this._lowBatteryNotified.left) {
-                this._lowBatteryNotified.left = true;
-                this._showNotification(
-                    _('%s Low Battery').replace('%s', displayName),
-                    `${_('Battery')}: ${left}%`,
-                    true);
-            } else if (left > threshold) {
-                this._lowBatteryNotified.left = false;
-            }
-        } else {
-            /* For earbuds, check both */
-            let messages = [];
+        /* AirPods Max have a single battery, reported as the left one */
+        if (this._crossedLowThreshold('left', left, threshold))
+            messages.push(`${isHeadphones ? _('Battery') : _('Left')}: ${left}%`);
+        if (!isHeadphones && this._crossedLowThreshold('right', right, threshold))
+            messages.push(`${_('Right')}: ${right}%`);
 
-            if (left > 0 && left <= threshold && !this._lowBatteryNotified.left) {
-                this._lowBatteryNotified.left = true;
-                messages.push(`${_('Left')}: ${left}%`);
-            } else if (left > threshold) {
-                this._lowBatteryNotified.left = false;
-            }
-
-            if (right > 0 && right <= threshold && !this._lowBatteryNotified.right) {
-                this._lowBatteryNotified.right = true;
-                messages.push(`${_('Right')}: ${right}%`);
-            } else if (right > threshold) {
-                this._lowBatteryNotified.right = false;
-            }
-
-            if (messages.length > 0) {
-                this._showNotification(
-                    _('%s Low Battery').replace('%s', displayName),
-                    messages.join(', '),
-                    true);
-            }
+        if (messages.length > 0) {
+            this._showNotification(
+                _('%s Low Battery').replace('%s', displayName),
+                messages.join(', '),
+                true);
         }
     }
 
@@ -866,8 +857,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
 /* Quick Settings indicator */
 const EarPortIndicator = GObject.registerClass(
 class EarPortIndicator extends QuickSettings.SystemIndicator {
-    _init(extensionObject) {
-        super._init();
+    constructor(extensionObject) {
+        super();
 
         this._indicator = this._addIndicator();
         this._indicator.icon_name = 'audio-headphones-symbolic';

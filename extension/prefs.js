@@ -21,8 +21,8 @@ const AirPodsProxy = Gio.DBusProxy.makeProxyWrapper(AirPodsInterface);
 /* Modal window capturing a keyboard shortcut */
 const ShortcutDialog = GObject.registerClass(
 class ShortcutDialog extends Adw.Window {
-    _init(parent, onCaptured) {
-        super._init({
+    constructor(parent, onCaptured) {
+        super({
             transient_for: parent,
             modal: true,
             resizable: false,
@@ -388,7 +388,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
                     this._onProxyReady();
                 }
             );
-        } catch (e) {
+        } catch {
             this._statusRow.subtitle = _('Error connecting to daemon');
             this._setSensitive(false);
         }
