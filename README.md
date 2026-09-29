@@ -48,7 +48,46 @@ The project consists of two components:
 
 ## Requirements
 
-### Build Dependencies
+- GNOME Shell 46 or later
+- BlueZ (Bluetooth stack)
+- AirPods paired via Bluetooth settings
+
+## Installation
+
+EarPort has two parts: the GNOME Shell extension, and a small service
+(`earport-daemon`) that talks to the AirPods over Bluetooth. Both are needed.
+
+### Quick Install (Recommended)
+
+**1. The service**, prebuilt for x86_64 and ARM64: no compiler, no sudo, installed
+in your home directory. Run the same command again to update it.
+
+```bash
+curl -fsSL https://github.com/Anoryth/earport/releases/latest/download/install-daemon.sh | bash
+```
+
+To remove it: `curl -fsSL https://github.com/Anoryth/earport/releases/latest/download/install-daemon.sh | bash -s -- --uninstall`
+
+**2. The extension**: download `earport@anoryth.github.io.shell-extension.zip` from the
+[latest release](https://github.com/Anoryth/earport/releases/latest), then:
+
+```bash
+gnome-extensions install earport@anoryth.github.io.shell-extension.zip
+```
+
+Log out and back in (Wayland), then enable EarPort in the Extensions app.
+
+### Arch Linux
+
+Until the AUR package is published, build it from the repository:
+
+```bash
+cd packaging/aur/earport && makepkg -si
+```
+
+### Build from Source
+
+Build dependencies:
 
 ```bash
 # Debian/Ubuntu
@@ -61,53 +100,39 @@ sudo dnf install meson ninja-build glib2-devel bluez-libs-devel
 sudo pacman -S meson ninja glib2 bluez-libs
 ```
 
-### Runtime Dependencies
-
-- GNOME Shell 46 or later
-- BlueZ (Bluetooth stack)
-- AirPods paired via Bluetooth settings
-
-## Installation
-
-### Quick Install (Recommended)
+Then, as your regular user (it asks for sudo only to install the service):
 
 ```bash
 ./install.sh
 ```
 
-This will build and install the daemon, enable the systemd service, and install the GNOME Shell extension.
+This builds and installs the service, enables it, and installs the extension.
 
-### Manual Installation
+#### Manual Steps
 
-#### 1. Build and Install the Daemon
+1. Build and install the service:
 
-```bash
-cd daemon
-meson setup build
-ninja -C build
-sudo ninja -C build install
-```
+   ```bash
+   cd daemon
+   meson setup build
+   ninja -C build
+   sudo ninja -C build install
+   ```
 
-#### 2. Enable the Systemd User Service
+2. Enable it:
 
-```bash
-systemctl --user enable --now earport-daemon.service
-```
+   ```bash
+   systemctl --user enable --now earport-daemon.service
+   ```
 
-#### 3. Install the GNOME Shell Extension
+3. Install the extension:
 
-```bash
-# Copy extension to GNOME Shell extensions directory
-cp -r extension ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
+   ```bash
+   cp -r extension ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
+   gnome-extensions enable earport@anoryth.github.io
+   ```
 
-# Enable the extension
-gnome-extensions enable earport@anoryth.github.io
-```
-
-#### 4. Restart GNOME Shell
-
-- **X11**: Press `Alt+F2`, type `r`, press Enter
-- **Wayland**: Log out and log back in
+4. Restart GNOME Shell: log out and back in (Wayland), or `Alt+F2`, `r` (X11)
 
 ## Usage
 

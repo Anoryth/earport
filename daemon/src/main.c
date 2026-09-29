@@ -980,8 +980,16 @@ static void cleanup(void)
 
 int main(int argc, char *argv[])
 {
-    (void)argc;
-    (void)argv;
+    if (argc > 1) {
+        if (strcmp(argv[1], "--version") == 0) {
+            printf("earport-daemon %s\n", EARPORT_VERSION);
+            return 0;
+        }
+        printf("Usage: %s [--version]\n"
+               "AirPods integration service for GNOME, started by systemd or D-Bus.\n",
+               argv[0]);
+        return strcmp(argv[1], "--help") == 0 ? 0 : 1;
+    }
 
     g_message("EarPort Daemon %s starting...", EARPORT_VERSION);
 

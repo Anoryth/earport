@@ -1,0 +1,92 @@
+name: Release
+
+# On a version tag: build the service for x86_64 and aarch64, pack the
+# extension, and prepare a draft GitHub release with everything
+# install-daemon.sh needs. The draft is published by hand after review.
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  daemon:
+    name: Build service (${{ matrix.arch }})
+    strategy:
+      matrix:
+        include:
+          # Oldest supported base: the binary then runs on newer systems too
+          - runner: ubuntu-22.04
+            arch: x86_64
+          - runner: ubuntu-22.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config libglib2.0-dev libbluetooth-dev
+
+      - name: Build and test
+        run: |
+          meson setup build daemon --buildtype=release
+          ninja -C build
+          meson test -C build --print-errorlogs
+
+      - name: Check runtime dependencies
+        run: |
+          # Only GLib and the C library: libbluetooth must not come back
+          ! ldd build/earport-daemon | grep -q libbluetooth
+
+      - name: Pack
+        run: tools/pack-daemon.sh build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daemon-${{ matrix.arch }}
+          path: dist/*.tar.gz
+
+  extension:
+    name: Pack extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext libglib2.0-bin zip
+
+      - name: Pack
+        run: tools/pack-extension.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: dist/*.shell-extension.zip
+
+  release:
+    name: Draft release
+    needs: [daemon, extension]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp install-daemon.sh dist/
+          (cd dist && sha256sum earport-daemon-linux-*.tar.gz > SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "EarPort ${GITHUB_REF_NAME#v}" \
+            --notes "Release notes to be written before publishing." \
+            dist/*
