@@ -76,10 +76,34 @@ static void set_state(BluetoothConnection *conn, BluetoothState state, const cha
     }
 }
 
+/* "AC:07:75:F0:31:02" -> bdaddr_t, least significant byte first. Done here
+ * rather than with libbluetooth's str2ba(), the only function the daemon
+ * used from it: the binary then needs nothing but GLib at runtime. */
+static bool parse_bdaddr(const char *address, bdaddr_t *bdaddr)
+{
+    unsigned int b[6];
+    char extra;
+
+    if (address == NULL ||
+        sscanf(address, "%2x:%2x:%2x:%2x:%2x:%2x%c",
+               &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &extra) != 6)
+        return false;
+
+    for (int i = 0; i < 6; i++)
+        bdaddr->b[5 - i] = (uint8_t)b[i];
+    return true;
+}
+
 bool bt_connection_connect(BluetoothConnection *conn, const char *address)
 {
     if (conn->state != BT_STATE_DISCONNECTED) {
         g_warning("Cannot connect: already connected or connecting");
+        return false;
+    }
+
+    bdaddr_t bdaddr;
+    if (!parse_bdaddr(address, &bdaddr)) {
+        g_warning("Cannot connect: invalid address '%s'", address ? address : "");
         return false;
     }
 
@@ -108,7 +132,7 @@ bool bt_connection_connect(BluetoothConnection *conn, const char *address)
     memset(&addr, 0, sizeof(addr));
     addr.l2_family = AF_BLUETOOTH;
     addr.l2_psm = htobs(AIRPODS_L2CAP_PSM);
-    str2ba(address, &addr.l2_bdaddr);
+    bacpy(&addr.l2_bdaddr, &bdaddr);
 
     g_free(conn->address);
     conn->address = g_strdup(address);

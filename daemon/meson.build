@@ -17,14 +17,19 @@ add_project_arguments(
 glib_dep = dependency('glib-2.0', version: '>= 2.56')
 gio_dep = dependency('gio-2.0', version: '>= 2.56')
 gio_unix_dep = dependency('gio-unix-2.0', version: '>= 2.56')
+# Only the BlueZ headers are needed (socket structures): not linking to
+# libbluetooth keeps prebuilt binaries portable
 bluetooth_dep = dependency('bluez', required: false)
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required: false)
 
-# If bluez pkg-config not available, use libbluetooth directly
-if not bluetooth_dep.found()
-    bluetooth_dep = cc.find_library('bluetooth', required: true)
+# Without the bluez pkg-config file, just check the headers are there
+if bluetooth_dep.found()
+    bluetooth_dep = bluetooth_dep.partial_dependency(compile_args: true, includes: true)
+else
+    cc.check_header('bluetooth/l2cap.h', required: true)
+    bluetooth_dep = declare_dependency()
 endif
 
 # Source files
@@ -96,6 +101,7 @@ configure_file(
 #   ninja -C build aap-probe
 executable('aap-probe',
     files('tools/aap_probe.c'),
-    dependencies: [bluetooth_dep],
+    # The probe still uses libbluetooth's str2ba()
+    dependencies: [bluetooth_dep, cc.find_library('bluetooth', required: false)],
     build_by_default: false,
 )
