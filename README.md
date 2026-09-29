@@ -215,6 +215,14 @@ gdbus call --session --dest io.github.anoryth.EarPort \
   --method io.github.anoryth.EarPort1.SetNoiseControlMode "anc"
 ```
 
+### Packaging
+
+- `tools/pack-extension.sh` builds the extension zip for extensions.gnome.org and
+  GitHub releases (only the files the extension needs, translations compiled from
+  `po/`); CI builds it on every push
+- `packaging/aur/` holds the Arch Linux packages: `earport` (tagged releases) and
+  `earport-git` (latest `main`)
+
 ### Translations
 
 Translation sources live in `po/`. The German, Spanish, Italian, Brazilian

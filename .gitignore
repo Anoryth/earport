@@ -30,3 +30,4 @@ build/
 # Local development files
 CLAUDE.md
 .claude/settings.json
+dist/
