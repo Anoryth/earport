@@ -259,24 +259,26 @@ const char *noise_control_mode_to_string(NoiseControlMode mode)
     }
 }
 
-NoiseControlMode noise_control_mode_from_string(const char *str)
+bool noise_control_mode_from_string(const char *str, NoiseControlMode *mode)
 {
     if (str == NULL)
-        return NOISE_CONTROL_OFF;
+        return false;
 
-    if (g_ascii_strcasecmp(str, "anc") == 0 ||
-        g_ascii_strcasecmp(str, "noise_cancellation") == 0 ||
-        g_ascii_strcasecmp(str, "cancellation") == 0)
-        return NOISE_CONTROL_ANC;
-
-    if (g_ascii_strcasecmp(str, "transparency") == 0 ||
-        g_ascii_strcasecmp(str, "transparent") == 0)
-        return NOISE_CONTROL_TRANSPARENCY;
-
-    if (g_ascii_strcasecmp(str, "adaptive") == 0)
-        return NOISE_CONTROL_ADAPTIVE;
-
-    return NOISE_CONTROL_OFF;
+    if (g_ascii_strcasecmp(str, "off") == 0) {
+        *mode = NOISE_CONTROL_OFF;
+    } else if (g_ascii_strcasecmp(str, "anc") == 0 ||
+               g_ascii_strcasecmp(str, "noise_cancellation") == 0 ||
+               g_ascii_strcasecmp(str, "cancellation") == 0) {
+        *mode = NOISE_CONTROL_ANC;
+    } else if (g_ascii_strcasecmp(str, "transparency") == 0 ||
+               g_ascii_strcasecmp(str, "transparent") == 0) {
+        *mode = NOISE_CONTROL_TRANSPARENCY;
+    } else if (g_ascii_strcasecmp(str, "adaptive") == 0) {
+        *mode = NOISE_CONTROL_ADAPTIVE;
+    } else {
+        return false;
+    }
+    return true;
 }
 
 bool airpods_model_supports_anc(AirPodsModel model)

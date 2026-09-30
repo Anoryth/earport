@@ -296,7 +296,12 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
         const gchar *mode_str = NULL;
         g_variant_get(parameters, "(&s)", &mode_str);
 
-        NoiseControlMode mode = noise_control_mode_from_string(mode_str);
+        NoiseControlMode mode;
+        if (!noise_control_mode_from_string(mode_str, &mode)) {
+            g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                  "Unknown noise control mode: %s", mode_str);
+            return;
+        }
         g_message("D-Bus: SetNoiseControlMode(%s) -> %d", mode_str, mode);
 
         if (service->noise_control_callback) {

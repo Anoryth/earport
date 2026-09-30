@@ -170,8 +170,8 @@ const char *airpods_model_to_string(AirPodsModel model);
 /* Get noise control mode as string */
 const char *noise_control_mode_to_string(NoiseControlMode mode);
 
-/* Parse noise control mode from string */
-NoiseControlMode noise_control_mode_from_string(const char *str);
+/* Parse a noise control mode name; false if unknown */
+bool noise_control_mode_from_string(const char *str, NoiseControlMode *mode);
 
 /* Check if model supports ANC */
 bool airpods_model_supports_anc(AirPodsModel model);
