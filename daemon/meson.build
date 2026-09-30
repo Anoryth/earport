@@ -47,6 +47,7 @@ sources = files(
     'src/bluetooth.c',
     'src/bluez_monitor.c',
     'src/config.c',
+    'src/device.c',
     'src/dbus_service.c',
     'src/media_control.c',
 )
@@ -94,6 +95,15 @@ test_ble_proximity = executable('test-ble-proximity',
     dependencies: [glib_dep],
 )
 test('ble-proximity', test_ble_proximity)
+
+test_device = executable('test-device',
+    files('tests/test_device.c', 'src/device.c', 'src/aap_protocol.c', 'src/airpods_settings.c',
+          'src/airpods_state.c', 'src/battery_estimator.c', 'src/config.c', 'src/dbus_service.c',
+          'src/media_control.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep, m_dep],
+)
+test('device', test_device)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

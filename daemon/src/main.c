@@ -16,10 +16,10 @@
 #include "aap_link.h"
 #include "aap_protocol.h"
 #include "autoconnect.h"
-#include "battery_estimator.h"
 #include "bluez_monitor.h"
 #include "config.h"
 #include "dbus_service.h"
+#include "device.h"
 #include "media_control.h"
 
 /* Global application state */
@@ -31,62 +31,14 @@ typedef struct {
     DbusService *dbus_service;
     MediaControl *media_control;
     EarPortConfig config;
-
-    bool ca_speaking;            /* Conversation awareness lowered the volume */
-
-    /* Remaining listening time, learned per device */
-    BatteryEstimator battery_estimator;
-
+    Device device;
     AutoConnect *autoconnect;
 } AppContext;
 
 static AppContext app = {0};
 
 /* Forward declarations */
-static void apply_device_profile(const char *address);
 static gboolean apply_saved_settings_idle(gpointer user_data);
-
-/* ============================================================================
- * Remaining listening time
- * ========================================================================== */
-
-/* The learned discharge rate is kept per device */
-static void save_learned_drain_rate(void)
-{
-    g_mutex_lock(&app.state.lock);
-    char *address = g_strdup(app.state.device_address);
-    g_mutex_unlock(&app.state.lock);
-
-    g_message("Learned discharge rate: %.1f %%/h", app.battery_estimator.drain_rate);
-    config_save_drain_rate(address, app.battery_estimator.drain_rate);
-    g_free(address);
-}
-
-static void update_listening_time(const AapBatteryData *battery)
-{
-    int64_t now = g_get_monotonic_time() / G_USEC_PER_SEC;
-    bool left_in_use = battery->left_status == BATTERY_STATUS_DISCHARGING;
-    bool right_in_use = battery->right_status == BATTERY_STATUS_DISCHARGING;
-    bool learned = false;
-
-    learned |= battery_estimator_update(&app.battery_estimator, BATTERY_POD_LEFT, now,
-                                        battery->left_level, left_in_use);
-    learned |= battery_estimator_update(&app.battery_estimator, BATTERY_POD_RIGHT, now,
-                                        battery->right_level, right_in_use);
-    if (learned)
-        save_learned_drain_rate();
-
-    /* The pod in use with the lowest level runs out first */
-    int level = -1;
-    if (left_in_use)
-        level = battery->left_level;
-    if (right_in_use && (level < 0 || battery->right_level < level))
-        level = battery->right_level;
-
-    int minutes = battery_estimator_minutes_left(&app.battery_estimator, level);
-    if (airpods_state_set_listening_minutes(&app.state, minutes))
-        dbus_service_emit_properties_changed(app.dbus_service, "ListeningTimeRemaining");
-}
 
 /* ============================================================================
  * Automatic connection
@@ -117,222 +69,22 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 {
     (void)user_data;
 
-    switch (pkt->type) {
-    case AAP_PKT_TYPE_BATTERY:
-        g_message("Battery: L=%d%% (status=%d) R=%d%% (status=%d) Case=%d%% (status=%d)",
-                  pkt->data.battery.left_level,
-                  pkt->data.battery.left_status,
-                  pkt->data.battery.right_level,
-                  pkt->data.battery.right_status,
-                  pkt->data.battery.case_level,
-                  pkt->data.battery.case_status);
-
-        airpods_state_set_battery(&app.state,
-                                   pkt->data.battery.left_level,
-                                   pkt->data.battery.left_status,
-                                   pkt->data.battery.right_level,
-                                   pkt->data.battery.right_status,
-                                   pkt->data.battery.case_level,
-                                   pkt->data.battery.case_status);
-
-        dbus_service_emit_battery_changed(app.dbus_service,
-                                           pkt->data.battery.left_level,
-                                           pkt->data.battery.right_level,
-                                           pkt->data.battery.case_level);
-        dbus_service_emit_properties_changed(app.dbus_service, "BatteryLeft");
-        dbus_service_emit_properties_changed(app.dbus_service, "BatteryRight");
-        dbus_service_emit_properties_changed(app.dbus_service, "BatteryCase");
-        dbus_service_emit_properties_changed(app.dbus_service, "ChargingLeft");
-        dbus_service_emit_properties_changed(app.dbus_service, "ChargingRight");
-        dbus_service_emit_properties_changed(app.dbus_service, "ChargingCase");
-
-        update_listening_time(&pkt->data.battery);
-        break;
-
-    case AAP_PKT_TYPE_EAR_DETECTION: {
-        bool primary_in_ear = pkt->data.ear_detection.primary_in_ear;
-        bool secondary_in_ear = pkt->data.ear_detection.secondary_in_ear;
-
-        g_message("Ear detection: primary=%s secondary=%s",
-                  primary_in_ear ? "in" : "out",
-                  secondary_in_ear ? "in" : "out");
-
-        /* AirPods Max have a single sensor: the secondary slot always reads
-         * "out", which would jam the one-out auto-pause logic. Mirror the
-         * primary status instead. */
-        g_mutex_lock(&app.state.lock);
-        bool is_headphones = airpods_model_is_headphones(app.state.model);
-        g_mutex_unlock(&app.state.lock);
-        if (is_headphones)
-            secondary_in_ear = primary_in_ear;
-
-        airpods_state_set_ear_detection(&app.state,
-                                         primary_in_ear,
-                                         secondary_in_ear,
-                                         pkt->data.ear_detection.primary_left);
-
-        dbus_service_emit_ear_detection_changed(app.dbus_service,
-                                                 app.state.ear_detection.left_in_ear,
-                                                 app.state.ear_detection.right_in_ear);
-        dbus_service_emit_properties_changed(app.dbus_service, "LeftInEar");
-        dbus_service_emit_properties_changed(app.dbus_service, "RightInEar");
-
-        /* Trigger media pause/resume based on ear detection */
-        if (app.media_control) {
-            media_control_on_ear_detection_changed(app.media_control,
-                                                    app.state.ear_detection.left_in_ear,
-                                                    app.state.ear_detection.right_in_ear);
-        }
-        break;
-    }
-
-    case AAP_PKT_TYPE_NOISE_CONTROL:
-        g_message("Noise control mode: %s",
-                  noise_control_mode_to_string(pkt->data.noise_control));
-
-        airpods_state_set_noise_control(&app.state, pkt->data.noise_control);
-
-        dbus_service_emit_noise_control_changed(app.dbus_service,
-                                                 pkt->data.noise_control);
-        dbus_service_emit_properties_changed(app.dbus_service, "NoiseControlMode");
-        break;
-
-    case AAP_PKT_TYPE_CONV_AWARENESS:
-        g_message("Conversational awareness: %s",
-                  pkt->data.conversational_awareness ? "enabled" : "disabled");
-
-        airpods_state_set_conversational_awareness(&app.state,
-                                                    pkt->data.conversational_awareness);
-
-        dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
-        break;
-
-    case AAP_PKT_TYPE_CA_DETECTION: {
-        int speaking = aap_ca_speaking_from_level(pkt->data.ca_volume_level);
-        g_debug("CA detection event: level=%d", pkt->data.ca_volume_level);
-
-        if (speaking >= 0 && (bool)speaking != app.ca_speaking) {
-            app.ca_speaking = speaking;
-            g_message("Conversation %s", speaking ? "started" : "ended");
-            dbus_service_emit_speaking_changed(app.dbus_service, app.ca_speaking);
-        }
-        break;
-    }
-
-    case AAP_PKT_TYPE_LISTENING_MODES:
-        g_message("Listening modes: off=%s transparency=%s anc=%s adaptive=%s (raw=0x%02X)",
-                  pkt->data.listening_modes.off_enabled ? "on" : "off",
-                  pkt->data.listening_modes.transparency_enabled ? "on" : "off",
-                  pkt->data.listening_modes.anc_enabled ? "on" : "off",
-                  pkt->data.listening_modes.adaptive_enabled ? "on" : "off",
-                  pkt->data.listening_modes.raw_value);
-
-        airpods_state_set_listening_modes(&app.state,
-                                           pkt->data.listening_modes.off_enabled,
-                                           pkt->data.listening_modes.transparency_enabled,
-                                           pkt->data.listening_modes.anc_enabled,
-                                           pkt->data.listening_modes.adaptive_enabled);
-
-        dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeOff");
-        dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeTransparency");
-        dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeANC");
-        dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeAdaptive");
-        break;
-
-    case AAP_PKT_TYPE_PROXIMITY_KEYS:
+    if (pkt->type == AAP_PKT_TYPE_PROXIMITY_KEYS)
         on_proximity_keys(&pkt->data.proximity_keys);
-        break;
-
-    case AAP_PKT_TYPE_CONTROL_SETTING: {
-        const AirPodsSettingDef *def = airpods_setting_by_id(pkt->data.control_setting.id);
-        if (def == NULL)
-            break;  /* Not exposed yet */
-
-        uint8_t value = pkt->data.control_setting.value[0];
-        g_message("Setting %s: 0x%02X", def->key, value);
-
-        if (airpods_state_set_setting(&app.state, def->id, value))
-            dbus_service_emit_properties_changed(app.dbus_service, "Settings");
-        break;
-    }
-
-    case AAP_PKT_TYPE_METADATA:
-        g_message("Metadata received: device='%s' model='%s' manufacturer='%s'",
-                  pkt->data.metadata.device_name,
-                  pkt->data.metadata.model_number,
-                  pkt->data.metadata.manufacturer);
-
-        /* Update model from model number */
-        {
-            AirPodsModel detected_model = airpods_model_from_number(pkt->data.metadata.model_number);
-            if (detected_model != AIRPODS_MODEL_UNKNOWN) {
-                g_mutex_lock(&app.state.lock);
-                app.state.model = detected_model;
-                g_mutex_unlock(&app.state.lock);
-
-                g_message("Detected AirPods model: %s", airpods_model_to_string(detected_model));
-                dbus_service_emit_properties_changed(app.dbus_service, "DeviceModel");
-                dbus_service_emit_properties_changed(app.dbus_service, "IsHeadphones");
-                dbus_service_emit_properties_changed(app.dbus_service, "SupportsANC");
-                dbus_service_emit_properties_changed(app.dbus_service, "SupportsAdaptive");
-                /* DisplayName falls back to the model name, refresh it too */
-                dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
-            }
-        }
-        break;
-
-    default:
-        break;
-    }
+    else
+        device_handle_packet(&app.device, pkt);
 }
 
-/* Tell clients the AirPods are gone and forget their state */
 static void on_link_disconnected(void *user_data)
 {
     (void)user_data;
-
-    if (app.state.connected) {
-        dbus_service_emit_device_disconnected(app.dbus_service,
-                                               app.state.device_address,
-                                               app.state.device_name);
-    }
-
-    /* Let clients restore the volume lowered for a conversation */
-    if (app.ca_speaking) {
-        app.ca_speaking = false;
-        dbus_service_emit_speaking_changed(app.dbus_service, false);
-    }
-
-    /* Learn from the sessions cut short by the disconnection (needs the
-     * device address, so before the state reset) */
-    if (battery_estimator_finish(&app.battery_estimator))
-        save_learned_drain_rate();
-
-    airpods_state_reset(&app.state);
-    dbus_service_emit_properties_changed(app.dbus_service, "Connected");
-    dbus_service_emit_properties_changed(app.dbus_service, "Settings");
+    device_session_ended(&app.device);
 }
 
 static void on_link_connected(const char *address, const char *name, void *user_data)
 {
     (void)user_data;
-
-    /* Model detected later via metadata */
-    airpods_state_set_device(&app.state, name, address, AIRPODS_MODEL_UNKNOWN);
-
-    /* Load and apply saved device profile */
-    apply_device_profile(address);
-    battery_estimator_init(&app.battery_estimator, config_load_drain_rate(address));
-
-    /* Emit property changes BEFORE the DeviceConnected signal so the
-     * extension's proxy cache is up-to-date when its handler reads
-     * DisplayName for the connection notification. */
-    dbus_service_emit_properties_changed(app.dbus_service, "Connected");
-    dbus_service_emit_properties_changed(app.dbus_service, "DeviceName");
-    dbus_service_emit_properties_changed(app.dbus_service, "DeviceAddress");
-    dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
-
-    dbus_service_emit_device_connected(app.dbus_service, address, name);
+    device_session_started(&app.device, address, name);
 
     /* Schedule sending saved settings after connection stabilizes (500ms delay) */
     g_timeout_add(500, apply_saved_settings_idle, g_strdup(address));
@@ -341,39 +93,6 @@ static void on_link_connected(const char *address, const char *name, void *user_
 /* ============================================================================
  * Device profile management
  * ========================================================================== */
-
-static void apply_device_profile(const char *address)
-{
-    if (address == NULL || address[0] == '\0') {
-        return;
-    }
-
-    DeviceProfile profile;
-    bool has_profile = config_load_device_profile(address, &profile);
-
-    if (!has_profile || !profile.has_saved_settings) {
-        g_message("No saved profile for device %s, using defaults", address);
-        return;
-    }
-
-    g_message("Applying saved profile for device %s", address);
-
-    /* Apply display name */
-    airpods_state_set_display_name(&app.state, profile.display_name);
-
-    /* Apply listening modes */
-    airpods_state_set_listening_modes(&app.state,
-                                       profile.listening_modes.off_enabled,
-                                       profile.listening_modes.transparency_enabled,
-                                       profile.listening_modes.anc_enabled,
-                                       profile.listening_modes.adaptive_enabled);
-
-    /* Apply conversational awareness (will be sent after connection stabilizes) */
-    g_mutex_lock(&app.state.lock);
-    app.state.conversational_awareness = profile.conversational_awareness;
-    app.state.adaptive_noise_level = profile.adaptive_noise_level;
-    g_mutex_unlock(&app.state.lock);
-}
 
 static gboolean apply_saved_settings_idle(gpointer user_data)
 {
@@ -677,8 +396,7 @@ static void cleanup(void)
     autoconnect_free(app.autoconnect);
     app.autoconnect = NULL;
 
-    if (battery_estimator_finish(&app.battery_estimator))
-        save_learned_drain_rate();
+    device_finish(&app.device);
 
     aap_link_free(app.link);
     app.link = NULL;
@@ -770,6 +488,7 @@ int main(int argc, char *argv[])
         media_control_set_playback_started_callback(app.media_control, on_playback_started, NULL);
     }
 
+    device_init(&app.device, &app.state, app.dbus_service, app.media_control);
     app.autoconnect = autoconnect_new(app.config.auto_connect);
 
     static const AapLinkCallbacks link_callbacks = {
