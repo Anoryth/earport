@@ -47,6 +47,7 @@ sources = files(
     'src/bluetooth.c',
     'src/bluez_monitor.c',
     'src/config.c',
+    'src/controls.c',
     'src/device.c',
     'src/dbus_service.c',
     'src/media_control.c',

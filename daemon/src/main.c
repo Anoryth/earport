@@ -18,6 +18,7 @@
 #include "autoconnect.h"
 #include "bluez_monitor.h"
 #include "config.h"
+#include "controls.h"
 #include "dbus_service.h"
 #include "device.h"
 #include "media_control.h"
@@ -32,13 +33,11 @@ typedef struct {
     MediaControl *media_control;
     EarPortConfig config;
     Device device;
+    Controls controls;
     AutoConnect *autoconnect;
 } AppContext;
 
 static AppContext app = {0};
-
-/* Forward declarations */
-static gboolean apply_saved_settings_idle(gpointer user_data);
 
 /* ============================================================================
  * Automatic connection
@@ -85,61 +84,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
 {
     (void)user_data;
     device_session_started(&app.device, address, name);
-
-    /* Schedule sending saved settings after connection stabilizes (500ms delay) */
-    g_timeout_add(500, apply_saved_settings_idle, g_strdup(address));
-}
-
-/* ============================================================================
- * Device profile management
- * ========================================================================== */
-
-static gboolean apply_saved_settings_idle(gpointer user_data)
-{
-    const char *address = (const char *)user_data;
-
-    if (!aap_link_is_connected(app.link)) {
-        g_free((gchar *)address);
-        return G_SOURCE_REMOVE;
-    }
-
-    DeviceProfile profile;
-    if (!config_load_device_profile(address, &profile) || !profile.has_saved_settings) {
-        g_free((gchar *)address);
-        return G_SOURCE_REMOVE;
-    }
-
-    g_message("Sending saved settings to AirPods...");
-
-    /* Send listening modes configuration */
-    uint8_t modes = 0;
-    if (profile.listening_modes.off_enabled) modes |= AAP_LISTENING_MODE_OFF;
-    if (profile.listening_modes.transparency_enabled) modes |= AAP_LISTENING_MODE_TRANSPARENCY;
-    if (profile.listening_modes.anc_enabled) modes |= AAP_LISTENING_MODE_ANC;
-    if (profile.listening_modes.adaptive_enabled) modes |= AAP_LISTENING_MODE_ADAPTIVE;
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_listening_modes_cmd(modes, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* Send conversational awareness setting */
-    g_usleep(50000);  /* 50ms delay between commands */
-    aap_build_conv_awareness_cmd(profile.conversational_awareness, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* Send adaptive noise level */
-    g_usleep(50000);
-    aap_build_adaptive_level_cmd(profile.adaptive_noise_level, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* The values the AirPods announced on connection are now outdated */
-    airpods_state_set_conversational_awareness(&app.state, profile.conversational_awareness);
-    airpods_state_set_adaptive_noise_level(&app.state, profile.adaptive_noise_level);
-    dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
-    dbus_service_emit_properties_changed(app.dbus_service, "AdaptiveNoiseLevel");
-
-    g_free((gchar *)address);
-    return G_SOURCE_REMOVE;
+    controls_send_saved_settings(&app.controls, address);
 }
 
 /* ============================================================================
@@ -167,73 +112,8 @@ static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *us
 }
 
 /* ============================================================================
- * D-Bus method callbacks
+ * D-Bus methods about the service itself
  * ========================================================================== */
-
-static void on_set_noise_control(NoiseControlMode mode, void *user_data)
-{
-    (void)user_data;
-
-    if (!aap_link_is_connected(app.link)) {
-        g_warning("Cannot set noise control: not connected");
-        return;
-    }
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_noise_control_cmd(mode, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-}
-
-static void on_set_conv_awareness(bool enabled, void *user_data)
-{
-    (void)user_data;
-
-    if (!aap_link_is_connected(app.link)) {
-        g_warning("Cannot set conversational awareness: not connected");
-        return;
-    }
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_conv_awareness_cmd(enabled, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* The AirPods don't echo the change back */
-    airpods_state_set_conversational_awareness(&app.state, enabled);
-    dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
-
-    /* Save to device profile */
-    if (app.state.device_address && app.state.device_address[0] != '\0') {
-        DeviceProfile profile;
-        config_load_device_profile(app.state.device_address, &profile);
-        profile.conversational_awareness = enabled;
-        config_save_device_profile(app.state.device_address, &profile);
-    }
-}
-
-static void on_set_adaptive_level(int level, void *user_data)
-{
-    (void)user_data;
-
-    if (!aap_link_is_connected(app.link)) {
-        g_warning("Cannot set adaptive level: not connected");
-        return;
-    }
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_adaptive_level_cmd(level, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    airpods_state_set_adaptive_noise_level(&app.state, level);
-    dbus_service_emit_properties_changed(app.dbus_service, "AdaptiveNoiseLevel");
-
-    /* Save to device profile */
-    if (app.state.device_address && app.state.device_address[0] != '\0') {
-        DeviceProfile profile;
-        config_load_device_profile(app.state.device_address, &profile);
-        profile.adaptive_noise_level = level;
-        config_save_device_profile(app.state.device_address, &profile);
-    }
-}
 
 static void on_set_ear_pause_mode(int mode, void *user_data)
 {
@@ -259,76 +139,6 @@ static void on_set_ear_pause_mode(int mode, void *user_data)
     dbus_service_emit_properties_changed(app.dbus_service, "EarPauseMode");
 }
 
-static void on_set_listening_modes(bool off, bool transparency, bool anc, bool adaptive, void *user_data)
-{
-    (void)user_data;
-
-    if (!aap_link_is_connected(app.link)) {
-        g_warning("Cannot set listening modes: not connected");
-        return;
-    }
-
-    /* Build the bitmask */
-    uint8_t modes = 0;
-    if (off) modes |= AAP_LISTENING_MODE_OFF;
-    if (transparency) modes |= AAP_LISTENING_MODE_TRANSPARENCY;
-    if (anc) modes |= AAP_LISTENING_MODE_ANC;
-    if (adaptive) modes |= AAP_LISTENING_MODE_ADAPTIVE;
-
-    /* Ensure at least 2 modes are enabled */
-    int count = (off ? 1 : 0) + (transparency ? 1 : 0) + (anc ? 1 : 0) + (adaptive ? 1 : 0);
-    if (count < 2) {
-        g_warning("At least 2 listening modes must be enabled");
-        return;
-    }
-
-    g_message("Setting listening modes: 0x%02X", modes);
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_listening_modes_cmd(modes, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* Update local state immediately */
-    airpods_state_set_listening_modes(&app.state, off, transparency, anc, adaptive);
-
-    /* Save to device profile */
-    if (app.state.device_address && app.state.device_address[0] != '\0') {
-        DeviceProfile profile;
-        config_load_device_profile(app.state.device_address, &profile);
-        profile.listening_modes.off_enabled = off;
-        profile.listening_modes.transparency_enabled = transparency;
-        profile.listening_modes.anc_enabled = anc;
-        profile.listening_modes.adaptive_enabled = adaptive;
-        config_save_device_profile(app.state.device_address, &profile);
-    }
-
-    dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeOff");
-    dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeTransparency");
-    dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeANC");
-    dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeAdaptive");
-}
-
-static bool on_set_setting(const AirPodsSettingDef *def, uint8_t byte, void *user_data)
-{
-    (void)user_data;
-
-    if (!aap_link_is_connected(app.link)) {
-        g_warning("Cannot set %s: not connected", def->key);
-        return false;
-    }
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_control_cmd(def->id, &byte, 1, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* The AirPods don't echo settings back: update the state right away.
-     * No need to save it in the profile, the AirPods remember it. */
-    if (airpods_state_set_setting(&app.state, def->id, byte))
-        dbus_service_emit_properties_changed(app.dbus_service, "Settings");
-
-    return true;
-}
-
 static void on_set_auto_connect(bool enabled, void *user_data)
 {
     (void)user_data;
@@ -337,32 +147,6 @@ static void on_set_auto_connect(bool enabled, void *user_data)
     config_save(&app.config);
     dbus_service_set_auto_connect(app.dbus_service, enabled);
     autoconnect_set_enabled(app.autoconnect, enabled);
-}
-
-static void on_set_display_name(const char *name, void *user_data)
-{
-    (void)user_data;
-
-    g_message("Setting display name to '%s'", name ? name : "");
-
-    /* Update state */
-    airpods_state_set_display_name(&app.state, name);
-
-    /* Save to device profile */
-    if (app.state.device_address && app.state.device_address[0] != '\0') {
-        DeviceProfile profile;
-        config_load_device_profile(app.state.device_address, &profile);
-        if (name && name[0] != '\0') {
-            strncpy(profile.display_name, name, sizeof(profile.display_name) - 1);
-            profile.display_name[sizeof(profile.display_name) - 1] = '\0';
-        } else {
-            profile.display_name[0] = '\0';
-        }
-        config_save_device_profile(app.state.device_address, &profile);
-    }
-
-    /* Notify property change */
-    dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
 }
 
 /* ============================================================================
@@ -460,13 +244,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    dbus_service_set_noise_control_callback(app.dbus_service, on_set_noise_control, NULL);
-    dbus_service_set_conv_awareness_callback(app.dbus_service, on_set_conv_awareness, NULL);
-    dbus_service_set_adaptive_level_callback(app.dbus_service, on_set_adaptive_level, NULL);
     dbus_service_set_ear_pause_mode_callback(app.dbus_service, on_set_ear_pause_mode, NULL);
-    dbus_service_set_listening_modes_callback(app.dbus_service, on_set_listening_modes, NULL);
-    dbus_service_set_display_name_callback(app.dbus_service, on_set_display_name, NULL);
-    dbus_service_set_setting_callback(app.dbus_service, on_set_setting, NULL);
     dbus_service_set_auto_connect_callback(app.dbus_service, on_set_auto_connect, NULL);
     dbus_service_set_auto_connect(app.dbus_service, app.config.auto_connect);
 
@@ -497,6 +275,7 @@ int main(int argc, char *argv[])
         .packet = on_link_packet,
     };
     app.link = aap_link_new(&link_callbacks, NULL);
+    controls_init(&app.controls, &app.device, app.link, app.dbus_service);
 
     /* Create BlueZ monitor */
     app.bluez_monitor = bluez_monitor_new();
