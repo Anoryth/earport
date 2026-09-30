@@ -33,13 +33,16 @@ static gboolean send_saved_settings_cb(gpointer user_data)
     if (!aap_link_is_connected(c->link))
         return G_SOURCE_REMOVE;
 
+    /* Only what the AirPods don't announce, and only if it was set here:
+     * sending defaults or stale values would undo changes made on another
+     * device (conversation awareness and the adaptive level are announced,
+     * the AirPods keep them) */
     DeviceProfile profile;
-    if (!config_load_device_profile(job->address, &profile) || !profile.has_saved_settings)
+    if (!config_load_device_profile(job->address, &profile) || !profile.listening_modes_set)
         return G_SOURCE_REMOVE;
 
-    g_message("Sending saved settings to AirPods...");
+    g_message("Sending the long-press modes set in EarPort to the AirPods");
 
-    /* Send listening modes configuration */
     uint8_t modes = 0;
     if (profile.listening_modes.off_enabled) modes |= AAP_LISTENING_MODE_OFF;
     if (profile.listening_modes.transparency_enabled) modes |= AAP_LISTENING_MODE_TRANSPARENCY;
@@ -49,20 +52,6 @@ static gboolean send_saved_settings_cb(gpointer user_data)
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_listening_modes_cmd(modes, packet);
     aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* Send conversational awareness setting */
-    aap_build_conv_awareness_cmd(profile.conversational_awareness, packet);
-    aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* Send adaptive noise level */
-    aap_build_adaptive_level_cmd(profile.adaptive_noise_level, packet);
-    aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
-
-    /* The values the AirPods announced on connection are now outdated */
-    airpods_state_set_conversational_awareness(c->device->state, profile.conversational_awareness);
-    airpods_state_set_adaptive_noise_level(c->device->state, profile.adaptive_noise_level);
-    dbus_service_emit_properties_changed(c->device->dbus, "ConversationalAwareness");
-    dbus_service_emit_properties_changed(c->device->dbus, "AdaptiveNoiseLevel");
 
     return G_SOURCE_REMOVE;
 }
@@ -187,6 +176,7 @@ static void on_set_listening_modes(bool off, bool transparency, bool anc, bool a
         profile.listening_modes.transparency_enabled = transparency;
         profile.listening_modes.anc_enabled = anc;
         profile.listening_modes.adaptive_enabled = adaptive;
+        profile.listening_modes_set = true;
         config_save_device_profile(c->device->state->device_address, &profile);
     }
 

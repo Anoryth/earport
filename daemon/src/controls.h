@@ -4,7 +4,8 @@
  *
  * Commands sent to the AirPods: D-Bus methods (noise control, conversation
  * awareness, adaptive level, long-press modes, settings, display name) and
- * the saved profile sent back on connection. The AirPods don't echo most
+ * the long-press modes set here, sent back on connection (the AirPods
+ * don't announce them). The AirPods don't echo most
  * changes, so the state is updated right away.
  */
 
@@ -23,7 +24,7 @@ typedef struct {
 /* Handle the D-Bus methods that change the AirPods */
 void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus);
 
-/* Send the saved profile to the AirPods shortly */
+/* Send the long-press modes set in EarPort to the AirPods shortly */
 void controls_send_saved_settings(Controls *c, const char *address);
 
 #endif /* CONTROLS_H */

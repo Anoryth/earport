@@ -298,6 +298,12 @@ static AapParseResult parse_control_packet(const uint8_t *data, size_t len, AapP
         }
         return AAP_PARSE_OK;
 
+    case AAP_CTRL_ADAPTIVE_LEVEL:
+        /* Announced on connection, like the settings */
+        result->type = AAP_PKT_TYPE_ADAPTIVE_LEVEL;
+        result->data.adaptive_level = data[7] > 100 ? 100 : data[7];
+        return AAP_PARSE_OK;
+
     default:
         /* Other settings: keep the raw value, missing bytes read as zero */
         result->type = AAP_PKT_TYPE_CONTROL_SETTING;

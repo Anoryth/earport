@@ -116,6 +116,7 @@ static void test_profile(void)
     profile.listening_modes.off_enabled = true;
     profile.conversational_awareness = true;
     profile.adaptive_noise_level = 30;
+    profile.listening_modes_set = true;
     g_assert_true(config_save_device_profile(ADDRESS, &profile));
 
     g_assert_true(config_load_device_profile(ADDRESS, &loaded));
@@ -124,6 +125,7 @@ static void test_profile(void)
     g_assert_true(loaded.listening_modes.off_enabled);
     g_assert_true(loaded.conversational_awareness);
     g_assert_cmpint(loaded.adaptive_noise_level, ==, 30);
+    g_assert_true(loaded.listening_modes_set);
 
     /* Other AirPods keep their own profile */
     g_assert_false(config_load_device_profile(OTHER_ADDRESS, &loaded));

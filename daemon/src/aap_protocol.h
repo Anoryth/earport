@@ -106,6 +106,7 @@ typedef enum {
     AAP_PKT_TYPE_CA_DETECTION,
     AAP_PKT_TYPE_METADATA,
     AAP_PKT_TYPE_LISTENING_MODES,
+    AAP_PKT_TYPE_ADAPTIVE_LEVEL,
     AAP_PKT_TYPE_CONTROL_SETTING,
     AAP_PKT_TYPE_PROXIMITY_KEYS,
 } AapPacketType;
@@ -168,6 +169,7 @@ typedef struct {
         int ca_volume_level;
         AapMetadata metadata;
         AapListeningModes listening_modes;
+        int adaptive_level;           /* 0-100 */
         AapControlSetting control_setting;
         AapProximityKeys proximity_keys;
     } data;

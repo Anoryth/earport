@@ -58,26 +58,31 @@ static void apply_device_profile(Device *dev, const char *address)
     DeviceProfile profile;
     bool has_profile = config_load_device_profile(address, &profile);
 
-    if (!has_profile || !profile.has_saved_settings) {
+    if (!has_profile) {
         g_message("No saved profile for device %s, using defaults", address);
         return;
     }
 
     g_message("Applying saved profile for device %s", address);
 
-    /* Apply display name */
+    /* Local only, never sent to the AirPods */
     airpods_state_set_display_name(dev->state, profile.display_name);
 
-    /* Apply listening modes */
-    airpods_state_set_listening_modes(dev->state,
-                                       profile.listening_modes.off_enabled,
-                                       profile.listening_modes.transparency_enabled,
-                                       profile.listening_modes.anc_enabled,
-                                       profile.listening_modes.adaptive_enabled);
+    /* Not announced by the AirPods: sent back by controls.c */
+    if (profile.listening_modes_set) {
+        airpods_state_set_listening_modes(dev->state,
+                                           profile.listening_modes.off_enabled,
+                                           profile.listening_modes.transparency_enabled,
+                                           profile.listening_modes.anc_enabled,
+                                           profile.listening_modes.adaptive_enabled);
+    }
 
-    /* Apply conversational awareness (will be sent after connection stabilizes) */
-    dev->state->conversational_awareness = profile.conversational_awareness;
-    dev->state->adaptive_noise_level = profile.adaptive_noise_level;
+    /* Last values set in EarPort, until the AirPods announce theirs (they
+     * keep what was set on another device) */
+    if (profile.has_saved_settings) {
+        dev->state->conversational_awareness = profile.conversational_awareness;
+        dev->state->adaptive_noise_level = profile.adaptive_noise_level;
+    }
 }
 
 void device_session_started(Device *dev, const char *address, const char *name)
@@ -247,6 +252,12 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         dbus_service_emit_properties_changed(dev->dbus, "ListeningModeTransparency");
         dbus_service_emit_properties_changed(dev->dbus, "ListeningModeANC");
         dbus_service_emit_properties_changed(dev->dbus, "ListeningModeAdaptive");
+        break;
+
+    case AAP_PKT_TYPE_ADAPTIVE_LEVEL:
+        g_message("Adaptive noise level: %d", pkt->data.adaptive_level);
+        airpods_state_set_adaptive_noise_level(dev->state, pkt->data.adaptive_level);
+        dbus_service_emit_properties_changed(dev->dbus, "AdaptiveNoiseLevel");
         break;
 
     case AAP_PKT_TYPE_CONTROL_SETTING: {

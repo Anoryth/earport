@@ -161,6 +161,24 @@ static void test_conversational_awareness(void)
     g_assert_false(p.data.conversational_awareness);
 }
 
+/* Announced on connection (level 50, and 0 after moving the slider to the
+ * end on an iPhone, captured 2026-09-30) */
+static void test_adaptive_level(void)
+{
+    const uint8_t fifty[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E, 0x32, 0x00, 0x00, 0x00 };
+    const uint8_t zero[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E, 0x00, 0x00, 0x00, 0x00 };
+    const uint8_t too_high[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E, 0xC8, 0x00, 0x00, 0x00 };
+    AapParsedPacket p;
+
+    g_assert_cmpint(PARSE(fifty, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_ADAPTIVE_LEVEL);
+    g_assert_cmpint(p.data.adaptive_level, ==, 50);
+    g_assert_cmpint(PARSE(zero, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.data.adaptive_level, ==, 0);
+    g_assert_cmpint(PARSE(too_high, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.data.adaptive_level, ==, 100);
+}
+
 static void test_listening_modes(void)
 {
     /* Transparency + ANC enabled, Off and Adaptive disabled */
@@ -401,6 +419,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/control/noise-control", test_noise_control);
     g_test_add_func("/aap/control/conversational-awareness", test_conversational_awareness);
     g_test_add_func("/aap/control/listening-modes", test_listening_modes);
+    g_test_add_func("/aap/control/adaptive-level", test_adaptive_level);
     g_test_add_func("/aap/control/settings", test_control_settings);
     g_test_add_func("/aap/control/setting-short", test_control_setting_short);
     g_test_add_func("/aap/conversation-events", test_conversation_events);

@@ -311,6 +311,7 @@ static void connect_airpods(Fixture *f)
     RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x26, 0x01, 0x00, 0x00, 0x00);
     RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x1B, 0x02, 0x00, 0x00, 0x00);
     RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x35, 0x01, 0x00, 0x00, 0x00);
+    RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E, 0x32, 0x00, 0x00, 0x00);  /* Level 50 */
     RECEIVE(0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x03,
             0x04, 0x01, 0x53, 0x02, 0x01,
             0x02, 0x01, 0x53, 0x02, 0x01,
@@ -475,30 +476,65 @@ static void test_display_name(Fixture *f, gconstpointer data)
     g_assert_cmpstr(model, ==, "AirPods Pro 2 (USB-C)");
 }
 
-/* Settings the AirPods don't keep are sent back shortly after connecting */
+static void save_profile(bool listening_modes_set)
+{
+    DeviceProfile profile;
+
+    config_get_default_profile(&profile);
+    profile.listening_modes = (ListeningModesConfig) {
+        .off_enabled = true, .transparency_enabled = true,
+        .anc_enabled = true, .adaptive_enabled = false,
+    };
+    profile.listening_modes_set = listening_modes_set;
+    profile.conversational_awareness = false;
+    profile.adaptive_noise_level = 40;
+    g_assert_true(config_save_device_profile(ADDRESS, &profile));
+}
+
+/* The long-press modes set in EarPort are sent back: the AirPods don't
+ * announce them. Conversation awareness and the adaptive level are not:
+ * the AirPods keep what was set on another device and announce it. */
 static void test_saved_profile(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t ca_off[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28 };
+    const uint8_t level[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E };
+
+    save_profile(true);
+    connect_airpods(f);
+    ASSERT_SENT(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x1A, 0x07, 0x00, 0x00, 0x00);
+    g_assert_true(get_bool(f, "ListeningModeOff"));
+
+    run_for(100);
+    g_assert_cmpuint(fake_bt_count_sent(ca_off, sizeof(ca_off)), ==, 0);
+    g_assert_cmpuint(fake_bt_count_sent(level, sizeof(level)), ==, 0);
+    g_assert_true(get_bool(f, "ConversationalAwareness"));
+    g_assert_cmpint(get_int(f, "AdaptiveNoiseLevel"), ==, 50);
+}
+
+/* Profile saved for another setting: the defaults are not pushed */
+static void test_defaults_not_pushed(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t modes[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x1A };
+
+    save_profile(false);
+    connect_airpods(f);
+    run_for(700);
+    g_assert_cmpuint(fake_bt_count_sent(modes, sizeof(modes)), ==, 0);
+}
+
+/* Setting the modes here marks them for the next connections */
+static void test_listening_modes_remembered(Fixture *f, gconstpointer data)
 {
     (void)data;
     DeviceProfile profile;
 
-    config_get_default_profile(&profile);
-    profile.has_saved_settings = true;
-    profile.listening_modes = (ListeningModesConfig) {
-        .off_enabled = false, .transparency_enabled = true,
-        .anc_enabled = true, .adaptive_enabled = false,
-    };
-    profile.conversational_awareness = false;
-    profile.adaptive_noise_level = 40;
-    g_assert_true(config_save_device_profile(ADDRESS, &profile));
-
     connect_airpods(f);
-    ASSERT_SENT(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x1A, 0x06, 0x00, 0x00, 0x00);
-    ASSERT_SENT(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x02, 0x00, 0x00, 0x00);
-    ASSERT_SENT(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E, 0x28, 0x00, 0x00, 0x00);
-
-    /* The AirPods announced conversation awareness on: now outdated */
-    g_assert_false(get_bool(f, "ConversationalAwareness"));
-    g_assert_cmpint(get_int(f, "AdaptiveNoiseLevel"), ==, 40);
+    call_ok(f, "SetListeningModes", g_variant_new("(bbbb)", TRUE, FALSE, TRUE, FALSE));
+    g_assert_true(config_load_device_profile(ADDRESS, &profile));
+    g_assert_true(profile.listening_modes_set);
+    g_assert_true(profile.listening_modes.off_enabled);
 }
 
 static void test_conversation_signals(Fixture *f, gconstpointer data)
@@ -552,6 +588,8 @@ int main(int argc, char *argv[])
     ADD("/dbus/listening-modes", test_listening_modes);
     ADD("/dbus/display-name", test_display_name);
     ADD("/dbus/saved-profile", test_saved_profile);
+    ADD("/dbus/defaults-not-pushed", test_defaults_not_pushed);
+    ADD("/dbus/listening-modes-remembered", test_listening_modes_remembered);
     ADD("/dbus/conversation-signals", test_conversation_signals);
     ADD("/dbus/disconnection", test_disconnection);
 

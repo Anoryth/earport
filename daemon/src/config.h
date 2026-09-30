@@ -51,6 +51,9 @@ typedef struct {
     int adaptive_noise_level;           /* 0-100 */
     char preferred_nc_mode[16];         /* "off", "anc", "transparency", "adaptive" */
     bool has_saved_settings;            /* Whether profile has saved settings */
+    /* Long-press modes set in EarPort: the AirPods don't announce them, so
+     * they are sent back on connection, but only then (not the defaults) */
+    bool listening_modes_set;
 } DeviceProfile;
 
 /**

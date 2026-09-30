@@ -433,6 +433,9 @@ bool config_load_device_profile(const char *device_address, DeviceProfile *profi
         }
     }
 
+    if (g_key_file_has_key(keyfile, group, "listening_modes_set", NULL))
+        profile->listening_modes_set = g_key_file_get_boolean(keyfile, group, "listening_modes_set", NULL);
+
     /* Check if this profile has been explicitly saved */
     if (g_key_file_has_key(keyfile, group, "has_saved_settings", NULL)) {
         profile->has_saved_settings = g_key_file_get_boolean(keyfile, group, "has_saved_settings", NULL);
@@ -481,6 +484,7 @@ bool config_save_device_profile(const char *device_address, const DeviceProfile 
     g_key_file_set_integer(keyfile, group, "adaptive_noise_level", profile->adaptive_noise_level);
     g_key_file_set_string(keyfile, group, "preferred_nc_mode", profile->preferred_nc_mode);
     g_key_file_set_boolean(keyfile, group, "has_saved_settings", true);
+    g_key_file_set_boolean(keyfile, group, "listening_modes_set", profile->listening_modes_set);
 
     GError *error = NULL;
     if (!g_key_file_save_to_file(keyfile, config_path, &error)) {
