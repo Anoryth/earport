@@ -27,6 +27,11 @@
 /* Keys to recognize the AirPods' BLE adverts (automatic connection) */
 #define PROXIMITY_KEYS_DELAY_SEC 2
 
+/* The AirPods drop packets sent back to back: space them out, and give
+ * them a moment after the L2CAP connection before the handshake */
+#define SEND_GAP_MS 50
+#define HANDSHAKE_DELAY_MS 100
+
 /* Opcode of the AirPods' acknowledgement of our SET_FEATURES packet */
 #define AAP_OPCODE_FEATURES_ACK 0x2B
 
@@ -53,9 +58,60 @@ struct AapLink {
     guint silent_reconnect_id;
 
     guint keys_request_id;
+
+    /* Outgoing packets (GBytes), sent SEND_GAP_MS apart */
+    GQueue send_queue;
+    gint64 next_send_us;         /* Earliest time for the next packet */
+    guint send_timer_id;
 };
 
 static void connect_link(AapLink *link);
+
+/* ============================================================================
+ * Send queue
+ * ========================================================================== */
+
+static gboolean send_timer_cb(gpointer user_data);
+
+/* Send the next packet if its time has come, or wait for it */
+static void pump_send_queue(AapLink *link)
+{
+    if (link->send_timer_id > 0 || g_queue_is_empty(&link->send_queue))
+        return;
+
+    gint64 now = g_get_monotonic_time();
+    if (now < link->next_send_us) {
+        guint delay_ms = (guint)((link->next_send_us - now + 999) / 1000);
+        link->send_timer_id = g_timeout_add(delay_ms, send_timer_cb, link);
+        return;
+    }
+
+    GBytes *packet = g_queue_pop_head(&link->send_queue);
+    gsize len;
+    const uint8_t *data = g_bytes_get_data(packet, &len);
+    bt_connection_send(link->bt_conn, data, len);
+    g_bytes_unref(packet);
+
+    link->next_send_us = now + SEND_GAP_MS * 1000;
+    pump_send_queue(link);
+}
+
+static gboolean send_timer_cb(gpointer user_data)
+{
+    AapLink *link = user_data;
+    link->send_timer_id = 0;
+    pump_send_queue(link);
+    return G_SOURCE_REMOVE;
+}
+
+static void clear_send_queue(AapLink *link)
+{
+    if (link->send_timer_id > 0) {
+        g_source_remove(link->send_timer_id);
+        link->send_timer_id = 0;
+    }
+    g_queue_clear_full(&link->send_queue, (GDestroyNotify)g_bytes_unref);
+}
 
 /* ============================================================================
  * L2CAP reconnection with exponential backoff
@@ -146,9 +202,8 @@ static gboolean notif_retry_timeout_cb(gpointer user_data)
     g_message("No battery info yet, re-requesting notifications (%d/%d)",
               link->notif_retry_attempts, NOTIF_RETRY_MAX_ATTEMPTS);
 
-    bt_connection_send_set_features(link->bt_conn);
-    g_usleep(50000);
-    bt_connection_send_request_notifications(link->bt_conn);
+    aap_link_send(link, AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
+    aap_link_send(link, AAP_PKT_REQUEST_NOTIFICATIONS, AAP_REQUEST_NOTIF_SIZE);
 
     return G_SOURCE_CONTINUE;
 }
@@ -220,7 +275,7 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         aap_get_opcode(data, len) == AAP_OPCODE_FEATURES_ACK &&
         !link->battery_received) {
         g_debug("Features acknowledged, requesting notifications again");
-        bt_connection_send_request_notifications(link->bt_conn);
+        aap_link_send(link, AAP_PKT_REQUEST_NOTIFICATIONS, AAP_REQUEST_NOTIF_SIZE);
     }
 
     AapParsedPacket packet;
@@ -253,15 +308,12 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
         /* Attach to main loop for data reception */
         bt_connection_attach_to_mainloop(link->bt_conn, NULL);
 
-        /* Send initialization sequence */
-        g_usleep(100000);  /* 100ms delay */
-        bt_connection_send_handshake(link->bt_conn);
-
-        g_usleep(50000);  /* 50ms delay */
-        bt_connection_send_set_features(link->bt_conn);
-
-        g_usleep(50000);
-        bt_connection_send_request_notifications(link->bt_conn);
+        /* Initialization sequence */
+        clear_send_queue(link);
+        link->next_send_us = g_get_monotonic_time() + HANDSHAKE_DELAY_MS * 1000;
+        aap_link_send(link, AAP_PKT_HANDSHAKE, AAP_HANDSHAKE_SIZE);
+        aap_link_send(link, AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
+        aap_link_send(link, AAP_PKT_REQUEST_NOTIFICATIONS, AAP_REQUEST_NOTIF_SIZE);
 
         start_notif_retry(link);
 
@@ -283,6 +335,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
     case BT_STATE_DISCONNECTED:
         g_message("Bluetooth disconnected");
+        clear_send_queue(link);
 
         if (link->silent_reconnect) {
             if (link->silent_reconnect_id == 0)
@@ -300,6 +353,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
     case BT_STATE_ERROR:
         g_warning("Bluetooth error: %s", error ? error : "unknown");
+        clear_send_queue(link);
 
         /* The silent reconnect failed: the link is really down now */
         if (link->silent_reconnect)
@@ -340,6 +394,7 @@ static void connect_link(AapLink *link)
 AapLink *aap_link_new(const AapLinkCallbacks *callbacks, void *user_data)
 {
     AapLink *link = g_new0(AapLink, 1);
+    g_queue_init(&link->send_queue);
     link->callbacks = *callbacks;
     link->user_data = user_data;
     return link;
@@ -352,6 +407,7 @@ void aap_link_free(AapLink *link)
 
     cancel_reconnect(link);
     cancel_notif_retry(link);
+    clear_send_queue(link);
     if (link->silent_reconnect_id > 0)
         g_source_remove(link->silent_reconnect_id);
     if (link->keys_request_id > 0)
@@ -414,5 +470,8 @@ bool aap_link_send(AapLink *link, const uint8_t *data, size_t len)
 {
     if (!aap_link_is_connected(link))
         return false;
-    return bt_connection_send(link->bt_conn, data, len) >= 0;
+
+    g_queue_push_tail(&link->send_queue, g_bytes_new(data, len));
+    pump_send_queue(link);
+    return true;
 }

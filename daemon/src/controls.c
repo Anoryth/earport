@@ -51,12 +51,10 @@ static gboolean send_saved_settings_cb(gpointer user_data)
     aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* Send conversational awareness setting */
-    g_usleep(50000);  /* 50ms delay between commands */
     aap_build_conv_awareness_cmd(profile.conversational_awareness, packet);
     aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* Send adaptive noise level */
-    g_usleep(50000);
     aap_build_adaptive_level_cmd(profile.adaptive_noise_level, packet);
     aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
 

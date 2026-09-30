@@ -40,7 +40,8 @@ void aap_link_device_disconnected(AapLink *link);
 
 bool aap_link_is_connected(AapLink *link);
 
-/* Send a packet; false when the link is down */
+/* Queue a packet, sent after the previous ones with a short gap; false
+ * when the link is down */
 bool aap_link_send(AapLink *link, const uint8_t *data, size_t len);
 
 #endif /* AAP_LINK_H */

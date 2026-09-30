@@ -213,24 +213,6 @@ ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_
     return sent;
 }
 
-bool bt_connection_send_handshake(BluetoothConnection *conn)
-{
-    ssize_t sent = bt_connection_send(conn, AAP_PKT_HANDSHAKE, AAP_HANDSHAKE_SIZE);
-    return sent == AAP_HANDSHAKE_SIZE;
-}
-
-bool bt_connection_send_request_notifications(BluetoothConnection *conn)
-{
-    ssize_t sent = bt_connection_send(conn, AAP_PKT_REQUEST_NOTIFICATIONS, AAP_REQUEST_NOTIF_SIZE);
-    return sent == AAP_REQUEST_NOTIF_SIZE;
-}
-
-bool bt_connection_send_set_features(BluetoothConnection *conn)
-{
-    ssize_t sent = bt_connection_send(conn, AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
-    return sent == AAP_SET_FEATURES_SIZE;
-}
-
 int bt_connection_get_fd(BluetoothConnection *conn)
 {
     return conn->socket_fd;

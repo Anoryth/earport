@@ -97,21 +97,6 @@ BluetoothState bt_connection_get_state(BluetoothConnection *conn);
 ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_t len);
 
 /**
- * Send handshake packet
- */
-bool bt_connection_send_handshake(BluetoothConnection *conn);
-
-/**
- * Send request notifications packet
- */
-bool bt_connection_send_request_notifications(BluetoothConnection *conn);
-
-/**
- * Send set features packet
- */
-bool bt_connection_send_set_features(BluetoothConnection *conn);
-
-/**
  * Get file descriptor for event loop integration
  * Returns -1 if not connected
  */
