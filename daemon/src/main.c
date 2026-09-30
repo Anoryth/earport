@@ -176,6 +176,7 @@ static void cleanup(void)
 
     device_finish(&app.device);
 
+    controls_cleanup(&app.controls);
     aap_link_free(app.link);
     app.link = NULL;
 

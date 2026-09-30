@@ -29,6 +29,7 @@ static gboolean send_saved_settings_cb(gpointer user_data)
 {
     SavedSettingsJob *job = user_data;
     Controls *c = job->controls;
+    c->saved_settings_id = 0;
 
     if (!aap_link_is_connected(c->link))
         return G_SOURCE_REMOVE;
@@ -62,9 +63,20 @@ void controls_send_saved_settings(Controls *c, const char *address)
     job->controls = c;
     job->address = g_strdup(address);
 
-    /* After the connection stabilizes */
-    g_timeout_add_full(G_PRIORITY_DEFAULT, 500, send_saved_settings_cb, job,
-                       saved_settings_job_free);
+    /* After the connection stabilizes; a new session replaces the send
+     * still pending for the previous one */
+    if (c->saved_settings_id > 0)
+        g_source_remove(c->saved_settings_id);
+    c->saved_settings_id = g_timeout_add_full(G_PRIORITY_DEFAULT, 500, send_saved_settings_cb,
+                                              job, saved_settings_job_free);
+}
+
+void controls_cleanup(Controls *c)
+{
+    if (c->saved_settings_id > 0) {
+        g_source_remove(c->saved_settings_id);
+        c->saved_settings_id = 0;
+    }
 }
 
 /* ============================================================================
@@ -237,6 +249,7 @@ void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus
 {
     c->device = device;
     c->link = link;
+    c->saved_settings_id = 0;
 
     dbus_service_set_noise_control_callback(dbus, on_set_noise_control, c);
     dbus_service_set_conv_awareness_callback(dbus, on_set_conv_awareness, c);

@@ -275,6 +275,7 @@ static void fixture_teardown(Fixture *f, gconstpointer data)
 {
     (void)data;
 
+    controls_cleanup(&f->controls);
     aap_link_free(f->link);
     dbus_service_free(f->dbus);
     RUN_UNTIL(!name_has_owner(f));

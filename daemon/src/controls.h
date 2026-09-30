@@ -19,6 +19,7 @@
 typedef struct {
     Device *device;
     AapLink *link;
+    guint saved_settings_id;     /* Pending send of the long-press modes */
 } Controls;
 
 /* Handle the D-Bus methods that change the AirPods */
@@ -26,5 +27,8 @@ void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus
 
 /* Send the long-press modes set in EarPort to the AirPods shortly */
 void controls_send_saved_settings(Controls *c, const char *address);
+
+/* Cancel what is still pending */
+void controls_cleanup(Controls *c);
 
 #endif /* CONTROLS_H */
