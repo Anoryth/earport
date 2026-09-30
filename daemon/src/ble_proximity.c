@@ -4,7 +4,7 @@
  */
 
 #include "ble_proximity.h"
-#include <nettle/aes.h>
+#include "aes128.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -56,9 +56,7 @@ bool proximity_address_matches(const uint8_t *irk, const char *address)
     block[14] = (uint8_t)b[1];
     block[15] = (uint8_t)b[2];
 
-    struct aes128_ctx ctx;
-    aes128_set_encrypt_key(&ctx, key);
-    aes128_encrypt(&ctx, sizeof(block), out, block);
+    aes128_encrypt_block(key, block, out);
 
     return out[13] == b[3] && out[14] == b[4] && out[15] == b[5];
 }
