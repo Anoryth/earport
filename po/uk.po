@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-30 22:13+0200\n"
+"POT-Creation-Date: 2026-09-30 22:23+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -15,116 +15,118 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension/extension.js:117
+#: extension/batteryIndicator.js:102
 msgid "Headphones"
 msgstr "Навушники"
 
-#: extension/extension.js:166
+#: extension/batteryIndicator.js:151
 msgid "unavailable"
 msgstr "недоступно"
 
-#: extension/extension.js:168
+#: extension/batteryIndicator.js:153
 msgid "charging"
 msgstr "заряджається"
 
-#: extension/extension.js:265 extension/extension.js:690
-#: extension/extension.js:707 extension/prefs.js:502
+#: extension/earportToggle.js:31 extension/earportToggle.js:316
+#: extension/earportToggle.js:333 extension/prefs.js:502
 msgid "Disconnected"
 msgstr "Відключено"
 
-#: extension/extension.js:285
+#: extension/earportToggle.js:50
 msgid "Noise Control Off"
 msgstr "Режим слухання вимкнено"
 
-#: extension/extension.js:286 extension/prefs.js:183
+#: extension/earportToggle.js:51 extension/prefs.js:183
 msgid "Noise Cancellation"
 msgstr "Шумогасіння"
 
-#: extension/extension.js:287 extension/prefs.js:177
+#: extension/earportToggle.js:52 extension/prefs.js:177
 msgid "Transparency"
 msgstr "Режим проникності"
 
-#: extension/extension.js:288 extension/prefs.js:189
+#: extension/earportToggle.js:53 extension/prefs.js:189
 msgid "Adaptive"
 msgstr "Адаптивний"
 
-#: extension/extension.js:356 extension/extension.js:613 extension/prefs.js:476
+#: extension/earportToggle.js:88 extension/notifications.js:59
+#: extension/prefs.js:476
 msgid "Left"
 msgstr "Лівий"
 
-#: extension/extension.js:357 extension/extension.js:615 extension/prefs.js:476
+#: extension/earportToggle.js:89 extension/notifications.js:61
+#: extension/prefs.js:476
 msgid "Right"
 msgstr "Правий"
 
-#: extension/extension.js:358
+#: extension/earportToggle.js:90
 msgid "Case"
 msgstr "Футляр"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:401 extension/prefs.js:171
+#: extension/earportToggle.js:133 extension/prefs.js:171
 msgid "Off"
 msgstr "Вимк."
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:403
+#: extension/earportToggle.js:135
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/extension.js:405
+#: extension/earportToggle.js:137
 msgid "Hear"
 msgstr "Проникн."
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/extension.js:408
+#: extension/earportToggle.js:140
 msgid "Auto"
 msgstr "Авто"
 
-#: extension/extension.js:428
+#: extension/earportToggle.js:160
 msgid "Advanced Settings"
 msgstr "Додаткові налаштування"
 
-#: extension/extension.js:437
+#: extension/earportToggle.js:169
 msgid "How to Install the EarPort Service"
 msgstr "Як установити службу EarPort"
 
-#: extension/extension.js:499
-#, javascript-format
-msgid "%s Connected"
-msgstr "%s підключено"
-
-#: extension/extension.js:514
-#, javascript-format
-msgid "%s Disconnected"
-msgstr "%s відключено"
-
-#: extension/extension.js:613
-msgid "Battery"
-msgstr "Акумулятор"
-
-#: extension/extension.js:619
-#, javascript-format
-msgid "%s Low Battery"
-msgstr "%s: низький заряд"
-
-#: extension/extension.js:690
+#: extension/earportToggle.js:316
 msgid "Service not running"
 msgstr "Службу не запущено"
 
-#: extension/extension.js:737
+#: extension/earportToggle.js:363
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/extension.js:739
+#: extension/earportToggle.js:365
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/extension.js:744
+#: extension/earportToggle.js:370
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"
+
+#: extension/notifications.js:37
+#, javascript-format
+msgid "%s Connected"
+msgstr "%s підключено"
+
+#: extension/notifications.js:47
+#, javascript-format
+msgid "%s Disconnected"
+msgstr "%s відключено"
+
+#: extension/notifications.js:59
+msgid "Battery"
+msgstr "Акумулятор"
+
+#: extension/notifications.js:65
+#, javascript-format
+msgid "%s Low Battery"
+msgstr "%s: низький заряд"
 
 #: extension/prefs.js:29
 msgid "Set Shortcut"
