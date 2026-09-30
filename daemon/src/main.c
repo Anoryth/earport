@@ -14,9 +14,8 @@
 
 #include "airpods_state.h"
 #include "aap_protocol.h"
+#include "autoconnect.h"
 #include "battery_estimator.h"
-#include "ble_proximity.h"
-#include "ble_scanner.h"
 #include "bluetooth.h"
 #include "bluez_monitor.h"
 #include "config.h"
@@ -56,20 +55,7 @@ typedef struct {
     /* Remaining listening time, learned per device */
     BatteryEstimator battery_estimator;
 
-    /* Automatic connection from BLE advertisements */
-    BleScanner *ble_scanner;
-    char *adapter_path;
-    char *irk_address;           /* AirPods the IRK belongs to */
-    uint8_t irk[AAP_PROXIMITY_KEY_SIZE];
-    bool has_irk;
-    guint scan_timer_id;         /* Periodic short scans */
-    guint burst_timer_id;        /* End of the current short scan */
-    guint playback_window_id;    /* Waiting for an advert after playback started */
-    bool playback_pending;
-    bool playback_seen_busy;     /* Saw them in use while waiting */
-    bool prev_in_ear_known;
-    bool prev_in_ear;
-    gint64 last_autoconnect_us;
+    AutoConnect *autoconnect;
 } AppContext;
 
 /* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
@@ -93,18 +79,6 @@ typedef struct {
 
 static AppContext app = {0};
 
-/* Automatic connection. Scanning keeps bluetoothd, the system bus and the
- * shell's Bluetooth code busy (measured: ~4% CPU for bluetoothd when
- * continuous), but AirPods nearby answer within 0.5 s. So scan in short
- * bursts that end at their first advert, and scan right away when playback
- * starts. Don't insist when a connection attempt fails. */
-#define SCAN_INTERVAL_SEC 30
-#define SCAN_BURST_SEC 3
-/* Long enough for AirPods paused on another device to report it (2-3 s) */
-#define PLAYBACK_WINDOW_SEC 8
-#define AUTOCONNECT_COOLDOWN_SEC 30
-#define DEFAULT_ADAPTER_PATH "/org/bluez/hci0"
-
 /* Forward declarations */
 static void connect_to_airpods(const char *address, const char *name);
 static void disconnect_from_airpods(void);
@@ -114,7 +88,6 @@ static void schedule_reconnect(void);
 static void cancel_reconnect(void);
 static void cancel_notif_retry(void);
 static void report_disconnected(void);
-static void autoconnect_update(void);
 
 /* ============================================================================
  * Remaining listening time
@@ -162,206 +135,21 @@ static void update_listening_time(const AapBatteryData *battery)
  * Automatic connection
  * ========================================================================== */
 
-static void on_device_connect_done(GObject *source, GAsyncResult *res, gpointer user_data)
-{
-    (void)user_data;
-    GError *error = NULL;
-    GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
-
-    if (result != NULL) {
-        g_variant_unref(result);
-    } else {
-        g_message("Automatic connection failed: %s", error->message);
-        g_error_free(error);
-    }
-}
-
-static void try_autoconnect(const char *reason)
-{
-    gint64 now = g_get_monotonic_time();
-    if (app.last_autoconnect_us > 0 &&
-        now - app.last_autoconnect_us < AUTOCONNECT_COOLDOWN_SEC * G_USEC_PER_SEC)
-        return;
-    app.last_autoconnect_us = now;
-
-    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    if (bus == NULL)
-        return;
-
-    char *device = g_strdup(app.irk_address);
-    g_strdelimit(device, ":", '_');
-    char *path = g_strdup_printf("%s/dev_%s", app.adapter_path, device);
-
-    g_message("Connecting to the AirPods automatically (%s)", reason);
-    g_dbus_connection_call(bus, "org.bluez", path, "org.bluez.Device1", "Connect",
-                           NULL, NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL,
-                           on_device_connect_done, NULL);
-
-    g_free(path);
-    g_free(device);
-    g_object_unref(bus);
-}
-
-static bool ble_address_is_ours(const char *address, void *user_data)
-{
-    (void)user_data;
-    return app.has_irk && proximity_address_matches(app.irk, address);
-}
-
-static void end_playback_wait(void)
-{
-    app.playback_pending = false;
-    if (app.playback_window_id > 0) {
-        g_source_remove(app.playback_window_id);
-        app.playback_window_id = 0;
-    }
-    ble_scanner_stop(app.ble_scanner);
-}
-
-/* Decide on playback started here, now that we know what the AirPods do */
-static void evaluate_playback_trigger(const ProximityInfo *info)
-{
-    if (autoconnect_allowed(info, AUTOCONNECT_TRIGGER_PLAYBACK)) {
-        end_playback_wait();
-        try_autoconnect("playback started");
-    } else if (autoconnect_worth_waiting(info)) {
-        /* Maybe just paused on the other device: keep watching until the
-         * end of the window */
-        app.playback_seen_busy = true;
-    } else {
-        end_playback_wait();
-        g_message(info->in_ear ? "Not connecting: the AirPods are in use by another device"
-                               : "Not connecting: the AirPods are not in the ears");
-    }
-}
-
-static void on_ble_advert(const char *address, const uint8_t *data, size_t len, void *user_data)
-{
-    (void)address;
-    (void)user_data;
-    ProximityInfo info;
-
-    if (!proximity_parse(data, len, &info) || app.bluez_connected)
-        return;
-
-    /* React to the pods being put in, not to them being in: after a manual
-     * disconnection, AirPods still in the ears must stay disconnected */
-    if (app.prev_in_ear_known && !app.prev_in_ear && info.in_ear &&
-        autoconnect_allowed(&info, AUTOCONNECT_TRIGGER_EARS))
-        try_autoconnect("AirPods put in");
-    app.prev_in_ear = info.in_ear;
-    app.prev_in_ear_known = true;
-
-    if (app.playback_pending) {
-        evaluate_playback_trigger(&info);
-    } else {
-        /* One advert is all a periodic scan needs */
-        ble_scanner_stop(app.ble_scanner);
-    }
-}
-
-static gboolean playback_window_cb(gpointer user_data)
-{
-    (void)user_data;
-    app.playback_window_id = 0;
-    app.playback_pending = false;
-    ble_scanner_stop(app.ble_scanner);
-    g_message(app.playback_seen_busy ? "Not connecting: the AirPods are in use by another device"
-                                     : "Not connecting: the AirPods were not seen nearby");
-    return G_SOURCE_REMOVE;
-}
-
-static void on_playback_started(void *user_data)
-{
-    (void)user_data;
-
-    if (!app.config.auto_connect || !app.has_irk || app.bluez_connected)
-        return;
-
-    /* The AirPods' state may have changed since the last periodic scan:
-     * look at them now, it takes about half a second */
-    app.playback_pending = true;
-    app.playback_seen_busy = false;
-    if (app.playback_window_id > 0)
-        g_source_remove(app.playback_window_id);
-    app.playback_window_id = g_timeout_add_seconds(PLAYBACK_WINDOW_SEC, playback_window_cb, NULL);
-    ble_scanner_start(app.ble_scanner);
-}
-
-static gboolean burst_end_cb(gpointer user_data)
-{
-    (void)user_data;
-    app.burst_timer_id = 0;
-    /* AirPods away: no advert came, stop anyway */
-    if (!app.playback_pending)
-        ble_scanner_stop(app.ble_scanner);
-    return G_SOURCE_REMOVE;
-}
-
-/* Periodic short scan, to notice the pods being put in */
-static gboolean scan_cycle_cb(gpointer user_data)
-{
-    (void)user_data;
-
-    ble_scanner_start(app.ble_scanner);
-    if (app.burst_timer_id > 0)
-        g_source_remove(app.burst_timer_id);
-    app.burst_timer_id = g_timeout_add_seconds(SCAN_BURST_SEC, burst_end_cb, NULL);
-    return G_SOURCE_CONTINUE;
-}
-
-/* Scan only when it can lead somewhere: option on, keys known, AirPods
- * not connected to this computer */
-static void autoconnect_update(void)
-{
-    bool wanted = app.config.auto_connect && app.has_irk && !app.bluez_connected;
-
-    if (wanted && app.ble_scanner == NULL)
-        app.ble_scanner = ble_scanner_new(app.adapter_path, ble_address_is_ours, on_ble_advert, NULL);
-
-    if (wanted && app.scan_timer_id == 0 && app.ble_scanner != NULL) {
-        g_message("Watching for the AirPods to connect automatically");
-        scan_cycle_cb(NULL);
-        app.scan_timer_id = g_timeout_add_seconds(SCAN_INTERVAL_SEC, scan_cycle_cb, NULL);
-    } else if (!wanted && app.scan_timer_id > 0) {
-        g_source_remove(app.scan_timer_id);
-        app.scan_timer_id = 0;
-        if (app.burst_timer_id > 0) {
-            g_source_remove(app.burst_timer_id);
-            app.burst_timer_id = 0;
-        }
-        ble_scanner_stop(app.ble_scanner);
-    }
-
-    if (!wanted) {
-        app.playback_pending = false;
-        app.prev_in_ear_known = false;
-    }
-}
-
 static void on_proximity_keys(const AapProximityKeys *keys)
 {
     g_mutex_lock(&app.state.lock);
     char *address = g_strdup(app.state.device_address);
     g_mutex_unlock(&app.state.lock);
 
-    if (!keys->has_irk || address == NULL) {
-        g_free(address);
-        return;
-    }
-
-    bool changed = !app.has_irk || g_strcmp0(address, app.irk_address) != 0 ||
-                   memcmp(app.irk, keys->irk, sizeof(app.irk)) != 0;
-    if (changed) {
-        memcpy(app.irk, keys->irk, sizeof(app.irk));
-        app.has_irk = true;
-        g_free(app.irk_address);
-        app.irk_address = g_strdup(address);
-        config_save_proximity_irk(address, keys->irk);
-        ble_scanner_reset_filter(app.ble_scanner);
-        g_message("Stored the keys to recognize the AirPods nearby");
-    }
+    if (keys->has_irk && address != NULL)
+        autoconnect_set_irk(app.autoconnect, address, keys->irk);
     g_free(address);
+}
+
+static void on_playback_started(void *user_data)
+{
+    (void)user_data;
+    autoconnect_on_playback_started(app.autoconnect);
 }
 
 static gboolean request_proximity_keys_cb(gpointer user_data)
@@ -959,11 +747,9 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
     app.silent_reconnect_done = false;
 
     /* The adapter the AirPods use is the one to scan on */
-    if (device->object_path != NULL) {
-        g_free(app.adapter_path);
-        app.adapter_path = g_path_get_dirname(device->object_path);
-    }
-    autoconnect_update();
+    char *adapter_path = device->object_path ? g_path_get_dirname(device->object_path) : NULL;
+    autoconnect_set_airpods_connected(app.autoconnect, true, adapter_path);
+    g_free(adapter_path);
 
     connect_to_airpods(device->address, device->name);
 }
@@ -981,7 +767,7 @@ static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *us
         report_disconnected();
 
     disconnect_from_airpods();
-    autoconnect_update();
+    autoconnect_set_airpods_connected(app.autoconnect, false, NULL);
 }
 
 /* ============================================================================
@@ -1154,7 +940,7 @@ static void on_set_auto_connect(bool enabled, void *user_data)
     app.config.auto_connect = enabled;
     config_save(&app.config);
     dbus_service_set_auto_connect(app.dbus_service, enabled);
-    autoconnect_update();
+    autoconnect_set_enabled(app.autoconnect, enabled);
 }
 
 static void on_set_display_name(const char *name, void *user_data)
@@ -1211,16 +997,8 @@ static void cleanup(void)
 {
     g_message("Cleaning up...");
 
-    if (app.scan_timer_id > 0)
-        g_source_remove(app.scan_timer_id);
-    if (app.burst_timer_id > 0)
-        g_source_remove(app.burst_timer_id);
-    if (app.playback_window_id > 0)
-        g_source_remove(app.playback_window_id);
-    ble_scanner_free(app.ble_scanner);
-    app.ble_scanner = NULL;
-    g_free(app.adapter_path);
-    g_free(app.irk_address);
+    autoconnect_free(app.autoconnect);
+    app.autoconnect = NULL;
 
     if (battery_estimator_finish(&app.battery_estimator))
         save_learned_drain_rate();
@@ -1323,9 +1101,7 @@ int main(int argc, char *argv[])
         media_control_set_playback_started_callback(app.media_control, on_playback_started, NULL);
     }
 
-    /* Automatic connection: keys of the AirPods used last */
-    app.adapter_path = g_strdup(DEFAULT_ADAPTER_PATH);
-    app.has_irk = config_load_proximity_irk(&app.irk_address, app.irk);
+    app.autoconnect = autoconnect_new(app.config.auto_connect);
 
     /* Create BlueZ monitor */
     app.bluez_monitor = bluez_monitor_new();
@@ -1346,7 +1122,7 @@ int main(int argc, char *argv[])
 
     /* Check for already connected devices */
     bluez_monitor_check_existing_devices(app.bluez_monitor);
-    autoconnect_update();
+    autoconnect_start(app.autoconnect);
 
     g_message("EarPort Daemon running. Press Ctrl+C to quit.");
 

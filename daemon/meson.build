@@ -39,6 +39,7 @@ sources = files(
     'src/airpods_settings.c',
     'src/aap_protocol.c',
     'src/aes128.c',
+    'src/autoconnect.c',
     'src/battery_estimator.c',
     'src/ble_proximity.c',
     'src/ble_scanner.c',
