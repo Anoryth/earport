@@ -45,13 +45,8 @@ static AppContext app = {0};
 
 static void on_proximity_keys(const AapProximityKeys *keys)
 {
-    g_mutex_lock(&app.state.lock);
-    char *address = g_strdup(app.state.device_address);
-    g_mutex_unlock(&app.state.lock);
-
-    if (keys->has_irk && address != NULL)
-        autoconnect_set_irk(app.autoconnect, address, keys->irk);
-    g_free(address);
+    if (keys->has_irk && app.state.device_address != NULL)
+        autoconnect_set_irk(app.autoconnect, app.state.device_address, keys->irk);
 }
 
 static void on_playback_started(void *user_data)
@@ -122,9 +117,7 @@ static void on_set_ear_pause_mode(int mode, void *user_data)
     g_message("Setting ear pause mode to %d", mode);
 
     /* Update state */
-    g_mutex_lock(&app.state.lock);
     app.state.ear_pause_mode = mode;
-    g_mutex_unlock(&app.state.lock);
 
     /* Update media control */
     if (app.media_control) {

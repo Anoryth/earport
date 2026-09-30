@@ -9,7 +9,6 @@
 void airpods_state_init(AirPodsState *state)
 {
     memset(state, 0, sizeof(AirPodsState));
-    g_mutex_init(&state->lock);
 
     state->connected = false;
     state->device_name = NULL;
@@ -42,21 +41,16 @@ void airpods_state_init(AirPodsState *state)
 
 void airpods_state_cleanup(AirPodsState *state)
 {
-    g_mutex_lock(&state->lock);
     g_free(state->device_name);
     g_free(state->device_address);
     g_free(state->display_name);
     state->device_name = NULL;
     state->device_address = NULL;
     state->display_name = NULL;
-    g_mutex_unlock(&state->lock);
-    g_mutex_clear(&state->lock);
 }
 
 void airpods_state_reset(AirPodsState *state)
 {
-    g_mutex_lock(&state->lock);
-
     state->connected = false;
     g_free(state->device_name);
     g_free(state->device_address);
@@ -86,8 +80,6 @@ void airpods_state_reset(AirPodsState *state)
 
     memset(state->setting_values, 0, sizeof(state->setting_values));
     memset(state->setting_announced, 0, sizeof(state->setting_announced));
-
-    g_mutex_unlock(&state->lock);
 }
 
 void airpods_state_set_device(AirPodsState *state,
@@ -95,19 +87,16 @@ void airpods_state_set_device(AirPodsState *state,
                                const char *address,
                                AirPodsModel model)
 {
-    g_mutex_lock(&state->lock);
     g_free(state->device_name);
     g_free(state->device_address);
     state->device_name = g_strdup(name);
     state->device_address = g_strdup(address);
     state->model = model;
     state->connected = true;
-    g_mutex_unlock(&state->lock);
 }
 
 void airpods_state_set_display_name(AirPodsState *state, const char *display_name)
 {
-    g_mutex_lock(&state->lock);
     g_free(state->display_name);
     /* Empty string means no custom name (use model) */
     if (display_name && display_name[0] != '\0') {
@@ -115,12 +104,10 @@ void airpods_state_set_display_name(AirPodsState *state, const char *display_nam
     } else {
         state->display_name = NULL;
     }
-    g_mutex_unlock(&state->lock);
 }
 
 const char *airpods_state_get_display_name(AirPodsState *state)
 {
-    /* Note: caller must hold lock or accept potential race */
     if (state->display_name && state->display_name[0] != '\0') {
         return state->display_name;
     }
@@ -138,8 +125,6 @@ void airpods_state_set_battery(AirPodsState *state,
                                 int8_t right, BatteryStatus right_status,
                                 int8_t case_level, BatteryStatus case_status)
 {
-    g_mutex_lock(&state->lock);
-
     state->battery.left.level = left;
     state->battery.left.status = left_status;
     state->battery.left.available = (left >= 0);
@@ -151,24 +136,18 @@ void airpods_state_set_battery(AirPodsState *state,
     state->battery.case_battery.level = case_level;
     state->battery.case_battery.status = case_status;
     state->battery.case_battery.available = (case_level >= 0);
-
-    g_mutex_unlock(&state->lock);
 }
 
 bool airpods_state_set_listening_minutes(AirPodsState *state, int minutes)
 {
-    g_mutex_lock(&state->lock);
     bool changed = state->listening_minutes_left != minutes;
     state->listening_minutes_left = minutes;
-    g_mutex_unlock(&state->lock);
     return changed;
 }
 
 void airpods_state_set_noise_control(AirPodsState *state, NoiseControlMode mode)
 {
-    g_mutex_lock(&state->lock);
     state->noise_control_mode = mode;
-    g_mutex_unlock(&state->lock);
 }
 
 void airpods_state_set_ear_detection(AirPodsState *state,
@@ -176,25 +155,19 @@ void airpods_state_set_ear_detection(AirPodsState *state,
                                       bool right_in_ear,
                                       bool primary_left)
 {
-    g_mutex_lock(&state->lock);
     state->ear_detection.left_in_ear = left_in_ear;
     state->ear_detection.right_in_ear = right_in_ear;
     state->ear_detection.primary_left = primary_left;
-    g_mutex_unlock(&state->lock);
 }
 
 void airpods_state_set_conversational_awareness(AirPodsState *state, bool enabled)
 {
-    g_mutex_lock(&state->lock);
     state->conversational_awareness = enabled;
-    g_mutex_unlock(&state->lock);
 }
 
 void airpods_state_set_adaptive_noise_level(AirPodsState *state, int level)
 {
-    g_mutex_lock(&state->lock);
     state->adaptive_noise_level = CLAMP(level, 0, 100);
-    g_mutex_unlock(&state->lock);
 }
 
 bool airpods_state_set_setting(AirPodsState *state, uint8_t id, uint8_t value)
@@ -203,12 +176,10 @@ bool airpods_state_set_setting(AirPodsState *state, uint8_t id, uint8_t value)
     if (index < 0)
         return false;
 
-    g_mutex_lock(&state->lock);
     bool changed = !state->setting_announced[index] ||
                    state->setting_values[index] != value;
     state->setting_values[index] = value;
     state->setting_announced[index] = true;
-    g_mutex_unlock(&state->lock);
 
     return changed;
 }
@@ -219,11 +190,9 @@ bool airpods_state_get_setting(AirPodsState *state, uint8_t id, uint8_t *value)
     if (index < 0)
         return false;
 
-    g_mutex_lock(&state->lock);
     bool announced = state->setting_announced[index];
     if (announced)
         *value = state->setting_values[index];
-    g_mutex_unlock(&state->lock);
 
     return announced;
 }
@@ -234,12 +203,10 @@ void airpods_state_set_listening_modes(AirPodsState *state,
                                         bool anc_enabled,
                                         bool adaptive_enabled)
 {
-    g_mutex_lock(&state->lock);
     state->listening_modes.off_enabled = off_enabled;
     state->listening_modes.transparency_enabled = transparency_enabled;
     state->listening_modes.anc_enabled = anc_enabled;
     state->listening_modes.adaptive_enabled = adaptive_enabled;
-    g_mutex_unlock(&state->lock);
 }
 
 const char *airpods_model_to_string(AirPodsModel model)

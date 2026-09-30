@@ -125,7 +125,7 @@ struct DbusService {
     bool auto_connect;
 };
 
-/* Settings announced by the AirPods, as {key: b|i}. Caller holds the lock. */
+/* Settings announced by the AirPods, as {key: b|i} */
 static GVariant *build_settings_variant(AirPodsState *state)
 {
     GVariantBuilder builder;
@@ -218,7 +218,6 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
     DbusService *service = user_data;
     AirPodsState *state = service->state;
 
-    g_mutex_lock(&state->lock);
 
     GVariant *result = NULL;
 
@@ -278,7 +277,6 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = build_settings_variant(state);
     }
 
-    g_mutex_unlock(&state->lock);
 
     return result;
 }

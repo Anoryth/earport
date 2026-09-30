@@ -103,9 +103,6 @@ typedef struct {
 
     /* Extension settings (stored in daemon) */
     int ear_pause_mode;   /* 0=disabled, 1=one_out, 2=both_out */
-
-    /* Internal state */
-    GMutex lock;
 } AirPodsState;
 
 /* Initialize state structure */

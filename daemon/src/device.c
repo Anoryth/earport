@@ -15,13 +15,8 @@
 /* The learned discharge rate is kept per device */
 static void save_learned_drain_rate(Device *dev)
 {
-    g_mutex_lock(&dev->state->lock);
-    char *address = g_strdup(dev->state->device_address);
-    g_mutex_unlock(&dev->state->lock);
-
     g_message("Learned discharge rate: %.1f %%/h", dev->battery_estimator.drain_rate);
-    config_save_drain_rate(address, dev->battery_estimator.drain_rate);
-    g_free(address);
+    config_save_drain_rate(dev->state->device_address, dev->battery_estimator.drain_rate);
 }
 
 static void update_listening_time(Device *dev, const AapBatteryData *battery)
@@ -81,10 +76,8 @@ static void apply_device_profile(Device *dev, const char *address)
                                        profile.listening_modes.adaptive_enabled);
 
     /* Apply conversational awareness (will be sent after connection stabilizes) */
-    g_mutex_lock(&dev->state->lock);
     dev->state->conversational_awareness = profile.conversational_awareness;
     dev->state->adaptive_noise_level = profile.adaptive_noise_level;
-    g_mutex_unlock(&dev->state->lock);
 }
 
 void device_session_started(Device *dev, const char *address, const char *name)
@@ -180,10 +173,7 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         /* AirPods Max have a single sensor: the secondary slot always reads
          * "out", which would jam the one-out auto-pause logic. Mirror the
          * primary status instead. */
-        g_mutex_lock(&dev->state->lock);
-        bool is_headphones = airpods_model_is_headphones(dev->state->model);
-        g_mutex_unlock(&dev->state->lock);
-        if (is_headphones)
+        if (airpods_model_is_headphones(dev->state->model))
             secondary_in_ear = primary_in_ear;
 
         airpods_state_set_ear_detection(dev->state,
@@ -282,9 +272,7 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         {
             AirPodsModel detected_model = airpods_model_from_number(pkt->data.metadata.model_number);
             if (detected_model != AIRPODS_MODEL_UNKNOWN) {
-                g_mutex_lock(&dev->state->lock);
                 dev->state->model = detected_model;
-                g_mutex_unlock(&dev->state->lock);
 
                 g_message("Detected AirPods model: %s", airpods_model_to_string(detected_model));
                 dbus_service_emit_properties_changed(dev->dbus, "DeviceModel");
