@@ -14,12 +14,18 @@
 #define MPRIS_PLAYER_INTERFACE "org.mpris.MediaPlayer2.Player"
 #define DBUS_PROPERTIES_INTERFACE "org.freedesktop.DBus.Properties"
 
+/* Players are called asynchronously, and a frozen one (e.g. a stuck
+ * browser) must not hold the others back for long */
+#define PLAYER_CALL_TIMEOUT_MS 2000
+
 struct MediaControl {
     GDBusConnection *connection;
     EarPauseMode ear_pause_mode;
 
     /* Track which players we paused */
     GList *paused_players;     /* List of player names (strings) that we paused */
+    guint resume_count;        /* Resumes so far, to spot pauses that land after one */
+    GCancellable *cancellable; /* Pending player calls, cancelled on free */
 
     /* Previous ear state for edge detection */
     bool prev_left_in_ear;
@@ -58,131 +64,140 @@ static void on_player_properties_changed(GDBusConnection *connection G_GNUC_UNUS
  * Helper functions
  * ========================================================================== */
 
-static GList *get_mpris_players(MediaControl *mc)
+/* A pause in progress on one player */
+typedef struct {
+    MediaControl *mc;
+    char *player;
+    guint resume_count;        /* mc->resume_count when the pause started */
+} PauseOp;
+
+static void pause_op_free(PauseOp *op)
 {
-    GList *players = NULL;
+    g_free(op->player);
+    g_free(op);
+}
+
+/* Whether a call failed because the MediaControl is gone (op/mc unusable) */
+static bool call_cancelled(GError *error)
+{
+    return g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED);
+}
+
+static void player_call(MediaControl *mc, const char *player, const char *method,
+                        GAsyncReadyCallback callback, gpointer user_data)
+{
+    g_dbus_connection_call(mc->connection, player, MPRIS_DBUS_PATH, MPRIS_PLAYER_INTERFACE,
+                           method, NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+                           PLAYER_CALL_TIMEOUT_MS, mc->cancellable, callback, user_data);
+}
+
+static void on_play_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    char *player = user_data;
     GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
 
-    GVariant *result = g_dbus_connection_call_sync(
-        mc->connection,
-        "org.freedesktop.DBus",
-        "/org/freedesktop/DBus",
-        "org.freedesktop.DBus",
-        "ListNames",
-        NULL,
-        G_VARIANT_TYPE("(as)"),
-        G_DBUS_CALL_FLAGS_NONE,
-        -1,
-        NULL,
-        &error);
-
-    if (error != NULL) {
-        g_warning("Failed to list D-Bus names: %s", error->message);
+    if (reply != NULL) {
+        g_message("Resumed media player: %s", player);
+        g_variant_unref(reply);
+    } else {
+        if (!call_cancelled(error))
+            g_debug("Failed to play %s: %s", player, error->message);
         g_error_free(error);
-        return NULL;
+    }
+    g_free(player);
+}
+
+static void player_play(MediaControl *mc, const char *player)
+{
+    player_call(mc, player, "Play", on_play_done, g_strdup(player));
+}
+
+static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    PauseOp *op = user_data;
+    GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+
+    if (reply == NULL) {
+        if (!call_cancelled(error))
+            g_debug("Failed to pause %s: %s", op->player, error->message);
+        g_error_free(error);
+        pause_op_free(op);
+        return;
+    }
+    g_variant_unref(reply);
+
+    MediaControl *mc = op->mc;
+    g_message("Paused media player: %s", op->player);
+
+    if (mc->resume_count != op->resume_count) {
+        /* The pods went back in while the player was being paused */
+        player_play(mc, op->player);
+    } else if (g_list_find_custom(mc->paused_players, op->player, (GCompareFunc)g_strcmp0) == NULL) {
+        mc->paused_players = g_list_append(mc->paused_players, g_strdup(op->player));
+    }
+    pause_op_free(op);
+}
+
+static void on_status_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    PauseOp *op = user_data;
+    GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+
+    if (reply == NULL) {
+        if (!call_cancelled(error))
+            g_debug("Failed to get playback status from %s: %s", op->player, error->message);
+        g_error_free(error);
+        pause_op_free(op);
+        return;
+    }
+
+    GVariant *status = NULL;
+    g_variant_get(reply, "(v)", &status);
+    bool playing = g_strcmp0(g_variant_get_string(status, NULL), "Playing") == 0;
+    g_variant_unref(status);
+    g_variant_unref(reply);
+
+    /* Only the players actually playing are paused, and later resumed */
+    if (playing && op->mc->resume_count == op->resume_count)
+        player_call(op->mc, op->player, "Pause", on_pause_done, op);
+    else
+        pause_op_free(op);
+}
+
+static void on_list_names_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    MediaControl *mc = user_data;
+    GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+
+    if (reply == NULL) {
+        if (!call_cancelled(error))
+            g_warning("Failed to list D-Bus names: %s", error->message);
+        g_error_free(error);
+        return;
     }
 
     GVariantIter *iter;
     const gchar *name;
-    g_variant_get(result, "(as)", &iter);
-
+    g_variant_get(reply, "(as)", &iter);
     while (g_variant_iter_loop(iter, "&s", &name)) {
-        if (g_str_has_prefix(name, MPRIS_DBUS_NAME_PREFIX)) {
-            players = g_list_append(players, g_strdup(name));
-        }
-    }
+        if (!g_str_has_prefix(name, MPRIS_DBUS_NAME_PREFIX))
+            continue;
 
+        PauseOp *op = g_new0(PauseOp, 1);
+        op->mc = mc;
+        op->player = g_strdup(name);
+        op->resume_count = mc->resume_count;
+        g_dbus_connection_call(mc->connection, name, MPRIS_DBUS_PATH, DBUS_PROPERTIES_INTERFACE,
+                               "Get", g_variant_new("(ss)", MPRIS_PLAYER_INTERFACE, "PlaybackStatus"),
+                               G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE,
+                               PLAYER_CALL_TIMEOUT_MS, mc->cancellable, on_status_done, op);
+    }
     g_variant_iter_free(iter);
-    g_variant_unref(result);
-
-    return players;
-}
-
-static gchar *get_player_playback_status(MediaControl *mc, const gchar *player_name)
-{
-    GError *error = NULL;
-    gchar *status = NULL;
-
-    GVariant *result = g_dbus_connection_call_sync(
-        mc->connection,
-        player_name,
-        MPRIS_DBUS_PATH,
-        DBUS_PROPERTIES_INTERFACE,
-        "Get",
-        g_variant_new("(ss)", MPRIS_PLAYER_INTERFACE, "PlaybackStatus"),
-        G_VARIANT_TYPE("(v)"),
-        G_DBUS_CALL_FLAGS_NONE,
-        -1,
-        NULL,
-        &error);
-
-    if (error != NULL) {
-        g_debug("Failed to get playback status from %s: %s", player_name, error->message);
-        g_error_free(error);
-        return NULL;
-    }
-
-    GVariant *variant;
-    g_variant_get(result, "(v)", &variant);
-    status = g_strdup(g_variant_get_string(variant, NULL));
-    g_variant_unref(variant);
-    g_variant_unref(result);
-
-    return status;
-}
-
-static bool player_pause(MediaControl *mc, const gchar *player_name)
-{
-    GError *error = NULL;
-
-    g_dbus_connection_call_sync(
-        mc->connection,
-        player_name,
-        MPRIS_DBUS_PATH,
-        MPRIS_PLAYER_INTERFACE,
-        "Pause",
-        NULL,
-        NULL,
-        G_DBUS_CALL_FLAGS_NONE,
-        -1,
-        NULL,
-        &error);
-
-    if (error != NULL) {
-        g_debug("Failed to pause %s: %s", player_name, error->message);
-        g_error_free(error);
-        return false;
-    }
-
-    g_message("Paused media player: %s", player_name);
-    return true;
-}
-
-static bool player_play(MediaControl *mc, const gchar *player_name)
-{
-    GError *error = NULL;
-
-    g_dbus_connection_call_sync(
-        mc->connection,
-        player_name,
-        MPRIS_DBUS_PATH,
-        MPRIS_PLAYER_INTERFACE,
-        "Play",
-        NULL,
-        NULL,
-        G_DBUS_CALL_FLAGS_NONE,
-        -1,
-        NULL,
-        &error);
-
-    if (error != NULL) {
-        g_debug("Failed to play %s: %s", player_name, error->message);
-        g_error_free(error);
-        return false;
-    }
-
-    g_message("Resumed media player: %s", player_name);
-    return true;
+    g_variant_unref(reply);
 }
 
 /* ============================================================================
@@ -203,6 +218,7 @@ MediaControl *media_control_new(void)
     }
 
     mc->ear_pause_mode = EAR_PAUSE_ONE_OUT;  /* Default: pause when one pod is removed */
+    mc->cancellable = g_cancellable_new();
     mc->paused_players = NULL;
     mc->prev_state_valid = false;
 
@@ -226,6 +242,10 @@ void media_control_free(MediaControl *mc)
     if (mc == NULL) {
         return;
     }
+
+    /* Pending calls must not reach the freed MediaControl */
+    g_cancellable_cancel(mc->cancellable);
+    g_object_unref(mc->cancellable);
 
     /* Free paused players list */
     g_list_free_full(mc->paused_players, g_free);
@@ -341,28 +361,15 @@ void media_control_pause_all(MediaControl *mc)
         return;
     }
 
-    /* Clear previous paused list */
+    /* Forget the players paused last time: this is a new pause */
     g_list_free_full(mc->paused_players, g_free);
     mc->paused_players = NULL;
 
-    /* Get all MPRIS players */
-    GList *players = get_mpris_players(mc);
-
-    for (GList *l = players; l != NULL; l = l->next) {
-        const gchar *player_name = l->data;
-
-        /* Check if player is currently playing */
-        gchar *status = get_player_playback_status(mc, player_name);
-        if (status != NULL && g_strcmp0(status, "Playing") == 0) {
-            /* Pause this player and remember it */
-            if (player_pause(mc, player_name)) {
-                mc->paused_players = g_list_append(mc->paused_players, g_strdup(player_name));
-            }
-        }
-        g_free(status);
-    }
-
-    g_list_free_full(players, g_free);
+    /* Then, for each player: playing? -> pause and remember it */
+    g_dbus_connection_call(mc->connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                           "org.freedesktop.DBus", "ListNames", NULL, G_VARIANT_TYPE("(as)"),
+                           G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS, mc->cancellable,
+                           on_list_names_done, mc);
 }
 
 void media_control_resume(MediaControl *mc)
@@ -371,10 +378,12 @@ void media_control_resume(MediaControl *mc)
         return;
     }
 
+    /* Pauses still in flight will resume their player themselves */
+    mc->resume_count++;
+
     /* Resume only players that we paused */
     for (GList *l = mc->paused_players; l != NULL; l = l->next) {
-        const gchar *player_name = l->data;
-        player_play(mc, player_name);
+        player_play(mc, l->data);
     }
 
     /* Clear the paused list */

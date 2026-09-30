@@ -3,8 +3,8 @@
  * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Pause/resume on ear detection, against fake MPRIS players on a private
- * bus. media_control.c calls the players synchronously, so each fake
- * player answers from its own thread.
+ * bus. Each fake player answers from its own thread, so that a slow or
+ * frozen one can be simulated.
  */
 
 #include <gio/gio.h>
@@ -42,6 +42,7 @@ typedef struct {
     char *status;                /* "Playing", "Paused", "Stopped" */
     int plays;
     int pauses;
+    guint delay_ms;              /* Answer this late (0: at once) */
 } FakePlayer;
 
 static void set_status(FakePlayer *p, const char *status)
@@ -71,6 +72,9 @@ static void on_player_method(GDBusConnection *connection, const char *sender, co
     (void)parameters;
     FakePlayer *p = user_data;
 
+    if (p->delay_ms > 0)
+        g_usleep(p->delay_ms * 1000);
+
     g_mutex_lock(&p->lock);
     if (g_strcmp0(method, "Play") == 0) {
         p->plays++;
@@ -96,6 +100,8 @@ static GVariant *on_player_get_property(GDBusConnection *connection, const char 
     (void)property;
     (void)error;
     FakePlayer *p = user_data;
+    if (p->delay_ms > 0)
+        g_usleep(p->delay_ms * 1000);
     g_autofree char *status = get_status(p);
     return g_variant_new_string(status);
 }
@@ -144,9 +150,10 @@ static gpointer player_thread(gpointer user_data)
     return NULL;
 }
 
-static FakePlayer *fake_player_new(const char *id, const char *status)
+static FakePlayer *fake_player_new_delayed(const char *id, const char *status, guint delay_ms)
 {
     FakePlayer *p = g_new0(FakePlayer, 1);
+    p->delay_ms = delay_ms;
     p->name = g_strdup_printf("org.mpris.MediaPlayer2.%s", id);
     p->status = g_strdup(status);
     p->context = g_main_context_new();
@@ -160,6 +167,11 @@ static FakePlayer *fake_player_new(const char *id, const char *status)
         g_cond_wait(&p->ready_cond, &p->lock);
     g_mutex_unlock(&p->lock);
     return p;
+}
+
+static FakePlayer *fake_player_new(const char *id, const char *status)
+{
+    return fake_player_new_delayed(id, status, 0);
 }
 
 static void fake_player_free(FakePlayer *p)
@@ -208,9 +220,25 @@ static int pauses(FakePlayer *p)
  * Tests
  * ========================================================================== */
 
+static gboolean set_flag(gpointer user_data)
+{
+    *(bool *)user_data = true;
+    return G_SOURCE_REMOVE;
+}
+
+static void run_for(guint ms)
+{
+    bool done = false;
+    g_timeout_add(ms, set_flag, &done);
+    while (!done)
+        g_main_context_iteration(NULL, TRUE);
+}
+
+/* The pods move, and the players have time to answer */
 static void ears(MediaControl *mc, bool left, bool right)
 {
     media_control_on_ear_detection_changed(mc, left, right);
+    run_for(50);
 }
 
 static void test_one_out(void)
@@ -342,6 +370,61 @@ static void test_playback_started(void)
     fake_player_free(player);
 }
 
+/* A frozen player must not hold the daemon nor the other players */
+static void test_frozen_player(void)
+{
+    FakePlayer *frozen = fake_player_new_delayed("frozen", "Playing", 2500);
+    FakePlayer *music = fake_player_new("music2", "Playing");
+    MediaControl *mc = media_control_new();
+
+    media_control_on_ear_detection_changed(mc, true, true);
+    gint64 start = g_get_monotonic_time();
+    media_control_on_ear_detection_changed(mc, false, true);
+    g_assert_cmpint(g_get_monotonic_time() - start, <, 50 * 1000);
+
+    run_for(200);
+    g_assert_cmpint(pauses(music), ==, 1);
+
+    media_control_free(mc);
+    fake_player_free(music);
+    fake_player_free(frozen);
+}
+
+/* Pod out and back in before the player has paused: it ends up playing */
+static void test_back_in_during_pause(void)
+{
+    FakePlayer *slow = fake_player_new_delayed("slow", "Playing", 150);
+    MediaControl *mc = media_control_new();
+
+    media_control_on_ear_detection_changed(mc, true, true);
+    media_control_on_ear_detection_changed(mc, false, true);
+    run_for(200);  /* Status read, pause sent but not answered yet */
+    media_control_on_ear_detection_changed(mc, true, true);
+    run_for(600);
+
+    g_assert_cmpint(pauses(slow), ==, 1);
+    g_assert_cmpint(plays(slow), ==, 1);
+    g_autofree char *status = get_status(slow);
+    g_assert_cmpstr(status, ==, "Playing");
+
+    media_control_free(mc);
+    fake_player_free(slow);
+}
+
+/* Freed with calls in flight: their answers must not reach it */
+static void test_free_with_pending_calls(void)
+{
+    FakePlayer *slow = fake_player_new_delayed("pending", "Playing", 100);
+    MediaControl *mc = media_control_new();
+
+    media_control_on_ear_detection_changed(mc, true, true);
+    media_control_on_ear_detection_changed(mc, false, true);
+    media_control_free(mc);
+    run_for(400);
+
+    fake_player_free(slow);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -356,6 +439,9 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/first-state-is-not-a-change", test_first_state_is_not_a_change);
     g_test_add_func("/media/pause-after-manual-resume", test_pause_after_manual_resume);
     g_test_add_func("/media/playback-started", test_playback_started);
+    g_test_add_func("/media/frozen-player", test_frozen_player);
+    g_test_add_func("/media/back-in-during-pause", test_back_in_during_pause);
+    g_test_add_func("/media/free-with-pending-calls", test_free_with_pending_calls);
 
     int result = g_test_run();
 

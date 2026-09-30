@@ -42,7 +42,8 @@ void media_control_on_ear_detection_changed(MediaControl *mc,
                                             bool left_in_ear,
                                             bool right_in_ear);
 
-/* Pause all playing media players */
+/* Pause all playing media players (asynchronous: returns at once, the
+ * players answer from the main loop) */
 void media_control_pause_all(MediaControl *mc);
 
 /* Be told when a player starts playing (e.g. to connect the AirPods) */
