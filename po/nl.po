@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-30 21:37+0200\n"
+"POT-Creation-Date: 2026-09-30 22:13+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Dutch\n"
@@ -18,85 +18,85 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: extension/extension.js:119
+#: extension/extension.js:117
 msgid "Headphones"
 msgstr "Koptelefoon"
 
-#: extension/extension.js:168
+#: extension/extension.js:166
 msgid "unavailable"
 msgstr "niet beschikbaar"
 
-#: extension/extension.js:170
+#: extension/extension.js:168
 msgid "charging"
 msgstr "wordt opgeladen"
 
-#: extension/extension.js:267 extension/extension.js:690
-#: extension/extension.js:707 extension/prefs.js:482
+#: extension/extension.js:265 extension/extension.js:690
+#: extension/extension.js:707 extension/prefs.js:502
 msgid "Disconnected"
 msgstr "Niet verbonden"
 
-#: extension/extension.js:287
+#: extension/extension.js:285
 msgid "Noise Control Off"
 msgstr "Luistermodi uit"
 
-#: extension/extension.js:288 extension/prefs.js:168
+#: extension/extension.js:286 extension/prefs.js:183
 msgid "Noise Cancellation"
 msgstr "Ruisonderdrukking"
 
-#: extension/extension.js:289 extension/prefs.js:162
+#: extension/extension.js:287 extension/prefs.js:177
 msgid "Transparency"
 msgstr "Transparantiemodus"
 
-#: extension/extension.js:290 extension/prefs.js:174
+#: extension/extension.js:288 extension/prefs.js:189
 msgid "Adaptive"
 msgstr "Adaptief"
 
-#: extension/extension.js:358 extension/extension.js:613 extension/prefs.js:456
+#: extension/extension.js:356 extension/extension.js:613 extension/prefs.js:476
 msgid "Left"
 msgstr "Links"
 
-#: extension/extension.js:359 extension/extension.js:615 extension/prefs.js:456
+#: extension/extension.js:357 extension/extension.js:615 extension/prefs.js:476
 msgid "Right"
 msgstr "Rechts"
 
-#: extension/extension.js:360
+#: extension/extension.js:358
 msgid "Case"
 msgstr "Case"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:403 extension/prefs.js:156
+#: extension/extension.js:401 extension/prefs.js:171
 msgid "Off"
 msgstr "Uit"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:405
+#: extension/extension.js:403
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/extension.js:407
+#: extension/extension.js:405
 msgid "Hear"
 msgstr "Transparant"
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/extension.js:410
+#: extension/extension.js:408
 msgid "Auto"
 msgstr "Auto"
 
-#: extension/extension.js:430
+#: extension/extension.js:428
 msgid "Advanced Settings"
 msgstr "Geavanceerde instellingen"
 
-#: extension/extension.js:439
+#: extension/extension.js:437
 msgid "How to Install the EarPort Service"
 msgstr "De EarPort-dienst installeren"
 
-#: extension/extension.js:501
+#: extension/extension.js:499
 #, javascript-format
 msgid "%s Connected"
 msgstr "%s verbonden"
 
-#: extension/extension.js:516
+#: extension/extension.js:514
 #, javascript-format
 msgid "%s Disconnected"
 msgstr "%s niet meer verbonden"
@@ -150,7 +150,7 @@ msgstr "Apparaatstatus"
 msgid "Current AirPods connection status"
 msgstr "Huidige verbindingsstatus van de AirPods"
 
-#: extension/prefs.js:94 extension/prefs.js:200
+#: extension/prefs.js:94 extension/prefs.js:215
 msgid "Connection"
 msgstr "Verbinding"
 
@@ -196,70 +196,78 @@ msgid "Automatically lower volume when you speak"
 msgstr "Verlaagt automatisch het volume als je praat"
 
 #: extension/prefs.js:137
+msgid "Volume During Conversations"
+msgstr "Volume tijdens gesprekken"
+
+#: extension/prefs.js:138
+msgid "Percentage of the current volume kept while you speak"
+msgstr "Percentage van het huidige volume dat behouden blijft terwijl je praat"
+
+#: extension/prefs.js:152
 msgid "Adaptive Noise Level"
 msgstr "Niveau van adaptieve modus"
 
-#: extension/prefs.js:138
+#: extension/prefs.js:153
 msgid "Adjust the transparency level (0-100)"
 msgstr "Stel het transparantieniveau in (0-100)"
 
-#: extension/prefs.js:150
+#: extension/prefs.js:165
 msgid "Long Press Actions"
 msgstr "Acties bij lang indrukken"
 
-#: extension/prefs.js:151
+#: extension/prefs.js:166
 msgid "Configure which modes are cycled when pressing and holding the stem"
 msgstr "Kies welke modi worden doorlopen als je de steel ingedrukt houdt"
 
-#: extension/prefs.js:157
+#: extension/prefs.js:172
 msgid "Include Off mode in long press cycle"
 msgstr "Uit-modus opnemen in de cyclus"
 
-#: extension/prefs.js:163
+#: extension/prefs.js:178
 msgid "Include Transparency mode in long press cycle"
 msgstr "Transparantiemodus opnemen in de cyclus"
 
-#: extension/prefs.js:169
+#: extension/prefs.js:184
 msgid "Include ANC mode in long press cycle"
 msgstr "Ruisonderdrukking opnemen in de cyclus"
 
-#: extension/prefs.js:175
+#: extension/prefs.js:190
 msgid "Include Adaptive mode in long press cycle"
 msgstr "Adaptieve modus opnemen in de cyclus"
 
-#: extension/prefs.js:181
+#: extension/prefs.js:196
 msgid "Media Control"
 msgstr "Mediabediening"
 
-#: extension/prefs.js:182
+#: extension/prefs.js:197
 msgid "Configure media playback behavior"
 msgstr "Gedrag van mediaweergave instellen"
 
-#: extension/prefs.js:187 extension/prefs.js:248
+#: extension/prefs.js:202 extension/prefs.js:263
 msgid "Disabled"
 msgstr "Uitgeschakeld"
 
-#: extension/prefs.js:188
+#: extension/prefs.js:203
 msgid "When one earbud removed"
 msgstr "Als één oortje wordt uitgedaan"
 
-#: extension/prefs.js:189
+#: extension/prefs.js:204
 msgid "When both earbuds removed"
 msgstr "Als beide oortjes worden uitgedaan"
 
-#: extension/prefs.js:192
+#: extension/prefs.js:207
 msgid "Auto-Pause Media"
 msgstr "Media automatisch pauzeren"
 
-#: extension/prefs.js:193
+#: extension/prefs.js:208
 msgid "Pause playback when earbuds are removed"
 msgstr "Pauzeert het afspelen als de oortjes worden uitgedaan"
 
-#: extension/prefs.js:205
+#: extension/prefs.js:220
 msgid "Automatic Connection"
 msgstr "Automatisch verbinden"
 
-#: extension/prefs.js:206
+#: extension/prefs.js:221
 msgid ""
 "Connect when you put your AirPods in or start playing, unless another device "
 "is using them"
@@ -267,193 +275,193 @@ msgstr ""
 "Verbinden als je je AirPods indoet of iets afspeelt, tenzij een ander "
 "apparaat ze gebruikt"
 
-#: extension/prefs.js:212
+#: extension/prefs.js:227
 msgid "Notifications"
 msgstr "Meldingen"
 
-#: extension/prefs.js:213
+#: extension/prefs.js:228
 msgid "Configure notification preferences"
 msgstr "Meldingen instellen"
 
-#: extension/prefs.js:218
+#: extension/prefs.js:233
 msgid "Connection Notifications"
 msgstr "Verbindingsmeldingen"
 
-#: extension/prefs.js:219
+#: extension/prefs.js:234
 msgid "Notify when AirPods connect or disconnect"
 msgstr "Melden als AirPods verbinding maken of verbreken"
 
-#: extension/prefs.js:224
+#: extension/prefs.js:239
 msgid "Low Battery Notifications"
 msgstr "Meldingen bij bijna lege batterij"
 
-#: extension/prefs.js:225
+#: extension/prefs.js:240
 msgid "Notify when battery drops below threshold"
 msgstr "Melden als de batterij onder de drempel zakt"
 
-#: extension/prefs.js:230
+#: extension/prefs.js:245
 msgid "Low Battery Threshold"
 msgstr "Drempel voor bijna lege batterij"
 
-#: extension/prefs.js:231
+#: extension/prefs.js:246
 msgid "Notify when battery drops below this percentage"
 msgstr "Melden als de batterij onder dit percentage zakt"
 
-#: extension/prefs.js:243
+#: extension/prefs.js:258
 msgid "Keyboard Shortcuts"
 msgstr "Sneltoetsen"
 
-#: extension/prefs.js:253
+#: extension/prefs.js:268
 msgid "Cycle Noise Control Mode"
 msgstr "Ruisregelingsmodus wisselen"
 
-#: extension/prefs.js:254
+#: extension/prefs.js:269
 msgid "Also works when the Quick Settings menu is closed"
 msgstr "Werkt ook als het snelinstellingenmenu gesloten is"
 
-#: extension/prefs.js:269
+#: extension/prefs.js:284
 msgid "About"
 msgstr "Over"
 
-#: extension/prefs.js:275
+#: extension/prefs.js:290
 msgid "AirPods integration for GNOME"
 msgstr "AirPods-integratie voor GNOME"
 
-#: extension/prefs.js:281
+#: extension/prefs.js:296
 msgid "Version"
 msgstr "Versie"
 
-#: extension/prefs.js:356
+#: extension/prefs.js:376
 msgid "At least two modes must stay in the cycle"
 msgstr "Er moeten minstens twee modi in de cyclus blijven"
 
-#: extension/prefs.js:401 extension/prefs.js:482
+#: extension/prefs.js:421 extension/prefs.js:502
 msgid "Daemon not running"
 msgstr "Dienst is niet actief"
 
-#: extension/prefs.js:410
+#: extension/prefs.js:430
 msgid "Error connecting to daemon"
 msgstr "Fout bij verbinden met de dienst"
 
-#: extension/prefs.js:452
+#: extension/prefs.js:472
 #, javascript-format
 msgid "Connected: %s"
 msgstr "Verbonden: %s"
 
-#: extension/prefs.js:454 extension/prefs.js:455
+#: extension/prefs.js:474 extension/prefs.js:475
 msgid "In ear"
 msgstr "In oor"
 
-#: extension/prefs.js:454 extension/prefs.js:455
+#: extension/prefs.js:474 extension/prefs.js:475
 msgid "Out"
 msgstr "Uit oor"
 
-#: extension/prefs.js:466
+#: extension/prefs.js:486
 #, javascript-format
 msgid "Device model: %s"
 msgstr "Apparaatmodel: %s"
 
-#: extension/prefs.js:483
+#: extension/prefs.js:503
 msgid "No device connected"
 msgstr "Geen apparaat verbonden"
 
-#: extension/prefs.js:497
+#: extension/prefs.js:517
 msgid "AirPods Settings"
 msgstr "AirPods-instellingen"
 
-#: extension/prefs.js:503
+#: extension/prefs.js:523
 msgid "No settings available"
 msgstr "Geen instellingen beschikbaar"
 
-#: extension/prefs.js:504
+#: extension/prefs.js:524
 msgid "Connect your AirPods to change the settings stored on them"
 msgstr "Verbind je AirPods om de daarop opgeslagen instellingen te wijzigen"
 
-#: extension/prefs.js:517
+#: extension/prefs.js:537
 msgid "Listening Modes"
 msgstr "Luistermodi"
 
-#: extension/prefs.js:519
+#: extension/prefs.js:539
 msgid "Noise Cancellation with One AirPod"
 msgstr "Ruisonderdrukking voor één AirPod"
 
-#: extension/prefs.js:520
+#: extension/prefs.js:540
 msgid "Allow noise cancellation with only one AirPod in your ear"
 msgstr "Staat ruisonderdrukking toe met maar één AirPod in"
 
-#: extension/prefs.js:524
+#: extension/prefs.js:544
 msgid "Audio"
 msgstr "Audio"
 
-#: extension/prefs.js:526
+#: extension/prefs.js:546
 msgid "Personalized Volume"
 msgstr "Gepersonaliseerd volume"
 
-#: extension/prefs.js:527
+#: extension/prefs.js:547
 msgid "Adjust media volume based on your environment"
 msgstr "Past het mediavolume aan je omgeving aan"
 
-#: extension/prefs.js:533
+#: extension/prefs.js:553
 msgid "Stem Controls"
 msgstr "Bediening op de steel"
 
-#: extension/prefs.js:535
+#: extension/prefs.js:555
 msgid "Press Speed"
 msgstr "Indruksnelheid"
 
-#: extension/prefs.js:536
+#: extension/prefs.js:556
 msgid "Speed required to press two or three times"
 msgstr "Snelheid die nodig is om twee of drie keer te drukken"
 
-#: extension/prefs.js:537 extension/prefs.js:540 extension/prefs.js:545
+#: extension/prefs.js:557 extension/prefs.js:560 extension/prefs.js:565
 msgid "Default"
 msgstr "Standaard"
 
-#: extension/prefs.js:537
+#: extension/prefs.js:557
 msgid "Slower"
 msgstr "Langzamer"
 
-#: extension/prefs.js:537
+#: extension/prefs.js:557
 msgid "Slowest"
 msgstr "Langzaamst"
 
-#: extension/prefs.js:538
+#: extension/prefs.js:558
 msgid "Press and Hold Duration"
 msgstr "Indruk- en vasthoudduur"
 
-#: extension/prefs.js:539
+#: extension/prefs.js:559
 msgid "Time required to press and hold"
 msgstr "Tijd die nodig is om ingedrukt te houden"
 
-#: extension/prefs.js:540
+#: extension/prefs.js:560
 msgid "Shorter"
 msgstr "Korter"
 
-#: extension/prefs.js:540
+#: extension/prefs.js:560
 msgid "Shortest"
 msgstr "Kortst"
 
-#: extension/prefs.js:541
+#: extension/prefs.js:561
 msgid "Volume Swipe"
 msgstr "Veeg om volume te regelen"
 
-#: extension/prefs.js:542
+#: extension/prefs.js:562
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Veeg omhoog of omlaag over de steel om het volume aan te passen"
 
-#: extension/prefs.js:543
+#: extension/prefs.js:563
 msgid "Volume Swipe Duration"
 msgstr "Lengte van de veegbeweging"
 
-#: extension/prefs.js:544
+#: extension/prefs.js:564
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr "Wachttijd tussen veegbewegingen om onbedoelde wijzigingen te voorkomen"
 
-#: extension/prefs.js:545
+#: extension/prefs.js:565
 msgid "Longer"
 msgstr "Langer"
 
-#: extension/prefs.js:545
+#: extension/prefs.js:565
 msgid "Longest"
 msgstr "Langst"
 

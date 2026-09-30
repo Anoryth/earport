@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-30 21:37+0200\n"
+"POT-Creation-Date: 2026-09-30 22:13+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -15,85 +15,85 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: extension/extension.js:119
+#: extension/extension.js:117
 msgid "Headphones"
 msgstr "Навушники"
 
-#: extension/extension.js:168
+#: extension/extension.js:166
 msgid "unavailable"
 msgstr "недоступно"
 
-#: extension/extension.js:170
+#: extension/extension.js:168
 msgid "charging"
 msgstr "заряджається"
 
-#: extension/extension.js:267 extension/extension.js:690
-#: extension/extension.js:707 extension/prefs.js:482
+#: extension/extension.js:265 extension/extension.js:690
+#: extension/extension.js:707 extension/prefs.js:502
 msgid "Disconnected"
 msgstr "Відключено"
 
-#: extension/extension.js:287
+#: extension/extension.js:285
 msgid "Noise Control Off"
 msgstr "Режим слухання вимкнено"
 
-#: extension/extension.js:288 extension/prefs.js:168
+#: extension/extension.js:286 extension/prefs.js:183
 msgid "Noise Cancellation"
 msgstr "Шумогасіння"
 
-#: extension/extension.js:289 extension/prefs.js:162
+#: extension/extension.js:287 extension/prefs.js:177
 msgid "Transparency"
 msgstr "Режим проникності"
 
-#: extension/extension.js:290 extension/prefs.js:174
+#: extension/extension.js:288 extension/prefs.js:189
 msgid "Adaptive"
 msgstr "Адаптивний"
 
-#: extension/extension.js:358 extension/extension.js:613 extension/prefs.js:456
+#: extension/extension.js:356 extension/extension.js:613 extension/prefs.js:476
 msgid "Left"
 msgstr "Лівий"
 
-#: extension/extension.js:359 extension/extension.js:615 extension/prefs.js:456
+#: extension/extension.js:357 extension/extension.js:615 extension/prefs.js:476
 msgid "Right"
 msgstr "Правий"
 
-#: extension/extension.js:360
+#: extension/extension.js:358
 msgid "Case"
 msgstr "Футляр"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:403 extension/prefs.js:156
+#: extension/extension.js:401 extension/prefs.js:171
 msgid "Off"
 msgstr "Вимк."
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/extension.js:405
+#: extension/extension.js:403
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/extension.js:407
+#: extension/extension.js:405
 msgid "Hear"
 msgstr "Проникн."
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/extension.js:410
+#: extension/extension.js:408
 msgid "Auto"
 msgstr "Авто"
 
-#: extension/extension.js:430
+#: extension/extension.js:428
 msgid "Advanced Settings"
 msgstr "Додаткові налаштування"
 
-#: extension/extension.js:439
+#: extension/extension.js:437
 msgid "How to Install the EarPort Service"
 msgstr "Як установити службу EarPort"
 
-#: extension/extension.js:501
+#: extension/extension.js:499
 #, javascript-format
 msgid "%s Connected"
 msgstr "%s підключено"
 
-#: extension/extension.js:516
+#: extension/extension.js:514
 #, javascript-format
 msgid "%s Disconnected"
 msgstr "%s відключено"
@@ -146,7 +146,7 @@ msgstr "Статус пристрою"
 msgid "Current AirPods connection status"
 msgstr "Поточний статус підключення AirPods"
 
-#: extension/prefs.js:94 extension/prefs.js:200
+#: extension/prefs.js:94 extension/prefs.js:215
 msgid "Connection"
 msgstr "Підключення"
 
@@ -194,70 +194,78 @@ msgid "Automatically lower volume when you speak"
 msgstr "Автоматично зменшувати гучність, коли ви розмовляєте"
 
 #: extension/prefs.js:137
+msgid "Volume During Conversations"
+msgstr "Гучність під час розмови"
+
+#: extension/prefs.js:138
+msgid "Percentage of the current volume kept while you speak"
+msgstr "Відсоток поточної гучності, що зберігається, поки ви розмовляєте"
+
+#: extension/prefs.js:152
 msgid "Adaptive Noise Level"
 msgstr "Адаптивний рівень шуму"
 
-#: extension/prefs.js:138
+#: extension/prefs.js:153
 msgid "Adjust the transparency level (0-100)"
 msgstr "Налаштування рівня проникності (0-100)"
 
-#: extension/prefs.js:150
+#: extension/prefs.js:165
 msgid "Long Press Actions"
 msgstr "Дії при довгому натисканні"
 
-#: extension/prefs.js:151
+#: extension/prefs.js:166
 msgid "Configure which modes are cycled when pressing and holding the stem"
 msgstr "Налаштуйте режими, які перемикаються при натисканні та утриманні ніжки"
 
-#: extension/prefs.js:157
+#: extension/prefs.js:172
 msgid "Include Off mode in long press cycle"
 msgstr "Додати режим «Вимкнено» до циклу довгого натискання"
 
-#: extension/prefs.js:163
+#: extension/prefs.js:178
 msgid "Include Transparency mode in long press cycle"
 msgstr "Додати режим «Проникність» до циклу довгого натискання"
 
-#: extension/prefs.js:169
+#: extension/prefs.js:184
 msgid "Include ANC mode in long press cycle"
 msgstr "Додати режим «Шумогасіння» до циклу довгого натискання"
 
-#: extension/prefs.js:175
+#: extension/prefs.js:190
 msgid "Include Adaptive mode in long press cycle"
 msgstr "Додати режим «Адаптивний» до циклу довгого натискання"
 
-#: extension/prefs.js:181
+#: extension/prefs.js:196
 msgid "Media Control"
 msgstr "Керування медіа"
 
-#: extension/prefs.js:182
+#: extension/prefs.js:197
 msgid "Configure media playback behavior"
 msgstr "Налаштуйте поведінку відтворення медіа"
 
-#: extension/prefs.js:187 extension/prefs.js:248
+#: extension/prefs.js:202 extension/prefs.js:263
 msgid "Disabled"
 msgstr "Вимкнено"
 
-#: extension/prefs.js:188
+#: extension/prefs.js:203
 msgid "When one earbud removed"
 msgstr "Коли вийнято один навушник"
 
-#: extension/prefs.js:189
+#: extension/prefs.js:204
 msgid "When both earbuds removed"
 msgstr "Коли вийнято обидва навушники"
 
-#: extension/prefs.js:192
+#: extension/prefs.js:207
 msgid "Auto-Pause Media"
 msgstr "Автопауза медіа"
 
-#: extension/prefs.js:193
+#: extension/prefs.js:208
 msgid "Pause playback when earbuds are removed"
 msgstr "Призупиняти відтворення, коли навушники вийнято з вух"
 
-#: extension/prefs.js:205
+#: extension/prefs.js:220
 msgid "Automatic Connection"
 msgstr "Автоматичне підключення"
 
-#: extension/prefs.js:206
+#: extension/prefs.js:221
 msgid ""
 "Connect when you put your AirPods in or start playing, unless another device "
 "is using them"
@@ -265,193 +273,193 @@ msgstr ""
 "Підключатися, коли ви вдягаєте AirPods або запускаєте відтворення, якщо їх "
 "не використовує інший пристрій"
 
-#: extension/prefs.js:212
+#: extension/prefs.js:227
 msgid "Notifications"
 msgstr "Сповіщення"
 
-#: extension/prefs.js:213
+#: extension/prefs.js:228
 msgid "Configure notification preferences"
 msgstr "Налаштуйте параметри сповіщень"
 
-#: extension/prefs.js:218
+#: extension/prefs.js:233
 msgid "Connection Notifications"
 msgstr "Сповіщення про підключення"
 
-#: extension/prefs.js:219
+#: extension/prefs.js:234
 msgid "Notify when AirPods connect or disconnect"
 msgstr "Сповіщати про підключення або відключення AirPods"
 
-#: extension/prefs.js:224
+#: extension/prefs.js:239
 msgid "Low Battery Notifications"
 msgstr "Сповіщення про низький заряд"
 
-#: extension/prefs.js:225
+#: extension/prefs.js:240
 msgid "Notify when battery drops below threshold"
 msgstr "Сповіщати, коли рівень заряду падає нижче порогу"
 
-#: extension/prefs.js:230
+#: extension/prefs.js:245
 msgid "Low Battery Threshold"
 msgstr "Поріг низького заряду"
 
-#: extension/prefs.js:231
+#: extension/prefs.js:246
 msgid "Notify when battery drops below this percentage"
 msgstr "Сповіщати, коли заряд батареї опускається нижче цього відсотка"
 
-#: extension/prefs.js:243
+#: extension/prefs.js:258
 msgid "Keyboard Shortcuts"
 msgstr "Комбінації клавіш"
 
-#: extension/prefs.js:253
+#: extension/prefs.js:268
 msgid "Cycle Noise Control Mode"
 msgstr "Перемикання режиму слухання"
 
-#: extension/prefs.js:254
+#: extension/prefs.js:269
 msgid "Also works when the Quick Settings menu is closed"
 msgstr "Також працює, коли меню швидких налаштувань закрито"
 
-#: extension/prefs.js:269
+#: extension/prefs.js:284
 msgid "About"
 msgstr "Про програму"
 
-#: extension/prefs.js:275
+#: extension/prefs.js:290
 msgid "AirPods integration for GNOME"
 msgstr "Інтеграція AirPods для GNOME"
 
-#: extension/prefs.js:281
+#: extension/prefs.js:296
 msgid "Version"
 msgstr "Версія"
 
-#: extension/prefs.js:356
+#: extension/prefs.js:376
 msgid "At least two modes must stay in the cycle"
 msgstr "У циклі має залишатися щонайменше два режими"
 
-#: extension/prefs.js:401 extension/prefs.js:482
+#: extension/prefs.js:421 extension/prefs.js:502
 msgid "Daemon not running"
 msgstr "Фоновий процес не працює"
 
-#: extension/prefs.js:410
+#: extension/prefs.js:430
 msgid "Error connecting to daemon"
 msgstr "Помилка підключення до фонового процесу"
 
-#: extension/prefs.js:452
+#: extension/prefs.js:472
 #, javascript-format
 msgid "Connected: %s"
 msgstr "Підключено: %s"
 
-#: extension/prefs.js:454 extension/prefs.js:455
+#: extension/prefs.js:474 extension/prefs.js:475
 msgid "In ear"
 msgstr "У вусі"
 
-#: extension/prefs.js:454 extension/prefs.js:455
+#: extension/prefs.js:474 extension/prefs.js:475
 msgid "Out"
 msgstr "Вийнято"
 
-#: extension/prefs.js:466
+#: extension/prefs.js:486
 #, javascript-format
 msgid "Device model: %s"
 msgstr "Модель пристрою: %s"
 
-#: extension/prefs.js:483
+#: extension/prefs.js:503
 msgid "No device connected"
 msgstr "Жодного пристрою не підключено"
 
-#: extension/prefs.js:497
+#: extension/prefs.js:517
 msgid "AirPods Settings"
 msgstr "Параметри AirPods"
 
-#: extension/prefs.js:503
+#: extension/prefs.js:523
 msgid "No settings available"
 msgstr "Немає доступних параметрів"
 
-#: extension/prefs.js:504
+#: extension/prefs.js:524
 msgid "Connect your AirPods to change the settings stored on them"
 msgstr "Підключіть AirPods, щоб змінити збережені на них параметри"
 
-#: extension/prefs.js:517
+#: extension/prefs.js:537
 msgid "Listening Modes"
 msgstr "Режими слухання"
 
-#: extension/prefs.js:519
+#: extension/prefs.js:539
 msgid "Noise Cancellation with One AirPod"
 msgstr "Шумогасіння з одним AirPod"
 
-#: extension/prefs.js:520
+#: extension/prefs.js:540
 msgid "Allow noise cancellation with only one AirPod in your ear"
 msgstr "Дозволяє шумогасіння, коли у вусі лише один AirPod"
 
-#: extension/prefs.js:524
+#: extension/prefs.js:544
 msgid "Audio"
 msgstr "Аудіо"
 
-#: extension/prefs.js:526
+#: extension/prefs.js:546
 msgid "Personalized Volume"
 msgstr "Персоналізована гучність"
 
-#: extension/prefs.js:527
+#: extension/prefs.js:547
 msgid "Adjust media volume based on your environment"
 msgstr "Налаштовує гучність медіа відповідно до оточення"
 
-#: extension/prefs.js:533
+#: extension/prefs.js:553
 msgid "Stem Controls"
 msgstr "Керування на ніжці"
 
-#: extension/prefs.js:535
+#: extension/prefs.js:555
 msgid "Press Speed"
 msgstr "Темп натискання"
 
-#: extension/prefs.js:536
+#: extension/prefs.js:556
 msgid "Speed required to press two or three times"
 msgstr "Швидкість, потрібна для подвійного чи потрійного натискання"
 
-#: extension/prefs.js:537 extension/prefs.js:540 extension/prefs.js:545
+#: extension/prefs.js:557 extension/prefs.js:560 extension/prefs.js:565
 msgid "Default"
 msgstr "Стандартно"
 
-#: extension/prefs.js:537
+#: extension/prefs.js:557
 msgid "Slower"
 msgstr "Повільніше"
 
-#: extension/prefs.js:537
+#: extension/prefs.js:557
 msgid "Slowest"
 msgstr "Найповільніше"
 
-#: extension/prefs.js:538
+#: extension/prefs.js:558
 msgid "Press and Hold Duration"
 msgstr "Час натискання і тримання"
 
-#: extension/prefs.js:539
+#: extension/prefs.js:559
 msgid "Time required to press and hold"
 msgstr "Час, потрібний для натискання й утримання"
 
-#: extension/prefs.js:540
+#: extension/prefs.js:560
 msgid "Shorter"
 msgstr "Коротше"
 
-#: extension/prefs.js:540
+#: extension/prefs.js:560
 msgid "Shortest"
 msgstr "Найкоротше"
 
-#: extension/prefs.js:541
+#: extension/prefs.js:561
 msgid "Volume Swipe"
 msgstr "Змінення гучності"
 
-#: extension/prefs.js:542
+#: extension/prefs.js:562
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Проведіть по ніжці вгору чи вниз, щоб змінити гучність"
 
-#: extension/prefs.js:543
+#: extension/prefs.js:563
 msgid "Volume Swipe Duration"
 msgstr "Інтервал проведення для гучності"
 
-#: extension/prefs.js:544
+#: extension/prefs.js:564
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr "Затримка між проведеннями, щоб уникнути випадкових змін"
 
-#: extension/prefs.js:545
+#: extension/prefs.js:565
 msgid "Longer"
 msgstr "Довше"
 
-#: extension/prefs.js:545
+#: extension/prefs.js:565
 msgid "Longest"
 msgstr "Найдовше"
 

@@ -132,6 +132,21 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         featuresGroup.add(this._caRow);
 
+        /* Volume kept during a conversation (lowered by the extension) */
+        this._conversationVolumeRow = new Adw.SpinRow({
+            title: _('Volume During Conversations'),
+            subtitle: _('Percentage of the current volume kept while you speak'),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 80,
+                step_increment: 5,
+                page_increment: 10,
+            }),
+        });
+        this._caRow.bind_property('active', this._conversationVolumeRow, 'sensitive',
+            GObject.BindingFlags.SYNC_CREATE);
+        featuresGroup.add(this._conversationVolumeRow);
+
         /* Adaptive Noise Level */
         this._adaptiveRow = new Adw.SpinRow({
             title: _('Adaptive Noise Level'),
@@ -291,6 +306,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._connectionNotifRow.active = this._settings.get_boolean('enable-connection-notifications');
         this._batteryNotifRow.active = this._settings.get_boolean('enable-low-battery-notifications');
         this._batteryThresholdRow.value = this._settings.get_int('low-battery-threshold');
+        this._conversationVolumeRow.value = this._settings.get_int('conversation-volume');
 
         const shortcuts = this._settings.get_strv('cycle-noise-mode-shortcut');
         this._shortcutLabel.accelerator = shortcuts.length > 0 ? shortcuts[0] : '';
@@ -309,6 +325,10 @@ export default class EarPortPreferences extends ExtensionPreferences {
 
         this._batteryThresholdRow.connect('notify::value', () => {
             this._settings.set_int('low-battery-threshold', this._batteryThresholdRow.value);
+        });
+
+        this._conversationVolumeRow.connect('notify::value', () => {
+            this._settings.set_int('conversation-volume', this._conversationVolumeRow.value);
         });
 
         /* Connect UI signals for daemon settings */

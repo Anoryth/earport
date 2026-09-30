@@ -16,6 +16,12 @@
       <summary>Enable connection notifications</summary>
       <description>Show notification when AirPods connect or disconnect</description>
     </key>
+    <key name="conversation-volume" type="i">
+      <range min="0" max="80"/>
+      <default>20</default>
+      <summary>Volume during conversations</summary>
+      <description>Share of the current volume, in percent, kept while conversation awareness detects that you speak</description>
+    </key>
     <key name="cycle-noise-mode-shortcut" type="as">
       <default><![CDATA[['<Super><Shift>n']]]></default>
       <summary>Cycle noise control mode</summary>

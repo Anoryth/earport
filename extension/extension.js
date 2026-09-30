@@ -31,8 +31,6 @@ const AirPodsProxy = Gio.DBusProxy.makeProxyWrapper(AirPodsInterface);
 const RING_LINE_WIDTH = 4;
 const RING_ICON_SIZE = 20;
 
-/* Share of the volume kept while conversation awareness detects speech */
-const CONVERSATION_VOLUME_RATIO = 0.2;
 
 /* Battery indicator widget: circular progress ring around a symbolic icon,
  * with percentage and name below. The ring color comes from the widget's
@@ -549,7 +547,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             return;
 
         const saved = sink.volume;
-        const lowered = Math.round(saved * CONVERSATION_VOLUME_RATIO);
+        /* Share of the volume kept while the user speaks */
+        const ratio = this._settings.get_int('conversation-volume') / 100;
+        const lowered = Math.round(saved * ratio);
         this._conversationVolume = {sink, saved, lowered};
         sink.volume = lowered;
         sink.push_volume();
