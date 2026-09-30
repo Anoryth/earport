@@ -25,6 +25,15 @@ jobs:
       - name: Test
         run: meson test -C daemon/build --print-errorlogs
 
+      # Memory errors in timers and D-Bus callbacks don't always crash:
+      # catch them before a release does
+      - name: Test with sanitizers
+        run: |
+          meson setup daemon/build-asan daemon -Db_sanitize=address,undefined
+          ninja -C daemon/build-asan
+          ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+            meson test -C daemon/build-asan --print-errorlogs
+
   translations:
     name: Check translations
     runs-on: ubuntu-latest
