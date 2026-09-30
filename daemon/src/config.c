@@ -100,6 +100,7 @@ void config_get_defaults(EarPortConfig *config)
 {
     config->ear_pause_mode = 1;  /* EAR_PAUSE_ONE_OUT */
     config->auto_connect = false;
+    config->research_log = false;
 }
 
 bool config_load(EarPortConfig *config)
@@ -141,6 +142,9 @@ bool config_load(EarPortConfig *config)
     if (g_key_file_has_key(keyfile, CONFIG_GROUP, "auto_connect", NULL))
         config->auto_connect = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "auto_connect", NULL);
 
+    if (g_key_file_has_key(keyfile, CONFIG_GROUP, "research_log", NULL))
+        config->research_log = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "research_log", NULL);
+
     g_message("Config loaded: ear_pause_mode=%d auto_connect=%d",
               config->ear_pause_mode, config->auto_connect);
 
@@ -160,6 +164,9 @@ bool config_save(const EarPortConfig *config)
     /* Write settings */
     g_key_file_set_integer(keyfile, CONFIG_GROUP, "ear_pause_mode", config->ear_pause_mode);
     g_key_file_set_boolean(keyfile, CONFIG_GROUP, "auto_connect", config->auto_connect);
+    /* Hidden option: only kept when set */
+    if (config->research_log)
+        g_key_file_set_boolean(keyfile, CONFIG_GROUP, "research_log", true);
 
     /* Add comment */
     g_key_file_set_comment(keyfile, CONFIG_GROUP, NULL,

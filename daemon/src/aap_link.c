@@ -5,6 +5,7 @@
 
 #include "aap_link.h"
 #include "bluetooth.h"
+#include "research.h"
 
 #include <glib.h>
 
@@ -280,6 +281,7 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
 
     AapParsedPacket packet;
     AapParseResult result = aap_parse_packet(data, len, &packet);
+    research_observe(data, len, result, &packet);
 
     if (result != AAP_PARSE_OK) {
         if (result != AAP_PARSE_UNKNOWN_OPCODE) {

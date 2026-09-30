@@ -22,6 +22,7 @@
 #include "dbus_service.h"
 #include "device.h"
 #include "media_control.h"
+#include "research.h"
 
 /* Global application state */
 typedef struct {
@@ -218,6 +219,7 @@ int main(int argc, char *argv[])
 
     /* Load configuration */
     config_load(&app.config);
+    research_set_enabled(app.config.research_log);
 
     /* Initialize state */
     airpods_state_init(&app.state);

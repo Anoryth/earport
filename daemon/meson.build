@@ -51,6 +51,7 @@ sources = files(
     'src/device.c',
     'src/dbus_service.c',
     'src/media_control.c',
+    'src/research.c',
 )
 
 # Build executable
