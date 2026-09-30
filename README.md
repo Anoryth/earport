@@ -13,7 +13,8 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Noise control modes** - Switch between Off, ANC, Transparency, and Adaptive modes
 - **Long press customization** - Configure which noise control modes cycle on stem long press
 - **AirPods settings** - Change the settings stored on the AirPods (noise cancellation with one AirPod, personalized volume, press speed, press and hold duration, volume swipe); only the settings your model reports are shown
-- **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone
+- **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone, to the level you choose
+- **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
 - **Quick Settings integration** - Native GNOME Shell Quick Settings panel

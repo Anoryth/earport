@@ -2,7 +2,7 @@
     "uuid": "earport@anoryth.github.io",
     "name": "EarPort",
     "description": "AirPods integration for GNOME: battery status, noise control modes (ANC, Transparency, Adaptive), Conversation Awareness and the settings stored on the AirPods.\n\nRequires the EarPort service (earport-daemon), which talks to the AirPods over Bluetooth: see the project page for installation.",
-    "version-name": "0.3.5",
+    "version-name": "0.4.0",
     "shell-version": [
         "46",
         "47",
