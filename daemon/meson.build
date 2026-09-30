@@ -37,6 +37,7 @@ sources = files(
     'src/main.c',
     'src/airpods_state.c',
     'src/airpods_settings.c',
+    'src/aap_link.c',
     'src/aap_protocol.c',
     'src/aes128.c',
     'src/autoconnect.c',

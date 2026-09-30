@@ -13,10 +13,10 @@
 #include <signal.h>
 
 #include "airpods_state.h"
+#include "aap_link.h"
 #include "aap_protocol.h"
 #include "autoconnect.h"
 #include "battery_estimator.h"
-#include "bluetooth.h"
 #include "bluez_monitor.h"
 #include "config.h"
 #include "dbus_service.h"
@@ -26,29 +26,11 @@
 typedef struct {
     GMainLoop *main_loop;
     AirPodsState state;
-    BluetoothConnection *bt_conn;
+    AapLink *link;
     BluezMonitor *bluez_monitor;
     DbusService *dbus_service;
     MediaControl *media_control;
     EarPortConfig config;
-
-    /* Pending connect info */
-    char *pending_address;
-    char *pending_name;
-
-    /* Reconnection */
-    guint reconnect_timeout_id;
-    int reconnect_attempts;
-    bool bluez_connected;   /* Device still connected at BlueZ level */
-
-    /* Notification request retries (until the first battery packet) */
-    guint notif_retry_timeout_id;
-    int notif_retry_attempts;
-    bool battery_received;
-
-    /* Silent L2CAP reconnect when battery info never arrives */
-    bool silent_reconnect;       /* Reconnect in progress, hidden from clients */
-    bool silent_reconnect_done;  /* Already tried for this BlueZ connection */
 
     bool ca_speaking;            /* Conversation awareness lowered the volume */
 
@@ -58,36 +40,11 @@ typedef struct {
     AutoConnect *autoconnect;
 } AppContext;
 
-/* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
- * right after the BlueZ link comes up, so retry with exponential backoff. */
-#define RECONNECT_MAX_ATTEMPTS 5
-#define RECONNECT_BASE_DELAY_SEC 2
-
-/* When another Apple device (e.g. a nearby iPhone) is also connected to the
- * AirPods, they sometimes ignore our notification request: control commands
- * still flow, but battery and ear detection never arrive. Re-send the
- * request until the first battery packet shows up. */
-#define NOTIF_RETRY_MAX_ATTEMPTS 5
-#define NOTIF_RETRY_INTERVAL_SEC 2
-
-/* If retries are not enough, re-open the L2CAP link once: a fresh
- * connection has been seen to restore battery updates. */
-#define SILENT_RECONNECT_DELAY_MS 500
-
-/* Opcode of the AirPods' acknowledgement of our SET_FEATURES packet */
-#define AAP_OPCODE_FEATURES_ACK 0x2B
-
 static AppContext app = {0};
 
 /* Forward declarations */
-static void connect_to_airpods(const char *address, const char *name);
-static void disconnect_from_airpods(void);
 static void apply_device_profile(const char *address);
 static gboolean apply_saved_settings_idle(gpointer user_data);
-static void schedule_reconnect(void);
-static void cancel_reconnect(void);
-static void cancel_notif_retry(void);
-static void report_disconnected(void);
 
 /* ============================================================================
  * Remaining listening time
@@ -152,66 +109,36 @@ static void on_playback_started(void *user_data)
     autoconnect_on_playback_started(app.autoconnect);
 }
 
-static gboolean request_proximity_keys_cb(gpointer user_data)
-{
-    (void)user_data;
-    if (app.bt_conn && bt_connection_is_connected(app.bt_conn))
-        bt_connection_send(app.bt_conn, AAP_PKT_REQUEST_PROXIMITY_KEYS, AAP_PROXIMITY_KEYS_REQ_SIZE);
-    return G_SOURCE_REMOVE;
-}
-
 /* ============================================================================
- * Bluetooth data handling
+ * AirPods link
  * ========================================================================== */
 
-static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data)
+static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 {
     (void)user_data;
 
-    /* Our notification request may have reached the AirPods before they
-     * processed SET_FEATURES: request again once they acknowledge it. */
-    if (aap_has_valid_header(data, len) &&
-        aap_get_opcode(data, len) == AAP_OPCODE_FEATURES_ACK &&
-        !app.battery_received) {
-        g_debug("Features acknowledged, requesting notifications again");
-        bt_connection_send_request_notifications(app.bt_conn);
-    }
-
-    AapParsedPacket packet;
-    AapParseResult result = aap_parse_packet(data, len, &packet);
-
-    if (result != AAP_PARSE_OK) {
-        if (result != AAP_PARSE_UNKNOWN_OPCODE) {
-            g_debug("Failed to parse packet: %d", result);
-        }
-        return;
-    }
-
-    switch (packet.type) {
+    switch (pkt->type) {
     case AAP_PKT_TYPE_BATTERY:
-        app.battery_received = true;
-        cancel_notif_retry();
-
         g_message("Battery: L=%d%% (status=%d) R=%d%% (status=%d) Case=%d%% (status=%d)",
-                  packet.data.battery.left_level,
-                  packet.data.battery.left_status,
-                  packet.data.battery.right_level,
-                  packet.data.battery.right_status,
-                  packet.data.battery.case_level,
-                  packet.data.battery.case_status);
+                  pkt->data.battery.left_level,
+                  pkt->data.battery.left_status,
+                  pkt->data.battery.right_level,
+                  pkt->data.battery.right_status,
+                  pkt->data.battery.case_level,
+                  pkt->data.battery.case_status);
 
         airpods_state_set_battery(&app.state,
-                                   packet.data.battery.left_level,
-                                   packet.data.battery.left_status,
-                                   packet.data.battery.right_level,
-                                   packet.data.battery.right_status,
-                                   packet.data.battery.case_level,
-                                   packet.data.battery.case_status);
+                                   pkt->data.battery.left_level,
+                                   pkt->data.battery.left_status,
+                                   pkt->data.battery.right_level,
+                                   pkt->data.battery.right_status,
+                                   pkt->data.battery.case_level,
+                                   pkt->data.battery.case_status);
 
         dbus_service_emit_battery_changed(app.dbus_service,
-                                           packet.data.battery.left_level,
-                                           packet.data.battery.right_level,
-                                           packet.data.battery.case_level);
+                                           pkt->data.battery.left_level,
+                                           pkt->data.battery.right_level,
+                                           pkt->data.battery.case_level);
         dbus_service_emit_properties_changed(app.dbus_service, "BatteryLeft");
         dbus_service_emit_properties_changed(app.dbus_service, "BatteryRight");
         dbus_service_emit_properties_changed(app.dbus_service, "BatteryCase");
@@ -219,12 +146,12 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         dbus_service_emit_properties_changed(app.dbus_service, "ChargingRight");
         dbus_service_emit_properties_changed(app.dbus_service, "ChargingCase");
 
-        update_listening_time(&packet.data.battery);
+        update_listening_time(&pkt->data.battery);
         break;
 
     case AAP_PKT_TYPE_EAR_DETECTION: {
-        bool primary_in_ear = packet.data.ear_detection.primary_in_ear;
-        bool secondary_in_ear = packet.data.ear_detection.secondary_in_ear;
+        bool primary_in_ear = pkt->data.ear_detection.primary_in_ear;
+        bool secondary_in_ear = pkt->data.ear_detection.secondary_in_ear;
 
         g_message("Ear detection: primary=%s secondary=%s",
                   primary_in_ear ? "in" : "out",
@@ -242,7 +169,7 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         airpods_state_set_ear_detection(&app.state,
                                          primary_in_ear,
                                          secondary_in_ear,
-                                         packet.data.ear_detection.primary_left);
+                                         pkt->data.ear_detection.primary_left);
 
         dbus_service_emit_ear_detection_changed(app.dbus_service,
                                                  app.state.ear_detection.left_in_ear,
@@ -261,28 +188,28 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
 
     case AAP_PKT_TYPE_NOISE_CONTROL:
         g_message("Noise control mode: %s",
-                  noise_control_mode_to_string(packet.data.noise_control));
+                  noise_control_mode_to_string(pkt->data.noise_control));
 
-        airpods_state_set_noise_control(&app.state, packet.data.noise_control);
+        airpods_state_set_noise_control(&app.state, pkt->data.noise_control);
 
         dbus_service_emit_noise_control_changed(app.dbus_service,
-                                                 packet.data.noise_control);
+                                                 pkt->data.noise_control);
         dbus_service_emit_properties_changed(app.dbus_service, "NoiseControlMode");
         break;
 
     case AAP_PKT_TYPE_CONV_AWARENESS:
         g_message("Conversational awareness: %s",
-                  packet.data.conversational_awareness ? "enabled" : "disabled");
+                  pkt->data.conversational_awareness ? "enabled" : "disabled");
 
         airpods_state_set_conversational_awareness(&app.state,
-                                                    packet.data.conversational_awareness);
+                                                    pkt->data.conversational_awareness);
 
         dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
         break;
 
     case AAP_PKT_TYPE_CA_DETECTION: {
-        int speaking = aap_ca_speaking_from_level(packet.data.ca_volume_level);
-        g_debug("CA detection event: level=%d", packet.data.ca_volume_level);
+        int speaking = aap_ca_speaking_from_level(pkt->data.ca_volume_level);
+        g_debug("CA detection event: level=%d", pkt->data.ca_volume_level);
 
         if (speaking >= 0 && (bool)speaking != app.ca_speaking) {
             app.ca_speaking = speaking;
@@ -294,17 +221,17 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
 
     case AAP_PKT_TYPE_LISTENING_MODES:
         g_message("Listening modes: off=%s transparency=%s anc=%s adaptive=%s (raw=0x%02X)",
-                  packet.data.listening_modes.off_enabled ? "on" : "off",
-                  packet.data.listening_modes.transparency_enabled ? "on" : "off",
-                  packet.data.listening_modes.anc_enabled ? "on" : "off",
-                  packet.data.listening_modes.adaptive_enabled ? "on" : "off",
-                  packet.data.listening_modes.raw_value);
+                  pkt->data.listening_modes.off_enabled ? "on" : "off",
+                  pkt->data.listening_modes.transparency_enabled ? "on" : "off",
+                  pkt->data.listening_modes.anc_enabled ? "on" : "off",
+                  pkt->data.listening_modes.adaptive_enabled ? "on" : "off",
+                  pkt->data.listening_modes.raw_value);
 
         airpods_state_set_listening_modes(&app.state,
-                                           packet.data.listening_modes.off_enabled,
-                                           packet.data.listening_modes.transparency_enabled,
-                                           packet.data.listening_modes.anc_enabled,
-                                           packet.data.listening_modes.adaptive_enabled);
+                                           pkt->data.listening_modes.off_enabled,
+                                           pkt->data.listening_modes.transparency_enabled,
+                                           pkt->data.listening_modes.anc_enabled,
+                                           pkt->data.listening_modes.adaptive_enabled);
 
         dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeOff");
         dbus_service_emit_properties_changed(app.dbus_service, "ListeningModeTransparency");
@@ -313,15 +240,15 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
         break;
 
     case AAP_PKT_TYPE_PROXIMITY_KEYS:
-        on_proximity_keys(&packet.data.proximity_keys);
+        on_proximity_keys(&pkt->data.proximity_keys);
         break;
 
     case AAP_PKT_TYPE_CONTROL_SETTING: {
-        const AirPodsSettingDef *def = airpods_setting_by_id(packet.data.control_setting.id);
+        const AirPodsSettingDef *def = airpods_setting_by_id(pkt->data.control_setting.id);
         if (def == NULL)
             break;  /* Not exposed yet */
 
-        uint8_t value = packet.data.control_setting.value[0];
+        uint8_t value = pkt->data.control_setting.value[0];
         g_message("Setting %s: 0x%02X", def->key, value);
 
         if (airpods_state_set_setting(&app.state, def->id, value))
@@ -331,13 +258,13 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
 
     case AAP_PKT_TYPE_METADATA:
         g_message("Metadata received: device='%s' model='%s' manufacturer='%s'",
-                  packet.data.metadata.device_name,
-                  packet.data.metadata.model_number,
-                  packet.data.metadata.manufacturer);
+                  pkt->data.metadata.device_name,
+                  pkt->data.metadata.model_number,
+                  pkt->data.metadata.manufacturer);
 
         /* Update model from model number */
         {
-            AirPodsModel detected_model = airpods_model_from_number(packet.data.metadata.model_number);
+            AirPodsModel detected_model = airpods_model_from_number(pkt->data.metadata.model_number);
             if (detected_model != AIRPODS_MODEL_UNKNOWN) {
                 g_mutex_lock(&app.state.lock);
                 app.state.model = detected_model;
@@ -359,138 +286,10 @@ static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data
     }
 }
 
-/* ============================================================================
- * L2CAP reconnection with exponential backoff
- * ========================================================================== */
-
-static gboolean reconnect_timeout_cb(gpointer user_data)
-{
-    (void)user_data;
-    app.reconnect_timeout_id = 0;
-
-    if (!app.bluez_connected || app.pending_address == NULL)
-        return G_SOURCE_REMOVE;
-
-    if (app.bt_conn && bt_connection_is_connected(app.bt_conn))
-        return G_SOURCE_REMOVE;
-
-    g_message("L2CAP reconnect attempt %d/%d to %s",
-              app.reconnect_attempts, RECONNECT_MAX_ATTEMPTS, app.pending_address);
-
-    /* On failure, the BT_STATE_ERROR callback schedules the next attempt */
-    connect_to_airpods(app.pending_address, app.pending_name);
-
-    return G_SOURCE_REMOVE;
-}
-
-static void schedule_reconnect(void)
-{
-    if (app.reconnect_timeout_id > 0)
-        return;
-
-    if (!app.bluez_connected || app.pending_address == NULL)
-        return;
-
-    if (app.reconnect_attempts >= RECONNECT_MAX_ATTEMPTS) {
-        g_warning("Giving up L2CAP reconnection after %d attempts", app.reconnect_attempts);
-        return;
-    }
-
-    guint delay = RECONNECT_BASE_DELAY_SEC << app.reconnect_attempts;  /* 2,4,8,16,32s */
-    app.reconnect_attempts++;
-
-    g_message("Scheduling L2CAP reconnect attempt %d/%d in %us",
-              app.reconnect_attempts, RECONNECT_MAX_ATTEMPTS, delay);
-
-    app.reconnect_timeout_id = g_timeout_add_seconds(delay, reconnect_timeout_cb, NULL);
-}
-
-static void cancel_reconnect(void)
-{
-    if (app.reconnect_timeout_id > 0) {
-        g_source_remove(app.reconnect_timeout_id);
-        app.reconnect_timeout_id = 0;
-    }
-    app.reconnect_attempts = 0;
-}
-
-/* ============================================================================
- * Notification request retries
- * ========================================================================== */
-
-static gboolean notif_retry_timeout_cb(gpointer user_data)
-{
-    (void)user_data;
-
-    if (app.battery_received || !app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
-        app.notif_retry_timeout_id = 0;
-        return G_SOURCE_REMOVE;
-    }
-
-    if (app.notif_retry_attempts >= NOTIF_RETRY_MAX_ATTEMPTS) {
-        app.notif_retry_timeout_id = 0;
-
-        if (!app.silent_reconnect_done) {
-            g_message("No battery info after %d notification requests, "
-                      "re-opening the AirPods link", app.notif_retry_attempts);
-            app.silent_reconnect = true;
-            app.silent_reconnect_done = true;
-            bt_connection_disconnect(app.bt_conn);
-        } else {
-            g_warning("No battery info after %d notification requests "
-                      "(another Apple device may own the AirPods connection)",
-                      app.notif_retry_attempts);
-        }
-        return G_SOURCE_REMOVE;
-    }
-
-    app.notif_retry_attempts++;
-    g_message("No battery info yet, re-requesting notifications (%d/%d)",
-              app.notif_retry_attempts, NOTIF_RETRY_MAX_ATTEMPTS);
-
-    bt_connection_send_set_features(app.bt_conn);
-    g_usleep(50000);
-    bt_connection_send_request_notifications(app.bt_conn);
-
-    return G_SOURCE_CONTINUE;
-}
-
-static void cancel_notif_retry(void)
-{
-    if (app.notif_retry_timeout_id > 0) {
-        g_source_remove(app.notif_retry_timeout_id);
-        app.notif_retry_timeout_id = 0;
-    }
-}
-
-static void start_notif_retry(void)
-{
-    cancel_notif_retry();
-    app.battery_received = false;
-    app.notif_retry_attempts = 0;
-    app.notif_retry_timeout_id = g_timeout_add_seconds(NOTIF_RETRY_INTERVAL_SEC,
-                                                       notif_retry_timeout_cb, NULL);
-}
-
-static gboolean silent_reconnect_cb(gpointer user_data)
-{
-    (void)user_data;
-
-    if (!app.silent_reconnect)
-        return G_SOURCE_REMOVE;
-
-    if (app.bluez_connected && app.pending_address != NULL)
-        connect_to_airpods(app.pending_address, app.pending_name);
-    else
-        report_disconnected();
-
-    return G_SOURCE_REMOVE;
-}
-
 /* Tell clients the AirPods are gone and forget their state */
-static void report_disconnected(void)
+static void on_link_disconnected(void *user_data)
 {
-    app.silent_reconnect = false;
+    (void)user_data;
 
     if (app.state.connected) {
         dbus_service_emit_device_disconnected(app.dbus_service,
@@ -509,102 +308,34 @@ static void report_disconnected(void)
     if (battery_estimator_finish(&app.battery_estimator))
         save_learned_drain_rate();
 
-    cancel_notif_retry();
     airpods_state_reset(&app.state);
     dbus_service_emit_properties_changed(app.dbus_service, "Connected");
     dbus_service_emit_properties_changed(app.dbus_service, "Settings");
 }
 
-static void on_bt_state_changed(BluetoothState state, const char *error, void *user_data)
+static void on_link_connected(const char *address, const char *name, void *user_data)
 {
     (void)user_data;
 
-    switch (state) {
-    case BT_STATE_CONNECTED:
-        g_message("Bluetooth connected, sending handshake...");
-        cancel_reconnect();
+    /* Model detected later via metadata */
+    airpods_state_set_device(&app.state, name, address, AIRPODS_MODEL_UNKNOWN);
 
-        /* Attach to main loop for data reception */
-        bt_connection_attach_to_mainloop(app.bt_conn, NULL);
+    /* Load and apply saved device profile */
+    apply_device_profile(address);
+    battery_estimator_init(&app.battery_estimator, config_load_drain_rate(address));
 
-        /* Send initialization sequence */
-        g_usleep(100000);  /* 100ms delay */
-        bt_connection_send_handshake(app.bt_conn);
+    /* Emit property changes BEFORE the DeviceConnected signal so the
+     * extension's proxy cache is up-to-date when its handler reads
+     * DisplayName for the connection notification. */
+    dbus_service_emit_properties_changed(app.dbus_service, "Connected");
+    dbus_service_emit_properties_changed(app.dbus_service, "DeviceName");
+    dbus_service_emit_properties_changed(app.dbus_service, "DeviceAddress");
+    dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
 
-        g_usleep(50000);  /* 50ms delay */
-        bt_connection_send_set_features(app.bt_conn);
+    dbus_service_emit_device_connected(app.dbus_service, address, name);
 
-        g_usleep(50000);
-        bt_connection_send_request_notifications(app.bt_conn);
-
-        start_notif_retry();
-
-        /* Keys to recognize the AirPods' BLE adverts (automatic connection) */
-        g_timeout_add_seconds(2, request_proximity_keys_cb, NULL);
-
-        if (app.silent_reconnect) {
-            /* Clients never saw the link go down: keep the current state
-             * and don't announce a new connection. */
-            app.silent_reconnect = false;
-            g_message("AirPods link re-opened");
-            break;
-        }
-
-        /* Update state */
-        airpods_state_set_device(&app.state,
-                                  app.pending_name,
-                                  app.pending_address,
-                                  AIRPODS_MODEL_UNKNOWN);  /* Model detected later via metadata */
-
-        /* Load and apply saved device profile */
-        apply_device_profile(app.pending_address);
-        battery_estimator_init(&app.battery_estimator,
-                               config_load_drain_rate(app.pending_address));
-
-        /* Emit property changes BEFORE the DeviceConnected signal so the
-         * extension's proxy cache is up-to-date when its handler reads
-         * DisplayName for the connection notification. */
-        dbus_service_emit_properties_changed(app.dbus_service, "Connected");
-        dbus_service_emit_properties_changed(app.dbus_service, "DeviceName");
-        dbus_service_emit_properties_changed(app.dbus_service, "DeviceAddress");
-        dbus_service_emit_properties_changed(app.dbus_service, "DisplayName");
-
-        dbus_service_emit_device_connected(app.dbus_service,
-                                            app.pending_address,
-                                            app.pending_name);
-
-        /* Schedule sending saved settings after connection stabilizes (500ms delay) */
-        g_timeout_add(500, apply_saved_settings_idle, g_strdup(app.pending_address));
-        break;
-
-    case BT_STATE_DISCONNECTED:
-        g_message("Bluetooth disconnected");
-
-        if (app.silent_reconnect) {
-            g_timeout_add(SILENT_RECONNECT_DELAY_MS, silent_reconnect_cb, NULL);
-            break;
-        }
-
-        report_disconnected();
-
-        /* L2CAP dropped but the device is still connected at BlueZ level
-         * (e.g. AirPods went idle): try to re-establish the link. */
-        schedule_reconnect();
-        break;
-
-    case BT_STATE_ERROR:
-        g_warning("Bluetooth error: %s", error ? error : "unknown");
-
-        /* The silent reconnect failed: the link is really down now */
-        if (app.silent_reconnect)
-            report_disconnected();
-
-        schedule_reconnect();
-        break;
-
-    default:
-        break;
-    }
+    /* Schedule sending saved settings after connection stabilizes (500ms delay) */
+    g_timeout_add(500, apply_saved_settings_idle, g_strdup(address));
 }
 
 /* ============================================================================
@@ -648,7 +379,7 @@ static gboolean apply_saved_settings_idle(gpointer user_data)
 {
     const char *address = (const char *)user_data;
 
-    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+    if (!aap_link_is_connected(app.link)) {
         g_free((gchar *)address);
         return G_SOURCE_REMOVE;
     }
@@ -670,17 +401,17 @@ static gboolean apply_saved_settings_idle(gpointer user_data)
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_listening_modes_cmd(modes, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* Send conversational awareness setting */
     g_usleep(50000);  /* 50ms delay between commands */
     aap_build_conv_awareness_cmd(profile.conversational_awareness, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* Send adaptive noise level */
     g_usleep(50000);
     aap_build_adaptive_level_cmd(profile.adaptive_noise_level, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* The values the AirPods announced on connection are now outdated */
     airpods_state_set_conversational_awareness(&app.state, profile.conversational_awareness);
@@ -693,48 +424,6 @@ static gboolean apply_saved_settings_idle(gpointer user_data)
 }
 
 /* ============================================================================
- * Connection management
- * ========================================================================== */
-
-static void connect_to_airpods(const char *address, const char *name)
-{
-    if (app.bt_conn && bt_connection_is_connected(app.bt_conn)) {
-        g_message("Already connected, ignoring connect request");
-        return;
-    }
-
-    /* Store pending info (dup first: on reconnect, address/name may alias
-     * app.pending_address/app.pending_name) */
-    char *addr_copy = g_strdup(address);
-    char *name_copy = g_strdup(name);
-    g_free(app.pending_address);
-    g_free(app.pending_name);
-    app.pending_address = addr_copy;
-    app.pending_name = name_copy;
-
-    /* Create new connection if needed */
-    if (app.bt_conn == NULL) {
-        app.bt_conn = bt_connection_new();
-        bt_connection_set_data_callback(app.bt_conn, on_bt_data_received, NULL);
-        bt_connection_set_state_callback(app.bt_conn, on_bt_state_changed, NULL);
-    }
-
-    /* address/name may have just been freed: only use the copies from here */
-    g_message("Connecting to AirPods: %s (%s)", app.pending_name, app.pending_address);
-
-    if (!bt_connection_connect(app.bt_conn, app.pending_address)) {
-        g_warning("Failed to initiate connection");
-    }
-}
-
-static void disconnect_from_airpods(void)
-{
-    if (app.bt_conn) {
-        bt_connection_disconnect(app.bt_conn);
-    }
-}
-
-/* ============================================================================
  * BlueZ callbacks
  * ========================================================================== */
 
@@ -742,31 +431,19 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
 {
     (void)user_data;
     g_message("BlueZ: AirPods connected - %s (%s)", device->name, device->address);
-    app.bluez_connected = true;
-    app.reconnect_attempts = 0;
-    app.silent_reconnect_done = false;
-
     /* The adapter the AirPods use is the one to scan on */
     char *adapter_path = device->object_path ? g_path_get_dirname(device->object_path) : NULL;
     autoconnect_set_airpods_connected(app.autoconnect, true, adapter_path);
     g_free(adapter_path);
 
-    connect_to_airpods(device->address, device->name);
+    aap_link_device_connected(app.link, device->address, device->name);
 }
 
 static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *user_data)
 {
     (void)user_data;
     g_message("BlueZ: AirPods disconnected - %s (%s)", device->name, device->address);
-    app.bluez_connected = false;
-    cancel_reconnect();
-
-    /* The AirPods left during a silent reconnect: clients still think
-     * they are connected, so report it now. */
-    if (app.silent_reconnect)
-        report_disconnected();
-
-    disconnect_from_airpods();
+    aap_link_device_disconnected(app.link);
     autoconnect_set_airpods_connected(app.autoconnect, false, NULL);
 }
 
@@ -778,28 +455,28 @@ static void on_set_noise_control(NoiseControlMode mode, void *user_data)
 {
     (void)user_data;
 
-    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+    if (!aap_link_is_connected(app.link)) {
         g_warning("Cannot set noise control: not connected");
         return;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_noise_control_cmd(mode, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 }
 
 static void on_set_conv_awareness(bool enabled, void *user_data)
 {
     (void)user_data;
 
-    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+    if (!aap_link_is_connected(app.link)) {
         g_warning("Cannot set conversational awareness: not connected");
         return;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_conv_awareness_cmd(enabled, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* The AirPods don't echo the change back */
     airpods_state_set_conversational_awareness(&app.state, enabled);
@@ -818,14 +495,14 @@ static void on_set_adaptive_level(int level, void *user_data)
 {
     (void)user_data;
 
-    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+    if (!aap_link_is_connected(app.link)) {
         g_warning("Cannot set adaptive level: not connected");
         return;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_adaptive_level_cmd(level, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     airpods_state_set_adaptive_noise_level(&app.state, level);
     dbus_service_emit_properties_changed(app.dbus_service, "AdaptiveNoiseLevel");
@@ -867,7 +544,7 @@ static void on_set_listening_modes(bool off, bool transparency, bool anc, bool a
 {
     (void)user_data;
 
-    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+    if (!aap_link_is_connected(app.link)) {
         g_warning("Cannot set listening modes: not connected");
         return;
     }
@@ -890,7 +567,7 @@ static void on_set_listening_modes(bool off, bool transparency, bool anc, bool a
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_listening_modes_cmd(modes, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* Update local state immediately */
     airpods_state_set_listening_modes(&app.state, off, transparency, anc, adaptive);
@@ -916,14 +593,14 @@ static bool on_set_setting(const AirPodsSettingDef *def, uint8_t byte, void *use
 {
     (void)user_data;
 
-    if (!app.bt_conn || !bt_connection_is_connected(app.bt_conn)) {
+    if (!aap_link_is_connected(app.link)) {
         g_warning("Cannot set %s: not connected", def->key);
         return false;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_control_cmd(def->id, &byte, 1, packet);
-    bt_connection_send(app.bt_conn, packet, AAP_CONTROL_CMD_SIZE);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
 
     /* The AirPods don't echo settings back: update the state right away.
      * No need to save it in the profile, the AirPods remember it. */
@@ -1003,13 +680,8 @@ static void cleanup(void)
     if (battery_estimator_finish(&app.battery_estimator))
         save_learned_drain_rate();
 
-    cancel_reconnect();
-    cancel_notif_retry();
-
-    if (app.bt_conn) {
-        bt_connection_free(app.bt_conn);
-        app.bt_conn = NULL;
-    }
+    aap_link_free(app.link);
+    app.link = NULL;
 
     if (app.bluez_monitor) {
         bluez_monitor_free(app.bluez_monitor);
@@ -1025,9 +697,6 @@ static void cleanup(void)
         media_control_free(app.media_control);
         app.media_control = NULL;
     }
-
-    g_free(app.pending_address);
-    g_free(app.pending_name);
 
     airpods_state_cleanup(&app.state);
 
@@ -1102,6 +771,13 @@ int main(int argc, char *argv[])
     }
 
     app.autoconnect = autoconnect_new(app.config.auto_connect);
+
+    static const AapLinkCallbacks link_callbacks = {
+        .connected = on_link_connected,
+        .disconnected = on_link_disconnected,
+        .packet = on_link_packet,
+    };
+    app.link = aap_link_new(&link_callbacks, NULL);
 
     /* Create BlueZ monitor */
     app.bluez_monitor = bluez_monitor_new();
