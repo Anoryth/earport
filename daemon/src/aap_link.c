@@ -357,6 +357,12 @@ void aap_link_free(AapLink *link)
     if (link->keys_request_id > 0)
         g_source_remove(link->keys_request_id);
 
+    /* Stopping is not losing the AirPods: no disconnection to report,
+     * no reconnection to schedule */
+    if (link->bt_conn != NULL) {
+        bt_connection_set_state_callback(link->bt_conn, NULL, NULL);
+        bt_connection_set_data_callback(link->bt_conn, NULL, NULL);
+    }
     bt_connection_free(link->bt_conn);
     g_free(link->address);
     g_free(link->name);
