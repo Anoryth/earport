@@ -120,6 +120,18 @@ test_aap_link = executable('test-aap-link',
 )
 test('aap-link', test_aap_link)
 
+# D-Bus service, controls, device and link together, on a private bus
+test_dbus = executable('test-dbus',
+    files('tests/test_dbus.c', 'tests/fake_bluetooth.c', 'src/aap_link.c', 'src/controls.c',
+          'src/dbus_service.c', 'src/device.c', 'src/aap_protocol.c', 'src/research.c',
+          'src/airpods_settings.c', 'src/airpods_state.c', 'src/battery_estimator.c',
+          'src/config.c', 'src/media_control.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DSEND_GAP_MS=2', '-DHANDSHAKE_DELAY_MS=4'],
+    dependencies: [glib_dep, gio_dep, m_dep],
+)
+test('dbus', test_dbus)
+
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)
 service_conf = configuration_data()
