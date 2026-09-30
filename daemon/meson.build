@@ -139,6 +139,13 @@ test_config = executable('test-config',
 )
 test('config', test_config)
 
+test_media_control = executable('test-media-control',
+    files('tests/test_media_control.c', 'src/media_control.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('media-control', test_media_control)
+
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)
 service_conf = configuration_data()
