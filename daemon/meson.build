@@ -132,6 +132,13 @@ test_dbus = executable('test-dbus',
 )
 test('dbus', test_dbus)
 
+test_config = executable('test-config',
+    files('tests/test_config.c', 'src/config.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep],
+)
+test('config', test_config)
+
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)
 service_conf = configuration_data()
