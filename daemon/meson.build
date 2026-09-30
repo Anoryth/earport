@@ -107,6 +107,19 @@ test_device = executable('test-device',
 )
 test('device', test_device)
 
+# The link over a fake transport, with delays shortened (keep in sync with
+# the test)
+test_aap_link = executable('test-aap-link',
+    files('tests/test_aap_link.c', 'tests/fake_bluetooth.c', 'src/aap_link.c',
+          'src/aap_protocol.c', 'src/research.c', 'src/airpods_settings.c', 'src/airpods_state.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DSEND_GAP_MS=2', '-DHANDSHAKE_DELAY_MS=4', '-DNOTIF_RETRY_INTERVAL_MS=20',
+             '-DRECONNECT_BASE_DELAY_MS=10', '-DSILENT_RECONNECT_DELAY_MS=30',
+             '-DPROXIMITY_KEYS_DELAY_MS=30'],
+    dependencies: [glib_dep],
+)
+test('aap-link', test_aap_link)
+
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)
 service_conf = configuration_data()

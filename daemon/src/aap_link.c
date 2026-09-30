@@ -9,29 +9,44 @@
 
 #include <glib.h>
 
+/* Delays are in milliseconds and can be overridden at build time, so that
+ * tests run the whole state machine in a fraction of a second */
+
 /* L2CAP reconnection: AirPods frequently refuse the first L2CAP connect
  * right after the BlueZ link comes up, so retry with exponential backoff. */
 #define RECONNECT_MAX_ATTEMPTS 5
-#define RECONNECT_BASE_DELAY_SEC 2
+#ifndef RECONNECT_BASE_DELAY_MS
+#define RECONNECT_BASE_DELAY_MS 2000
+#endif
 
 /* When another Apple device (e.g. a nearby iPhone) is also connected to the
  * AirPods, they sometimes ignore our notification request: control commands
  * still flow, but battery and ear detection never arrive. Re-send the
  * request until the first battery packet shows up. */
 #define NOTIF_RETRY_MAX_ATTEMPTS 5
-#define NOTIF_RETRY_INTERVAL_SEC 2
+#ifndef NOTIF_RETRY_INTERVAL_MS
+#define NOTIF_RETRY_INTERVAL_MS 2000
+#endif
 
 /* If retries are not enough, re-open the L2CAP link once: a fresh
  * connection has been seen to restore battery updates. */
+#ifndef SILENT_RECONNECT_DELAY_MS
 #define SILENT_RECONNECT_DELAY_MS 500
+#endif
 
 /* Keys to recognize the AirPods' BLE adverts (automatic connection) */
-#define PROXIMITY_KEYS_DELAY_SEC 2
+#ifndef PROXIMITY_KEYS_DELAY_MS
+#define PROXIMITY_KEYS_DELAY_MS 2000
+#endif
 
 /* The AirPods drop packets sent back to back: space them out, and give
  * them a moment after the L2CAP connection before the handshake */
+#ifndef SEND_GAP_MS
 #define SEND_GAP_MS 50
+#endif
+#ifndef HANDSHAKE_DELAY_MS
 #define HANDSHAKE_DELAY_MS 100
+#endif
 
 /* Opcode of the AirPods' acknowledgement of our SET_FEATURES packet */
 #define AAP_OPCODE_FEATURES_ACK 0x2B
@@ -151,13 +166,13 @@ static void schedule_reconnect(AapLink *link)
         return;
     }
 
-    guint delay = RECONNECT_BASE_DELAY_SEC << link->reconnect_attempts;  /* 2,4,8,16,32s */
+    guint delay_ms = RECONNECT_BASE_DELAY_MS << link->reconnect_attempts;  /* 2,4,8,16,32s */
     link->reconnect_attempts++;
 
     g_message("Scheduling L2CAP reconnect attempt %d/%d in %us",
-              link->reconnect_attempts, RECONNECT_MAX_ATTEMPTS, delay);
+              link->reconnect_attempts, RECONNECT_MAX_ATTEMPTS, delay_ms / 1000);
 
-    link->reconnect_timeout_id = g_timeout_add_seconds(delay, reconnect_timeout_cb, link);
+    link->reconnect_timeout_id = g_timeout_add(delay_ms, reconnect_timeout_cb, link);
 }
 
 static void cancel_reconnect(AapLink *link)
@@ -222,8 +237,8 @@ static void start_notif_retry(AapLink *link)
     cancel_notif_retry(link);
     link->battery_received = false;
     link->notif_retry_attempts = 0;
-    link->notif_retry_timeout_id = g_timeout_add_seconds(NOTIF_RETRY_INTERVAL_SEC,
-                                                         notif_retry_timeout_cb, link);
+    link->notif_retry_timeout_id = g_timeout_add(NOTIF_RETRY_INTERVAL_MS,
+                                                  notif_retry_timeout_cb, link);
 }
 
 /* ============================================================================
@@ -321,8 +336,8 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
         if (link->keys_request_id > 0)
             g_source_remove(link->keys_request_id);
-        link->keys_request_id = g_timeout_add_seconds(PROXIMITY_KEYS_DELAY_SEC,
-                                                      request_proximity_keys_cb, link);
+        link->keys_request_id = g_timeout_add(PROXIMITY_KEYS_DELAY_MS,
+                                               request_proximity_keys_cb, link);
 
         if (link->silent_reconnect) {
             /* Clients never saw the link go down: keep the current state
