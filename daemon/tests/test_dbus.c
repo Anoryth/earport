@@ -446,6 +446,24 @@ static void test_adaptive_level(Fixture *f, gconstpointer data)
     call_ok(f, "SetAdaptiveNoiseLevel", g_variant_new("(i)", 30));
     ASSERT_SENT(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x2E, 0x1E, 0x00, 0x00, 0x00);
     g_assert_cmpint(get_int(f, "AdaptiveNoiseLevel"), ==, 30);
+
+    call_fails(f, "SetAdaptiveNoiseLevel", g_variant_new("(i)", 101), G_DBUS_ERROR_INVALID_ARGS);
+    call_fails(f, "SetAdaptiveNoiseLevel", g_variant_new("(i)", -1), G_DBUS_ERROR_INVALID_ARGS);
+}
+
+/* Commands that can't reach the AirPods fail instead of pretending */
+static void test_commands_need_airpods(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    call_fails(f, "SetNoiseControlMode", g_variant_new("(s)", "anc"), G_DBUS_ERROR_FAILED);
+    call_fails(f, "SetConversationalAwareness", g_variant_new("(b)", TRUE), G_DBUS_ERROR_FAILED);
+    call_fails(f, "SetAdaptiveNoiseLevel", g_variant_new("(i)", 50), G_DBUS_ERROR_FAILED);
+    call_fails(f, "SetListeningModes", g_variant_new("(bbbb)", FALSE, TRUE, TRUE, FALSE),
+               G_DBUS_ERROR_FAILED);
+
+    /* Local only: works without AirPods */
+    call_ok(f, "SetDisplayName", g_variant_new("(s)", "Mes AirPods"));
 }
 
 static void test_listening_modes(Fixture *f, gconstpointer data)
@@ -460,7 +478,8 @@ static void test_listening_modes(Fixture *f, gconstpointer data)
     g_assert_true(get_bool(f, "ListeningModeANC"));
 
     /* The long press needs at least two modes to cycle through */
-    call(f, "SetListeningModes", g_variant_new("(bbbb)", FALSE, FALSE, TRUE, FALSE));
+    call_fails(f, "SetListeningModes", g_variant_new("(bbbb)", FALSE, FALSE, TRUE, FALSE),
+               G_DBUS_ERROR_INVALID_ARGS);
     run_for(10 * GAP_MS);
     g_assert_cmpuint(fake_bt_count_sent(anc_only, sizeof(anc_only)), ==, 0);
     g_assert_true(get_bool(f, "ListeningModeTransparency"));
@@ -586,6 +605,7 @@ int main(int argc, char *argv[])
     ADD("/dbus/connection", test_connection);
     ADD("/dbus/noise-control", test_noise_control);
     ADD("/dbus/noise-control-unknown", test_noise_control_unknown);
+    ADD("/dbus/commands-need-airpods", test_commands_need_airpods);
     ADD("/dbus/set-setting", test_set_setting);
     ADD("/dbus/set-setting-errors", test_set_setting_errors);
     ADD("/dbus/conversation-awareness", test_conversation_awareness);

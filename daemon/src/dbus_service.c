@@ -208,6 +208,22 @@ out:
     g_variant_unref(value);
 }
 
+/* A command for the AirPods was sent, or could not be */
+static void return_command_result(GDBusMethodInvocation *invocation, bool sent)
+{
+    if (sent)
+        g_dbus_method_invocation_return_value(invocation, NULL);
+    else
+        g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+                                              "AirPods not connected");
+}
+
+static void return_invalid(GDBusMethodInvocation *invocation, const char *message)
+{
+    g_dbus_method_invocation_return_error_literal(invocation, G_DBUS_ERROR,
+                                                  G_DBUS_ERROR_INVALID_ARGS, message);
+}
+
 static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
                                const gchar *sender G_GNUC_UNUSED,
                                const gchar *object_path G_GNUC_UNUSED,
@@ -308,11 +324,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
         }
         g_message("D-Bus: SetNoiseControlMode(%s) -> %d", mode_str, mode);
 
-        if (service->noise_control_callback) {
-            service->noise_control_callback(mode, service->noise_control_user_data);
-        }
-
-        g_dbus_method_invocation_return_value(invocation, NULL);
+        return_command_result(invocation, service->noise_control_callback &&
+                              service->noise_control_callback(mode, service->noise_control_user_data));
 
     } else if (g_strcmp0(method_name, "SetConversationalAwareness") == 0) {
         gboolean enabled = FALSE;
@@ -320,11 +333,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         g_message("D-Bus: SetConversationalAwareness(%s)", enabled ? "true" : "false");
 
-        if (service->conv_awareness_callback) {
-            service->conv_awareness_callback(enabled, service->conv_awareness_user_data);
-        }
-
-        g_dbus_method_invocation_return_value(invocation, NULL);
+        return_command_result(invocation, service->conv_awareness_callback &&
+                              service->conv_awareness_callback(enabled, service->conv_awareness_user_data));
 
     } else if (g_strcmp0(method_name, "SetAdaptiveNoiseLevel") == 0) {
         gint32 level = 0;
@@ -332,11 +342,12 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         g_message("D-Bus: SetAdaptiveNoiseLevel(%d)", level);
 
-        if (service->adaptive_level_callback) {
-            service->adaptive_level_callback(level, service->adaptive_level_user_data);
+        if (level < 0 || level > 100) {
+            return_invalid(invocation, "The adaptive noise level goes from 0 to 100");
+            return;
         }
-
-        g_dbus_method_invocation_return_value(invocation, NULL);
+        return_command_result(invocation, service->adaptive_level_callback &&
+                              service->adaptive_level_callback(level, service->adaptive_level_user_data));
 
     } else if (g_strcmp0(method_name, "SetEarPauseMode") == 0) {
         gint32 mode = 0;
@@ -344,6 +355,10 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         g_message("D-Bus: SetEarPauseMode(%d)", mode);
 
+        if (mode < 0 || mode > 2) {
+            return_invalid(invocation, "Ear pause mode: 0 (off), 1 (one out) or 2 (both out)");
+            return;
+        }
         if (service->ear_pause_mode_callback) {
             service->ear_pause_mode_callback(mode, service->ear_pause_mode_user_data);
         }
@@ -360,12 +375,14 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
                   anc ? "true" : "false",
                   adaptive ? "true" : "false");
 
-        if (service->listening_modes_callback) {
-            service->listening_modes_callback(off, transparency, anc, adaptive,
-                                               service->listening_modes_user_data);
+        /* The long press cycles through them: it needs two */
+        if (off + transparency + anc + adaptive < 2) {
+            return_invalid(invocation, "At least two listening modes must be enabled");
+            return;
         }
-
-        g_dbus_method_invocation_return_value(invocation, NULL);
+        return_command_result(invocation, service->listening_modes_callback &&
+                              service->listening_modes_callback(off, transparency, anc, adaptive,
+                                                                service->listening_modes_user_data));
 
     } else if (g_strcmp0(method_name, "SetAutoConnect") == 0) {
         gboolean enabled = FALSE;

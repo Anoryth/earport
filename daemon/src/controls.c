@@ -83,27 +83,27 @@ void controls_cleanup(Controls *c)
  * D-Bus methods
  * ========================================================================== */
 
-static void on_set_noise_control(NoiseControlMode mode, void *user_data)
+static bool on_set_noise_control(NoiseControlMode mode, void *user_data)
 {
     Controls *c = user_data;
 
     if (!aap_link_is_connected(c->link)) {
-        g_warning("Cannot set noise control: not connected");
-        return;
+        return false;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_noise_control_cmd(mode, packet);
     aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
+
+    return true;
 }
 
-static void on_set_conv_awareness(bool enabled, void *user_data)
+static bool on_set_conv_awareness(bool enabled, void *user_data)
 {
     Controls *c = user_data;
 
     if (!aap_link_is_connected(c->link)) {
-        g_warning("Cannot set conversational awareness: not connected");
-        return;
+        return false;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
@@ -121,15 +121,16 @@ static void on_set_conv_awareness(bool enabled, void *user_data)
         profile.conversational_awareness = enabled;
         config_save_device_profile(c->device->state->device_address, &profile);
     }
+
+    return true;
 }
 
-static void on_set_adaptive_level(int level, void *user_data)
+static bool on_set_adaptive_level(int level, void *user_data)
 {
     Controls *c = user_data;
 
     if (!aap_link_is_connected(c->link)) {
-        g_warning("Cannot set adaptive level: not connected");
-        return;
+        return false;
     }
 
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
@@ -146,15 +147,16 @@ static void on_set_adaptive_level(int level, void *user_data)
         profile.adaptive_noise_level = level;
         config_save_device_profile(c->device->state->device_address, &profile);
     }
+
+    return true;
 }
 
-static void on_set_listening_modes(bool off, bool transparency, bool anc, bool adaptive, void *user_data)
+static bool on_set_listening_modes(bool off, bool transparency, bool anc, bool adaptive, void *user_data)
 {
     Controls *c = user_data;
 
     if (!aap_link_is_connected(c->link)) {
-        g_warning("Cannot set listening modes: not connected");
-        return;
+        return false;
     }
 
     /* Build the bitmask */
@@ -163,13 +165,6 @@ static void on_set_listening_modes(bool off, bool transparency, bool anc, bool a
     if (transparency) modes |= AAP_LISTENING_MODE_TRANSPARENCY;
     if (anc) modes |= AAP_LISTENING_MODE_ANC;
     if (adaptive) modes |= AAP_LISTENING_MODE_ADAPTIVE;
-
-    /* Ensure at least 2 modes are enabled */
-    int count = (off ? 1 : 0) + (transparency ? 1 : 0) + (anc ? 1 : 0) + (adaptive ? 1 : 0);
-    if (count < 2) {
-        g_warning("At least 2 listening modes must be enabled");
-        return;
-    }
 
     g_message("Setting listening modes: 0x%02X", modes);
 
@@ -196,6 +191,8 @@ static void on_set_listening_modes(bool off, bool transparency, bool anc, bool a
     dbus_service_emit_properties_changed(c->device->dbus, "ListeningModeTransparency");
     dbus_service_emit_properties_changed(c->device->dbus, "ListeningModeANC");
     dbus_service_emit_properties_changed(c->device->dbus, "ListeningModeAdaptive");
+
+    return true;
 }
 
 static bool on_set_setting(const AirPodsSettingDef *def, uint8_t byte, void *user_data)

@@ -17,20 +17,23 @@
 #define DBUS_OBJECT_PATH        "/io/github/anoryth/EarPort"
 #define DBUS_INTERFACE_NAME     "io.github.anoryth.EarPort1"
 
+/* Commands sent to the AirPods: the callbacks return false if they could
+ * not be sent (AirPods not connected), and the method then fails */
+
 /* Callback for noise control mode change request */
-typedef void (*DbusNoiseControlCallback)(NoiseControlMode mode, void *user_data);
+typedef bool (*DbusNoiseControlCallback)(NoiseControlMode mode, void *user_data);
 
 /* Callback for conversational awareness change request */
-typedef void (*DbusConvAwarenessCallback)(bool enabled, void *user_data);
+typedef bool (*DbusConvAwarenessCallback)(bool enabled, void *user_data);
 
 /* Callback for adaptive noise level change request */
-typedef void (*DbusAdaptiveLevelCallback)(int level, void *user_data);
+typedef bool (*DbusAdaptiveLevelCallback)(int level, void *user_data);
 
 /* Callback for ear pause mode change request */
 typedef void (*DbusEarPauseModeCallback)(int mode, void *user_data);
 
 /* Callback for listening modes configuration change request */
-typedef void (*DbusListeningModesCallback)(bool off, bool transparency, bool anc, bool adaptive, void *user_data);
+typedef bool (*DbusListeningModesCallback)(bool off, bool transparency, bool anc, bool adaptive, void *user_data);
 
 /* Callback for display name change request */
 typedef void (*DbusDisplayNameCallback)(const char *name, void *user_data);
