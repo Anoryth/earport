@@ -85,7 +85,11 @@ static gchar *get_config_path(void)
 static bool ensure_config_dir(void)
 {
     gchar *config_dir = get_config_dir();
-    int result = g_mkdir_with_parents(config_dir, 0755);
+    /* It holds the AirPods' keys: for this user only, also when created
+     * earlier with wider permissions */
+    int result = g_mkdir_with_parents(config_dir, 0700);
+    if (result == 0)
+        g_chmod(config_dir, 0700);
     g_free(config_dir);
 
     if (result != 0 && errno != EEXIST) {
