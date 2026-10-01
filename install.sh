@@ -1,7 +1,9 @@
 #!/bin/bash
 #
 # EarPort - Installation Script
-# Installs the daemon and GNOME Shell extension
+# Builds the service from source and installs it for the current user (in
+# ~/.local, no sudo, with install-daemon.sh like the prebuilt releases),
+# then installs the GNOME Shell extension.
 #
 
 set -e
@@ -65,8 +67,8 @@ check_dependencies() {
         missing_deps+=("libglib2.0-dev (Debian/Ubuntu) or glib2-devel (Fedora) or glib2 (Arch)")
     fi
 
-    # Check for BlueZ development files
-    if ! pkg-config --exists bluez 2>/dev/null; then
+    # Only the BlueZ headers are needed (no library at runtime)
+    if ! pkg-config --exists bluez 2>/dev/null && [ ! -f /usr/include/bluetooth/l2cap.h ]; then
         missing_deps+=("libbluetooth-dev (Debian/Ubuntu) or bluez-libs-devel (Fedora) or bluez-libs (Arch)")
     fi
 
@@ -108,7 +110,7 @@ build_daemon() {
         rm -rf build
     fi
 
-    meson setup build
+    meson setup build --buildtype=release
     ninja -C build
 
     print_success "Daemon built successfully"
@@ -131,24 +133,38 @@ remove_legacy_install() {
 }
 
 install_daemon() {
-    print_step "Installing daemon (requires sudo)..."
+    print_step "Installing the service for $(whoami)..."
 
-    cd "$SCRIPT_DIR/daemon"
-    sudo ninja -C build install
+    # Same archive and installer as the prebuilt releases
+    local archive
+    archive=$("$SCRIPT_DIR/tools/pack-daemon.sh" "$SCRIPT_DIR/daemon/build")
+    bash "$SCRIPT_DIR/install-daemon.sh" --from-file "$SCRIPT_DIR/$archive"
 
-    print_success "Daemon installed"
+    print_success "Service installed and running"
 }
 
-enable_daemon_service() {
-    print_step "Enabling systemd user service..."
+# The former install.sh installed the service system-wide: the new one
+# takes precedence, remove the old files (the only step needing sudo)
+remove_system_install() {
+    local files=(/usr/local/bin/earport-daemon
+                 /usr/local/lib/systemd/user/earport-daemon.service
+                 /usr/local/share/dbus-1/services/io.github.anoryth.EarPort.service)
+    local found=()
+    for f in "${files[@]}"; do
+        [ -e "$f" ] && found+=("$f")
+    done
+    [ ${#found[@]} -eq 0 ] && return 0
 
-    # Reload systemd user daemon
-    systemctl --user daemon-reload
-
-    # Enable and start the service
-    systemctl --user enable --now earport-daemon.service
-
-    print_success "Daemon service enabled and started"
+    print_step "An older system-wide EarPort service is installed in /usr/local"
+    if [ -t 0 ]; then
+        read -r -p "    Remove it now (asks for sudo)? [Y/n] " answer
+        if [ -z "$answer" ] || [[ "$answer" =~ ^[YyOo] ]]; then
+            sudo rm -f "${found[@]}"
+            print_success "Older service removed"
+            return 0
+        fi
+    fi
+    print_warning "Kept. To remove it later: sudo rm -f ${found[*]}"
 }
 
 install_extension() {
@@ -215,18 +231,8 @@ uninstall() {
     print_header
     print_step "Uninstalling EarPort..."
 
-    # Stop and disable service
-    print_step "Stopping daemon service..."
-    systemctl --user disable --now earport-daemon.service 2>/dev/null || true
-    print_success "Daemon service stopped"
-
-    # Uninstall daemon
-    print_step "Uninstalling daemon (requires sudo)..."
-    if [ -d "$SCRIPT_DIR/daemon/build" ]; then
-        cd "$SCRIPT_DIR/daemon"
-        sudo ninja -C build uninstall 2>/dev/null || true
-    fi
-    print_success "Daemon uninstalled"
+    bash "$SCRIPT_DIR/install-daemon.sh" --uninstall
+    remove_system_install
 
     # Remove extension
     print_step "Removing extension..."
@@ -246,8 +252,8 @@ show_help() {
     echo "Usage: $0 [OPTION]"
     echo ""
     echo "Options:"
-    echo "  --install     Install daemon and extension (default)"
-    echo "  --uninstall   Remove daemon and extension"
+    echo "  --install     Build and install the service and the extension (default)"
+    echo "  --uninstall   Remove the service and the extension"
     echo "  --daemon      Install only the daemon"
     echo "  --extension   Install only the extension"
     echo "  --help        Show this help message"
@@ -256,10 +262,9 @@ show_help() {
 
 # Main
 main() {
-    # Everything goes to the user's session and home, except the daemon
-    # install, which asks for sudo itself
+    # Everything goes to the user's session and home
     if [ "$(id -u)" -eq 0 ]; then
-        print_error "Run this script without sudo: it asks for it when needed."
+        print_error "Run this script as your regular user, without sudo."
         exit 1
     fi
 
@@ -273,7 +278,7 @@ main() {
             remove_legacy_install
             build_daemon
             install_daemon
-            enable_daemon_service
+            remove_system_install
             echo ""
             print_success "Daemon installation completed!"
             ;;
@@ -295,7 +300,7 @@ main() {
             remove_legacy_install
             build_daemon
             install_daemon
-            enable_daemon_service
+            remove_system_install
             install_extension
             enable_extension
             print_completion

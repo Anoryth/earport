@@ -69,6 +69,21 @@ curl -fsSL https://github.com/Anoryth/earport/releases/latest/download/install-d
 
 To remove it: `curl -fsSL https://github.com/Anoryth/earport/releases/latest/download/install-daemon.sh | bash -s -- --uninstall`
 
+<details>
+<summary>Prefer to check what you run? Same install, step by step</summary>
+
+```bash
+base=https://github.com/Anoryth/earport/releases/latest/download
+curl -fsSLO "$base/install-daemon.sh"
+curl -fsSLO "$base/earport-daemon-linux-$(uname -m).tar.gz"
+curl -fsSLO "$base/SHA256SUMS"
+sha256sum --check --ignore-missing SHA256SUMS
+less install-daemon.sh   # read it
+bash install-daemon.sh --from-file "earport-daemon-linux-$(uname -m).tar.gz"
+```
+
+</details>
+
 **2. The extension**: download `earport@anoryth.github.io.shell-extension.zip` from the
 [latest release](https://github.com/Anoryth/earport/releases/latest), then:
 
@@ -93,32 +108,28 @@ sudo dnf install meson ninja-build glib2-devel bluez-libs-devel
 sudo pacman -S meson ninja glib2 bluez-libs
 ```
 
-Then, as your regular user (it asks for sudo only to install the service):
+Then, as your regular user:
 
 ```bash
 ./install.sh
 ```
 
-This builds and installs the service, enables it, and installs the extension.
+This builds the service and installs it for your user, exactly like the
+quick install (in `~/.local`, no sudo), then installs the extension. If an
+older version installed the service system-wide in `/usr/local`, it offers
+to remove it (the only step asking for sudo).
 
 #### Manual Steps
 
-1. Build and install the service:
+1. Build the service and install it for your user:
 
    ```bash
-   cd daemon
-   meson setup build
-   ninja -C build
-   sudo ninja -C build install
+   meson setup daemon/build daemon --buildtype=release
+   ninja -C daemon/build
+   bash install-daemon.sh --from-file "$(tools/pack-daemon.sh daemon/build)"
    ```
 
-2. Enable it:
-
-   ```bash
-   systemctl --user enable --now earport-daemon.service
-   ```
-
-3. Install the extension:
+2. Install the extension:
 
    ```bash
    cp -r extension ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
@@ -126,7 +137,7 @@ This builds and installs the service, enables it, and installs the extension.
    gnome-extensions enable earport@anoryth.github.io
    ```
 
-4. Restart GNOME Shell: log out and back in (Wayland), or `Alt+F2`, `r` (X11)
+3. Restart GNOME Shell: log out and back in (Wayland), or `Alt+F2`, `r` (X11)
 
 ## Usage
 
@@ -150,11 +161,8 @@ By default, media will automatically pause when you remove one or both AirPods f
 ### Manual Uninstallation
 
 ```bash
-# Stop and disable the daemon
-systemctl --user disable --now earport-daemon.service
-
-# Remove the daemon
-sudo ninja -C daemon/build uninstall
+# Stop and remove the service (settings in ~/.config/earport stay)
+bash install-daemon.sh --uninstall
 
 # Remove the extension
 rm -rf ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io

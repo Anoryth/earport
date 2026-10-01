@@ -13,7 +13,8 @@ build="${1:?usage: $0 <build-dir>}"
 case "$(uname -m)" in
     x86_64) arch="x86_64" ;;
     aarch64 | arm64) arch="aarch64" ;;
-    *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+    # Not built for releases, but install.sh packs local builds too
+    *) arch="$(uname -m)" ;;
 esac
 
 stage=$(mktemp -d)

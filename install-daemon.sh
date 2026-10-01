@@ -54,17 +54,17 @@ if [ "$action" = "uninstall" ]; then
     exit 0
 fi
 
-case "$(uname -m)" in
-    x86_64) arch="x86_64" ;;
-    aarch64 | arm64) arch="aarch64" ;;
-    *) die "No prebuilt service for $(uname -m): build it from source (see the README)." ;;
-esac
-asset="earport-daemon-linux-$arch.tar.gz"
-
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 if [ -z "$archive" ]; then
+    case "$(uname -m)" in
+        x86_64) arch="x86_64" ;;
+        aarch64 | arm64) arch="aarch64" ;;
+        *) die "No prebuilt service for $(uname -m): build it from source with install.sh (see the README)." ;;
+    esac
+    asset="earport-daemon-linux-$arch.tar.gz"
+
     if [ -n "$version" ]; then
         base="https://github.com/$REPO/releases/download/v${version#v}"
     else
@@ -91,16 +91,23 @@ sed "s|@bindir@|$BIN_DIR|g" "$dir/$UNIT.in" > "$UNIT_DIR/$UNIT"
 sed "s|@bindir@|$BIN_DIR|g" "$dir/$DBUS_SERVICE.in" > "$DBUS_DIR/$DBUS_SERVICE"
 info "Installed $("$BIN_DIR/earport-daemon" --version 2>/dev/null || echo earport-daemon) in $BIN_DIR"
 
-for other in /usr/bin/earport-daemon /usr/local/bin/earport-daemon; do
-    [ -e "$other" ] && warn "Another EarPort service is installed in $other; this one takes precedence."
-done
+# This one takes precedence over a system-wide install (former install.sh,
+# packages): say how to remove the leftover
+if [ -e /usr/local/bin/earport-daemon ]; then
+    warn "An older EarPort service is installed in /usr/local (unused now). To remove it:"
+    warn "  sudo rm -f /usr/local/bin/earport-daemon /usr/local/lib/systemd/user/$UNIT /usr/local/share/dbus-1/services/$DBUS_SERVICE"
+fi
+if [ -e /usr/bin/earport-daemon ]; then
+    warn "A packaged EarPort service is installed in /usr/bin; this one takes precedence."
+fi
 
 systemctl is-active --quiet bluetooth 2>/dev/null ||
     warn "The Bluetooth service is not running: start it to use your AirPods."
 
 if [ "$start" -eq 1 ]; then
     systemctl --user daemon-reload
-    systemctl --user enable "$UNIT" >/dev/null 2>&1
+    # reenable: a former install may have left its own activation link
+    systemctl --user reenable "$UNIT" >/dev/null 2>&1
     systemctl --user restart "$UNIT"
     info "EarPort service running. Install or enable the GNOME Shell extension to use it."
 fi

@@ -34,6 +34,15 @@ jobs:
           ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
             meson test -C daemon/build-asan --print-errorlogs
 
+  scripts:
+    name: Check shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: ShellCheck
+        run: shellcheck install.sh install-daemon.sh tools/*.sh
+
   translations:
     name: Check translations
     runs-on: ubuntu-latest
