@@ -18,6 +18,7 @@
 #define RETRY_MS 20
 #define RECONNECT_MS 10
 #define SILENT_MS 30
+#define WATCHDOG_MS 600
 
 #define ADDRESS "00:11:22:33:44:55"
 
@@ -388,6 +389,69 @@ static void test_free_is_silent(Fixture *f, gconstpointer data)
     run_for(10 * RETRY_MS);
 }
 
+/* ============================================================================
+ * Watchdog
+ * ========================================================================== */
+
+/* After a long silence the AirPods are asked again; they answer */
+static void test_watchdog_probe_answered(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    aap_link_device_connected(f->link, ADDRESS, "AirPods Pro");
+    fake_bt_receive(battery, sizeof(battery));
+    RUN_UNTIL(SET_FEATURES() == 2);
+
+    fake_bt_receive(battery, sizeof(battery));
+    run_for(200);
+    g_assert_cmpint(fake_bt.connect_count, ==, 1);
+    g_assert_cmpint(f->disconnected, ==, 0);
+}
+
+/* No answer: another link took the notifications, re-open ours silently */
+static void test_watchdog_reopens_deaf_link(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    aap_link_device_connected(f->link, ADDRESS, "AirPods Pro");
+    fake_bt_receive(battery, sizeof(battery));
+    RUN_UNTIL(fake_bt.connect_count == 2);
+    run_for(10 * GAP_MS);  /* Handshake of the new link */
+
+    g_assert_cmpint(f->connected, ==, 1);
+    g_assert_cmpint(f->disconnected, ==, 0);
+    g_assert_cmpuint(HANDSHAKES(), ==, 2);
+}
+
+static void test_watchdog_quiet_while_packets(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    aap_link_device_connected(f->link, ADDRESS, "AirPods Pro");
+    for (int i = 0; i < 10; i++) {
+        fake_bt_receive(battery, sizeof(battery));
+        run_for(WATCHDOG_MS / 4);
+    }
+    g_assert_cmpuint(SET_FEATURES(), ==, 1);
+}
+
+/* The re-opened link gets nothing either (another device keeps the
+ * notifications): the watchdog stops there instead of fighting */
+static void test_watchdog_no_fight(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    aap_link_device_connected(f->link, ADDRESS, "AirPods Pro");
+    fake_bt_receive(battery, sizeof(battery));
+    RUN_UNTIL(fake_bt.connect_count == 2);
+
+    int attempts = fake_bt.connect_count;
+    run_for(3 * WATCHDOG_MS);
+    /* At most the one silent re-open of the notification retries */
+    g_assert_cmpint(fake_bt.connect_count, <=, attempts + 1);
+    g_assert_cmpint(f->disconnected, ==, 0);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -412,6 +476,10 @@ int main(int argc, char *argv[])
     ADD("/link/send-needs-link", test_send_needs_link);
     ADD("/link/queue-cleared", test_queue_cleared);
     ADD("/link/free-is-silent", test_free_is_silent);
+    ADD("/link/watchdog-probe-answered", test_watchdog_probe_answered);
+    ADD("/link/watchdog-reopens-deaf-link", test_watchdog_reopens_deaf_link);
+    ADD("/link/watchdog-quiet-while-packets", test_watchdog_quiet_while_packets);
+    ADD("/link/watchdog-no-fight", test_watchdog_no_fight);
 
     return g_test_run();
 }

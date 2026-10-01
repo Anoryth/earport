@@ -48,6 +48,21 @@
 #define HANDSHAKE_DELAY_MS 100
 #endif
 
+/* The AirPods only notify the last AAP link opened: when another one was
+ * opened meanwhile (another computer, a test), ours stays connected but
+ * deaf, even after the other one is closed. After a long silence, ask
+ * again: they always answer a notification request, so no answer means
+ * the link must be re-opened. */
+#ifndef WATCHDOG_SILENCE_MS
+#define WATCHDOG_SILENCE_MS (5 * 60 * 1000)
+#endif
+#ifndef WATCHDOG_PROBE_TIMEOUT_MS
+#define WATCHDOG_PROBE_TIMEOUT_MS 10000
+#endif
+#ifndef WATCHDOG_CHECK_MS
+#define WATCHDOG_CHECK_MS 30000
+#endif
+
 /* Opcode of the AirPods' acknowledgement of our SET_FEATURES packet */
 #define AAP_OPCODE_FEATURES_ACK 0x2B
 
@@ -74,6 +89,11 @@ struct AapLink {
     guint silent_reconnect_id;
 
     guint keys_request_id;
+
+    /* Watchdog: last packet received, last probe sent */
+    guint watchdog_id;
+    gint64 last_rx_us;
+    gint64 probe_sent_us;
 
     /* Outgoing packets (GBytes), sent SEND_GAP_MS apart */
     GQueue send_queue;
@@ -270,6 +290,55 @@ static gboolean silent_reconnect_cb(gpointer user_data)
 }
 
 /* ============================================================================
+ * Watchdog
+ * ========================================================================== */
+
+static gboolean watchdog_cb(gpointer user_data)
+{
+    AapLink *link = user_data;
+    gint64 now = g_get_monotonic_time();
+
+    /* Only for a link that worked in this session: when another Apple
+     * device keeps the notifications from the start, the retries and the
+     * one silent re-open already tried, and fighting over them every few
+     * minutes would not help */
+    if (!aap_link_is_connected(link) || !link->battery_received || link->silent_reconnect)
+        return G_SOURCE_CONTINUE;
+
+    if (link->probe_sent_us > link->last_rx_us) {
+        if (now - link->probe_sent_us >= (gint64)WATCHDOG_PROBE_TIMEOUT_MS * 1000) {
+            g_message("No answer from the AirPods, re-opening the link");
+            link->probe_sent_us = 0;
+            link->silent_reconnect = true;
+            bt_connection_disconnect(link->bt_conn);
+        }
+    } else if (now - link->last_rx_us >= (gint64)WATCHDOG_SILENCE_MS * 1000) {
+        g_message("Nothing from the AirPods for %" G_GINT64_FORMAT " s, requesting notifications",
+                  (now - link->last_rx_us) / G_USEC_PER_SEC);
+        link->probe_sent_us = now;
+        aap_link_send(link, AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
+        aap_link_send(link, AAP_PKT_REQUEST_NOTIFICATIONS, AAP_REQUEST_NOTIF_SIZE);
+    }
+    return G_SOURCE_CONTINUE;
+}
+
+static void start_watchdog(AapLink *link)
+{
+    link->last_rx_us = g_get_monotonic_time();
+    link->probe_sent_us = 0;
+    if (link->watchdog_id == 0)
+        link->watchdog_id = g_timeout_add(WATCHDOG_CHECK_MS, watchdog_cb, link);
+}
+
+static void stop_watchdog(AapLink *link)
+{
+    if (link->watchdog_id > 0) {
+        g_source_remove(link->watchdog_id);
+        link->watchdog_id = 0;
+    }
+}
+
+/* ============================================================================
  * Bluetooth callbacks
  * ========================================================================== */
 
@@ -284,6 +353,7 @@ static gboolean request_proximity_keys_cb(gpointer user_data)
 static void on_bt_data_received(const uint8_t *data, size_t len, void *user_data)
 {
     AapLink *link = user_data;
+    link->last_rx_us = g_get_monotonic_time();
 
     /* Our notification request may have reached the AirPods before they
      * processed SET_FEATURES: request again once they acknowledge it. */
@@ -324,6 +394,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
 
         /* Attach to main loop for data reception */
         bt_connection_attach_to_mainloop(link->bt_conn, NULL);
+        start_watchdog(link);
 
         /* Initialization sequence */
         clear_send_queue(link);
@@ -353,6 +424,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
     case BT_STATE_DISCONNECTED:
         g_message("Bluetooth disconnected");
         clear_send_queue(link);
+        stop_watchdog(link);
 
         if (link->silent_reconnect) {
             if (link->silent_reconnect_id == 0)
@@ -371,6 +443,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
     case BT_STATE_ERROR:
         g_warning("Bluetooth error: %s", error ? error : "unknown");
         clear_send_queue(link);
+        stop_watchdog(link);
 
         /* The silent reconnect failed: the link is really down now */
         if (link->silent_reconnect)
@@ -425,6 +498,7 @@ void aap_link_free(AapLink *link)
     cancel_reconnect(link);
     cancel_notif_retry(link);
     clear_send_queue(link);
+    stop_watchdog(link);
     if (link->silent_reconnect_id > 0)
         g_source_remove(link->silent_reconnect_id);
     if (link->keys_request_id > 0)

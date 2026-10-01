@@ -115,7 +115,8 @@ test_aap_link = executable('test-aap-link',
     include_directories: include_directories('src'),
     c_args: ['-DSEND_GAP_MS=2', '-DHANDSHAKE_DELAY_MS=4', '-DNOTIF_RETRY_INTERVAL_MS=20',
              '-DRECONNECT_BASE_DELAY_MS=10', '-DSILENT_RECONNECT_DELAY_MS=30',
-             '-DPROXIMITY_KEYS_DELAY_MS=30'],
+             '-DPROXIMITY_KEYS_DELAY_MS=30', '-DWATCHDOG_SILENCE_MS=600',
+             '-DWATCHDOG_PROBE_TIMEOUT_MS=50', '-DWATCHDOG_CHECK_MS=10'],
     dependencies: [glib_dep],
 )
 test('aap-link', test_aap_link)
