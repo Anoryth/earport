@@ -37,6 +37,9 @@ void research_observe(const uint8_t *data, size_t len, AapParseResult result,
 
     if (result == AAP_PARSE_UNKNOWN_OPCODE) {
         log_packet("unknown packet", data, len);
+    } else if (result == AAP_PARSE_OK && packet->type == AAP_PKT_TYPE_SLEEP_DETECTION) {
+        /* Decoded, but some bytes are still not understood */
+        log_packet("sleep packet", data, len);
     } else if (result == AAP_PARSE_OK && packet->type == AAP_PKT_TYPE_CONTROL_SETTING &&
                airpods_setting_by_id(packet->data.control_setting.id) == NULL) {
         log_packet("unknown setting", data, len);

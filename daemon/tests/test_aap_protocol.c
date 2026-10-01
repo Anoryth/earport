@@ -179,6 +179,44 @@ static void test_adaptive_level(void)
     g_assert_cmpint(p.data.adaptive_level, ==, 100);
 }
 
+/* Captured from AirPods Pro 2 USB-C (2026-10-01): asleep at night, then a
+ * false "asleep" while sitting still, then awake */
+static void test_sleep_detection(void)
+{
+    const uint8_t night[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x07, 0x00,
+                              0x02, 0x01, 0x01, 0x27, 0x23, 0x00, 0x41 };
+    const uint8_t still[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x07, 0x00,
+                              0x02, 0x01, 0x02, 0x5A, 0x5B, 0x0A, 0x41 };
+    const uint8_t awake[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x07, 0x00,
+                              0x02, 0x02, 0x02, 0x55, 0x56, 0x02, 0x40 };
+    const uint8_t truncated[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x07, 0x00, 0x02, 0x01 };
+    AapParsedPacket p;
+
+    g_assert_cmpint(PARSE(night, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_SLEEP_DETECTION);
+    g_assert_cmpuint(p.data.sleep_detection.msg_type, ==, AAP_SLEEP_MSG_STATUS);
+    g_assert_cmpuint(p.data.sleep_detection.status, ==, AAP_SLEEP_STATUS_ASLEEP);
+    g_assert_cmpuint(p.data.sleep_detection.confidence, ==, 65);
+    g_assert_cmpint(p.data.sleep_detection.rewind_seconds, ==, 0);
+
+    g_assert_cmpint(PARSE(still, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.data.sleep_detection.rewind_seconds, ==, 50);
+
+    g_assert_cmpint(PARSE(awake, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpuint(p.data.sleep_detection.status, !=, AAP_SLEEP_STATUS_ASLEEP);
+
+    g_assert_cmpint(PARSE(truncated, &p), ==, AAP_PARSE_INCOMPLETE);
+}
+
+static void test_build_sleep_detection(void)
+{
+    const uint8_t threshold[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x02, 0x00, 0x03, 0x41 };
+    uint8_t buf[AAP_SLEEP_MSG_SIZE];
+
+    aap_build_sleep_detection_msg(AAP_SLEEP_MSG_THRESHOLD, 65, buf);
+    g_assert_cmpmem(buf, sizeof(buf), threshold, sizeof(threshold));
+}
+
 static void test_listening_modes(void)
 {
     /* Transparency + ANC enabled, Off and Adaptive disabled */
@@ -422,6 +460,8 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/control/conversational-awareness", test_conversational_awareness);
     g_test_add_func("/aap/control/listening-modes", test_listening_modes);
     g_test_add_func("/aap/control/adaptive-level", test_adaptive_level);
+    g_test_add_func("/aap/sleep-detection", test_sleep_detection);
+    g_test_add_func("/aap/build-sleep-detection", test_build_sleep_detection);
     g_test_add_func("/aap/control/settings", test_control_settings);
     g_test_add_func("/aap/control/setting-short", test_control_setting_short);
     g_test_add_func("/aap/conversation-events", test_conversation_events);

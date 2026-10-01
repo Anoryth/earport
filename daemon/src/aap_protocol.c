@@ -269,6 +269,31 @@ static AapParseResult aap_parse_proximity_keys(const uint8_t *data, size_t len,
     return AAP_PARSE_OK;
 }
 
+/* 04 00 04 00 57 00 [length, 2 bytes LE] [type] [status] [?] [?] [?]
+ * [rewind / 5 s] [confidence] */
+static AapParseResult aap_parse_sleep_detection(const uint8_t *data, size_t len,
+                                                AapSleepDetection *sleep)
+{
+    if (len < 9)
+        return AAP_PARSE_INCOMPLETE;
+
+    size_t payload = data[6] | (data[7] << 8);
+    if (payload < 1 || len < 8 + payload)
+        return AAP_PARSE_INCOMPLETE;
+
+    memset(sleep, 0, sizeof(*sleep));
+    sleep->msg_type = data[8];
+    if (sleep->msg_type != AAP_SLEEP_MSG_STATUS)
+        return AAP_PARSE_OK;
+
+    if (payload < 7)
+        return AAP_PARSE_MALFORMED;
+    sleep->status = data[9];
+    sleep->rewind_seconds = 5 * data[13];
+    sleep->confidence = data[14];
+    return AAP_PARSE_OK;
+}
+
 static AapParseResult parse_control_packet(const uint8_t *data, size_t len, AapParsedPacket *result)
 {
     if (len < 8)
@@ -350,6 +375,10 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
         result->type = AAP_PKT_TYPE_PROXIMITY_KEYS;
         return aap_parse_proximity_keys(data, len, &result->data.proximity_keys);
 
+    case AAP_OPCODE_SLEEP_DETECTION:
+        result->type = AAP_PKT_TYPE_SLEEP_DETECTION;
+        return aap_parse_sleep_detection(data, len, &result->data.sleep_detection);
+
     case AAP_OPCODE_METADATA:
         result->type = AAP_PKT_TYPE_METADATA;
         return aap_parse_metadata(data, len, &result->data.metadata);
@@ -416,6 +445,14 @@ void aap_build_adaptive_level_cmd(int level, uint8_t *buffer)
 {
     uint8_t value = (uint8_t)(level < 0 ? 0 : (level > 100 ? 100 : level));
     aap_build_control_cmd(AAP_CTRL_ADAPTIVE_LEVEL, &value, 1, buffer);
+}
+
+void aap_build_sleep_detection_msg(uint8_t msg_type, uint8_t value, uint8_t *buffer)
+{
+    const uint8_t msg[AAP_SLEEP_MSG_SIZE] = {
+        0x04, 0x00, 0x04, 0x00, AAP_OPCODE_SLEEP_DETECTION, 0x00, 0x02, 0x00, msg_type, value,
+    };
+    memcpy(buffer, msg, sizeof(msg));
 }
 
 void aap_build_conv_awareness_cmd(bool enable, uint8_t *buffer)

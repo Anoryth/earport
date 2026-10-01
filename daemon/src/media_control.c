@@ -69,6 +69,8 @@ typedef struct {
     MediaControl *mc;
     char *player;
     guint resume_count;        /* mc->resume_count when the pause started */
+    bool for_sleep;            /* Not resumed with the ears; rewound */
+    int rewind_seconds;
 } PauseOp;
 
 static void pause_op_free(PauseOp *op)
@@ -113,6 +115,14 @@ static void player_play(MediaControl *mc, const char *player)
     player_call(mc, player, "Play", on_play_done, g_strdup(player));
 }
 
+static void on_seek_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    (void)user_data;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
+    if (reply != NULL)
+        g_variant_unref(reply);
+}
+
 static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data)
 {
     PauseOp *op = user_data;
@@ -130,6 +140,19 @@ static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data
 
     MediaControl *mc = op->mc;
     g_message("Paused media player: %s", op->player);
+
+    if (op->for_sleep) {
+        /* Replay what was missed while falling asleep (offset in µs) */
+        if (op->rewind_seconds > 0) {
+            g_dbus_connection_call(mc->connection, op->player, MPRIS_DBUS_PATH,
+                                   MPRIS_PLAYER_INTERFACE, "Seek",
+                                   g_variant_new("(x)", -(gint64)op->rewind_seconds * G_USEC_PER_SEC),
+                                   NULL, G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS,
+                                   mc->cancellable, on_seek_done, NULL);
+        }
+        pause_op_free(op);
+        return;
+    }
 
     if (mc->resume_count != op->resume_count) {
         /* The pods went back in while the player was being paused */
@@ -161,15 +184,23 @@ static void on_status_done(GObject *source, GAsyncResult *res, gpointer user_dat
     g_variant_unref(reply);
 
     /* Only the players actually playing are paused, and later resumed */
-    if (playing && op->mc->resume_count == op->resume_count)
+    if (playing && (op->for_sleep || op->mc->resume_count == op->resume_count))
         player_call(op->mc, op->player, "Pause", on_pause_done, op);
     else
         pause_op_free(op);
 }
 
+/* What to do with the players found playing */
+typedef struct {
+    MediaControl *mc;
+    bool for_sleep;
+    int rewind_seconds;
+} PauseRequest;
+
 static void on_list_names_done(GObject *source, GAsyncResult *res, gpointer user_data)
 {
-    MediaControl *mc = user_data;
+    PauseRequest *request = user_data;
+    MediaControl *mc = request->mc;
     GError *error = NULL;
     GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
 
@@ -177,6 +208,7 @@ static void on_list_names_done(GObject *source, GAsyncResult *res, gpointer user
         if (!call_cancelled(error))
             g_warning("Failed to list D-Bus names: %s", error->message);
         g_error_free(error);
+        g_free(request);
         return;
     }
 
@@ -191,6 +223,8 @@ static void on_list_names_done(GObject *source, GAsyncResult *res, gpointer user
         op->mc = mc;
         op->player = g_strdup(name);
         op->resume_count = mc->resume_count;
+        op->for_sleep = request->for_sleep;
+        op->rewind_seconds = request->rewind_seconds;
         g_dbus_connection_call(mc->connection, name, MPRIS_DBUS_PATH, DBUS_PROPERTIES_INTERFACE,
                                "Get", g_variant_new("(ss)", MPRIS_PLAYER_INTERFACE, "PlaybackStatus"),
                                G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE,
@@ -198,6 +232,21 @@ static void on_list_names_done(GObject *source, GAsyncResult *res, gpointer user
     }
     g_variant_iter_free(iter);
     g_variant_unref(reply);
+    g_free(request);
+}
+
+static void pause_playing(MediaControl *mc, bool for_sleep, int rewind_seconds)
+{
+    PauseRequest *request = g_new0(PauseRequest, 1);
+    request->mc = mc;
+    request->for_sleep = for_sleep;
+    request->rewind_seconds = rewind_seconds;
+
+    /* For each player: playing? -> pause */
+    g_dbus_connection_call(mc->connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
+                           "org.freedesktop.DBus", "ListNames", NULL, G_VARIANT_TYPE("(as)"),
+                           G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS, mc->cancellable,
+                           on_list_names_done, request);
 }
 
 /* ============================================================================
@@ -365,11 +414,15 @@ void media_control_pause_all(MediaControl *mc)
     g_list_free_full(mc->paused_players, g_free);
     mc->paused_players = NULL;
 
-    /* Then, for each player: playing? -> pause and remember it */
-    g_dbus_connection_call(mc->connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
-                           "org.freedesktop.DBus", "ListNames", NULL, G_VARIANT_TYPE("(as)"),
-                           G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS, mc->cancellable,
-                           on_list_names_done, mc);
+    /* Then pause the players playing, and remember them */
+    pause_playing(mc, false, 0);
+}
+
+void media_control_pause_for_sleep(MediaControl *mc, int rewind_seconds)
+{
+    if (mc == NULL || mc->connection == NULL)
+        return;
+    pause_playing(mc, true, rewind_seconds);
 }
 
 void media_control_resume(MediaControl *mc)

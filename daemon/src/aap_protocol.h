@@ -36,6 +36,7 @@
 #define AAP_OPCODE_SET_FEATURES  0x4D
 #define AAP_OPCODE_PROXIMITY_KEYS_REQ 0x30
 #define AAP_OPCODE_PROXIMITY_KEYS_RSP 0x31
+#define AAP_OPCODE_SLEEP_DETECTION 0x57
 
 /* Proximity key types (opcode 0x31) */
 #define AAP_PROXIMITY_KEY_IRK 0x01  /* Resolves the BLE random address */
@@ -109,6 +110,7 @@ typedef enum {
     AAP_PKT_TYPE_ADAPTIVE_LEVEL,
     AAP_PKT_TYPE_CONTROL_SETTING,
     AAP_PKT_TYPE_PROXIMITY_KEYS,
+    AAP_PKT_TYPE_SLEEP_DETECTION,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -158,6 +160,23 @@ typedef struct {
     uint8_t enc[AAP_PROXIMITY_KEY_SIZE];
 } AapProximityKeys;
 
+/* Sleep detection update ("Pause Media When Falling Asleep"): the AirPods
+ * detect it, the host decides and pauses */
+#define AAP_SLEEP_MSG_STATUS 0x02      /* Received: sleep status */
+#define AAP_SLEEP_MSG_THRESHOLD 0x03   /* Sent: confidence threshold */
+#define AAP_SLEEP_MSG_RESET 0x04       /* Sent: detection reset, with a reason */
+#define AAP_SLEEP_STATUS_ASLEEP 0x01
+#define AAP_SLEEP_RESET_USER_ACTIVE 0x01
+
+typedef struct {
+    uint8_t msg_type;          /* AAP_SLEEP_MSG_STATUS for the status */
+    uint8_t status;            /* AAP_SLEEP_STATUS_ASLEEP when asleep */
+    int rewind_seconds;        /* Playback to replay after the pause */
+    uint8_t confidence;        /* Compared to the threshold */
+} AapSleepDetection;
+
+#define AAP_SLEEP_MSG_SIZE 10   /* Header, opcode, length, type, value */
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;
@@ -172,6 +191,7 @@ typedef struct {
         int adaptive_level;           /* 0-100 */
         AapControlSetting control_setting;
         AapProximityKeys proximity_keys;
+        AapSleepDetection sleep_detection;
     } data;
 } AapParsedPacket;
 
@@ -248,6 +268,12 @@ void aap_build_noise_control_cmd(NoiseControlMode mode, uint8_t *buffer);
  * @param buffer Output buffer (must be AAP_CONTROL_CMD_SIZE bytes)
  */
 void aap_build_adaptive_level_cmd(int level, uint8_t *buffer);
+
+/**
+ * Build a sleep detection message for the AirPods (threshold or reset)
+ * @param buffer Must be at least AAP_SLEEP_MSG_SIZE bytes
+ */
+void aap_build_sleep_detection_msg(uint8_t msg_type, uint8_t value, uint8_t *buffer);
 
 /**
  * Build conversational awareness command

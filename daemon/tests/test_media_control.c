@@ -25,6 +25,7 @@ static const char player_xml[] =
     "  <interface name='org.mpris.MediaPlayer2.Player'>"
     "    <method name='Play'/>"
     "    <method name='Pause'/>"
+    "    <method name='Seek'><arg name='Offset' type='x' direction='in'/></method>"
     "    <property name='PlaybackStatus' type='s' access='read'/>"
     "  </interface>"
     "</node>";
@@ -42,6 +43,7 @@ typedef struct {
     char *status;                /* "Playing", "Paused", "Stopped" */
     int plays;
     int pauses;
+    gint64 seek_offset;
     guint delay_ms;              /* Answer this late (0: at once) */
 } FakePlayer;
 
@@ -69,14 +71,15 @@ static void on_player_method(GDBusConnection *connection, const char *sender, co
     (void)sender;
     (void)path;
     (void)interface;
-    (void)parameters;
     FakePlayer *p = user_data;
 
     if (p->delay_ms > 0)
         g_usleep(p->delay_ms * 1000);
 
     g_mutex_lock(&p->lock);
-    if (g_strcmp0(method, "Play") == 0) {
+    if (g_strcmp0(method, "Seek") == 0) {
+        g_variant_get(parameters, "(x)", &p->seek_offset);
+    } else if (g_strcmp0(method, "Play") == 0) {
         p->plays++;
         g_free(p->status);
         p->status = g_strdup("Playing");
@@ -425,6 +428,28 @@ static void test_free_with_pending_calls(void)
     fake_player_free(slow);
 }
 
+/* Fell asleep: paused and rewound, and not resumed with the ears */
+static void test_pause_for_sleep(void)
+{
+    FakePlayer *player = fake_player_new("asleep", "Playing");
+    MediaControl *mc = media_control_new();
+
+    ears(mc, true, true);
+    media_control_pause_for_sleep(mc, 30);
+    run_for(100);
+    g_assert_cmpint(pauses(player), ==, 1);
+    g_mutex_lock(&player->lock);
+    g_assert_cmpint(player->seek_offset, ==, -30 * G_USEC_PER_SEC);
+    g_mutex_unlock(&player->lock);
+
+    ears(mc, true, false);
+    ears(mc, true, true);
+    g_assert_cmpint(plays(player), ==, 0);
+
+    media_control_free(mc);
+    fake_player_free(player);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -442,6 +467,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/frozen-player", test_frozen_player);
     g_test_add_func("/media/back-in-during-pause", test_back_in_during_pause);
     g_test_add_func("/media/free-with-pending-calls", test_free_with_pending_calls);
+    g_test_add_func("/media/pause-for-sleep", test_pause_for_sleep);
 
     int result = g_test_run();
 

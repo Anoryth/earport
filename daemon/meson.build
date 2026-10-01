@@ -61,6 +61,7 @@ sources = files(
     'src/dbus_service.c',
     'src/media_control.c',
     'src/research.c',
+    'src/sleep_pause.c',
 )
 
 # Build executable
@@ -156,6 +157,15 @@ test_media_control = executable('test-media-control',
     dependencies: [glib_dep, gio_dep],
 )
 test('media-control', test_media_control)
+
+test_sleep_pause = executable('test-sleep-pause',
+    files('tests/test_sleep_pause.c', 'src/sleep_pause.c', 'src/aap_protocol.c',
+          'src/airpods_settings.c', 'src/airpods_state.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DSLEEP_COOL_OFF_MS=50'],
+    dependencies: [glib_dep],
+)
+test('sleep-pause', test_sleep_pause)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)
