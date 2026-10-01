@@ -8,6 +8,10 @@
 
 #include <string.h>
 
+/* These calls are synchronous: if bluetoothd stops answering, give up
+ * after a few seconds instead of the default 25 s */
+#define BLUEZ_CALL_TIMEOUT_MS 5000
+
 struct BluezMonitor {
     GDBusConnection *connection;
     guint properties_signal_id;
@@ -61,7 +65,7 @@ static bool device_is_airpods(GDBusConnection *connection, const char *object_pa
         g_variant_new("(ss)", BLUEZ_DEVICE_INTERFACE, "UUIDs"),
         G_VARIANT_TYPE("(v)"),
         G_DBUS_CALL_FLAGS_NONE,
-        -1,
+        BLUEZ_CALL_TIMEOUT_MS,
         NULL,
         &error
     );
@@ -108,7 +112,7 @@ static BluezDeviceInfo *get_device_info(GDBusConnection *connection, const char 
         g_variant_new("(s)", BLUEZ_DEVICE_INTERFACE),
         G_VARIANT_TYPE("(a{sv})"),
         G_DBUS_CALL_FLAGS_NONE,
-        -1,
+        BLUEZ_CALL_TIMEOUT_MS,
         NULL,
         &error
     );
@@ -421,7 +425,7 @@ void bluez_monitor_check_existing_devices(BluezMonitor *monitor)
         NULL,
         G_VARIANT_TYPE("(a{oa{sa{sv}}})"),
         G_DBUS_CALL_FLAGS_NONE,
-        -1,
+        BLUEZ_CALL_TIMEOUT_MS,
         NULL,
         &error
     );
