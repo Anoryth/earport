@@ -68,6 +68,14 @@ export class Notifications {
         }
     }
 
+    /* The installation command was copied to the clipboard */
+    commandCopied(update) {
+        this._show(_('Command Copied'),
+            update
+                ? _('Paste it in a terminal to update the EarPort service.')
+                : _('Paste it in a terminal to install the EarPort service.'));
+    }
+
     destroy() {
         this._source?.destroy();
         this._source = null;

@@ -327,6 +327,10 @@ static void test_disconnected(Fixture *f, gconstpointer data)
     g_assert_false(get_bool(f, "Connected"));
     g_assert_cmpint(get_int(f, "BatteryLeft"), ==, -1);
 
+    /* The extension compares it with its own version */
+    g_autofree char *version = get_string(f, "Version");
+    g_assert_cmpstr(version, ==, EARPORT_VERSION);
+
     /* Nothing announced: no setting can be changed */
     call_fails(f, "SetSetting", g_variant_new("(sv)", "OneBudANC", g_variant_new_boolean(TRUE)),
                G_DBUS_ERROR_NOT_SUPPORTED);

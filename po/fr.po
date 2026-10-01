@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-09-30 22:23+0200\n"
+"POT-Creation-Date: 2026-10-01 20:40+0200\n"
 "PO-Revision-Date: 2026-07-07 12:00+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: French\n"
@@ -28,84 +28,92 @@ msgstr "indisponible"
 msgid "charging"
 msgstr "en charge"
 
-#: extension/earportToggle.js:31 extension/earportToggle.js:316
-#: extension/earportToggle.js:333 extension/prefs.js:502
+#: extension/earportToggle.js:40 extension/earportToggle.js:363
+#: extension/earportToggle.js:380 extension/prefs.js:502
 msgid "Disconnected"
 msgstr "Déconnecté"
 
-#: extension/earportToggle.js:50
+#: extension/earportToggle.js:59
 msgid "Noise Control Off"
 msgstr "Contrôle du bruit désactivé"
 
-#: extension/earportToggle.js:51 extension/prefs.js:183
+#: extension/earportToggle.js:60 extension/prefs.js:183
 msgid "Noise Cancellation"
 msgstr "Réduction du bruit"
 
-#: extension/earportToggle.js:52 extension/prefs.js:177
+#: extension/earportToggle.js:61 extension/prefs.js:177
 msgid "Transparency"
 msgstr "Mode Transparence"
 
-#: extension/earportToggle.js:53 extension/prefs.js:189
+#: extension/earportToggle.js:62 extension/prefs.js:189
 msgid "Adaptive"
 msgstr "Adaptatif"
 
-#: extension/earportToggle.js:88 extension/notifications.js:59
+#: extension/earportToggle.js:97 extension/notifications.js:59
 #: extension/prefs.js:476
 msgid "Left"
 msgstr "Gauche"
 
-#: extension/earportToggle.js:89 extension/notifications.js:61
+#: extension/earportToggle.js:98 extension/notifications.js:61
 #: extension/prefs.js:476
 msgid "Right"
 msgstr "Droit"
 
-#: extension/earportToggle.js:90
+#: extension/earportToggle.js:99
 msgid "Case"
 msgstr "Boîtier"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/earportToggle.js:133 extension/prefs.js:171
+#: extension/earportToggle.js:142 extension/prefs.js:171
 msgid "Off"
 msgstr "Off"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/earportToggle.js:135
+#: extension/earportToggle.js:144
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/earportToggle.js:137
+#: extension/earportToggle.js:146
 msgid "Hear"
 msgstr "Ambiant"
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/earportToggle.js:140
+#: extension/earportToggle.js:149
 msgid "Auto"
 msgstr "Auto"
 
-#: extension/earportToggle.js:160
+#: extension/earportToggle.js:169
 msgid "Advanced Settings"
 msgstr "Réglages avancés"
 
-#: extension/earportToggle.js:169
+#: extension/earportToggle.js:178
 msgid "How to Install the EarPort Service"
 msgstr "Comment installer le service EarPort"
 
-#: extension/earportToggle.js:316
+#: extension/earportToggle.js:191
+msgid "Copy the Installation Command"
+msgstr "Copier la commande d'installation"
+
+#: extension/earportToggle.js:201
+msgid "Update the EarPort Service"
+msgstr "Mettre à jour le service EarPort"
+
+#: extension/earportToggle.js:363
 msgid "Service not running"
 msgstr "Service arrêté"
 
-#: extension/earportToggle.js:363
+#: extension/earportToggle.js:410
 msgid "Less than 5 min of listening left"
 msgstr "Moins de 5 min d’écoute restante"
 
-#: extension/earportToggle.js:365
+#: extension/earportToggle.js:412
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Environ %d min d’écoute restante"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:370
+#: extension/earportToggle.js:417
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Environ %d∶%02d d’écoute restante"
@@ -128,6 +136,18 @@ msgstr "Batterie"
 #, javascript-format
 msgid "%s Low Battery"
 msgstr "%s : batterie faible"
+
+#: extension/notifications.js:73
+msgid "Command Copied"
+msgstr "Commande copiée"
+
+#: extension/notifications.js:75
+msgid "Paste it in a terminal to update the EarPort service."
+msgstr "Collez-la dans un terminal pour mettre à jour le service EarPort."
+
+#: extension/notifications.js:76
+msgid "Paste it in a terminal to install the EarPort service."
+msgstr "Collez-la dans un terminal pour installer le service EarPort."
 
 #: extension/prefs.js:29
 msgid "Set Shortcut"

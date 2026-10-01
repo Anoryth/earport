@@ -22,6 +22,15 @@ import {ConversationVolume} from './conversationVolume.js';
 import {NoiseControlButton} from './noiseControlButton.js';
 import {Notifications} from './notifications.js';
 
+/* Last service version without the Version property */
+const UNVERSIONED_SERVICE = '0.4.0';
+
+/* Major and minor only: a patch release never needs a service update */
+function minorVersion(version) {
+    const [major = 0, minor = 0] = String(version).split('.').map(n => parseInt(n, 10) || 0);
+    return major * 1000 + minor;
+}
+
 /* Main Quick Settings toggle */
 export const EarPortToggle = GObject.registerClass(
 class EarPortToggle extends QuickSettings.QuickMenuToggle {
@@ -176,6 +185,26 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._installItem.visible = false;
         this.menu.addMenuItem(this._installItem);
 
+        /* The same command installs and updates the service: copy it, to be
+         * pasted in a terminal (nothing is run from here) */
+        this._copyInstallItem = new PopupMenu.PopupImageMenuItem(
+            _('Copy the Installation Command'),
+            'edit-copy-symbolic'
+        );
+        this._copyInstallItem.connect('activate', () => this._copyInstallCommand(false));
+        this._copyInstallItem.visible = false;
+        this.menu.addMenuItem(this._copyInstallItem);
+
+        /* The extension is updated by extensions.gnome.org, the service is
+         * not: say when it is too old for this version */
+        this._updateServiceItem = new PopupMenu.PopupImageMenuItem(
+            _('Update the EarPort Service'),
+            'software-update-available-symbolic'
+        );
+        this._updateServiceItem.connect('activate', () => this._copyInstallCommand(true));
+        this._updateServiceItem.visible = false;
+        this.menu.addMenuItem(this._updateServiceItem);
+
         /* Set initial disconnected state */
         this._updateDisconnectedState();
     }
@@ -256,6 +285,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         if (!this._proxy)
             return;
 
+        this._updateServiceVersion();
+
         const connected = this._proxy.Connected;
 
         if (connected) {
@@ -307,9 +338,25 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     setServiceMissing(missing) {
         this._serviceMissing = missing;
         this._installItem.visible = missing;
+        this._copyInstallItem.visible = missing;
         this._settingsItem.visible = !missing;
+        this._updateServiceVersion();
         if (missing)
             this._updateDisconnectedState();
+    }
+
+    _updateServiceVersion() {
+        const service = this._proxy?.Version || UNVERSIONED_SERVICE;
+        const extension = this._extensionObject.metadata['version-name'];
+        const outdated = !this._serviceMissing && extension !== undefined &&
+            minorVersion(service) < minorVersion(extension);
+        this._updateServiceItem.visible = outdated;
+    }
+
+    _copyInstallCommand(update) {
+        const script = `${this._extensionObject.metadata.url}/releases/latest/download/install-daemon.sh`;
+        St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, `curl -fsSL ${script} | bash`);
+        this._notifications.commandCopied(update);
     }
 
     _updateDisconnectedState() {

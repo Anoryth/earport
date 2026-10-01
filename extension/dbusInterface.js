@@ -13,6 +13,7 @@ export const OBJECT_PATH = '/io/github/anoryth/EarPort';
 export const AirPodsInterface = `
 <node>
   <interface name="io.github.anoryth.EarPort1">
+    <property name="Version" type="s" access="read"/>
     <property name="Connected" type="b" access="read"/>
     <property name="DeviceName" type="s" access="read"/>
     <property name="DeviceAddress" type="s" access="read"/>

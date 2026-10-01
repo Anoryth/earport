@@ -10,6 +10,7 @@
 static const gchar introspection_xml[] =
     "<node>"
     "  <interface name='" DBUS_INTERFACE_NAME "'>"
+    "    <property name='Version' type='s' access='read'/>"
     "    <property name='Connected' type='b' access='read'/>"
     "    <property name='DeviceName' type='s' access='read'/>"
     "    <property name='DeviceAddress' type='s' access='read'/>"
@@ -221,7 +222,10 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
 
     GVariant *result = NULL;
 
-    if (g_strcmp0(property_name, "Connected") == 0) {
+    if (g_strcmp0(property_name, "Version") == 0) {
+        /* Lets the extension, updated separately, spot an old service */
+        result = g_variant_new_string(EARPORT_VERSION);
+    } else if (g_strcmp0(property_name, "Connected") == 0) {
         result = g_variant_new_boolean(state->connected);
     } else if (g_strcmp0(property_name, "DeviceName") == 0) {
         result = g_variant_new_string(state->device_name ? state->device_name : "");
