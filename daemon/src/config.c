@@ -219,11 +219,7 @@ static gchar *address_to_group(const char *address)
 
 void config_get_default_listening_modes(ListeningModesConfig *modes)
 {
-    /* Default: ANC and Transparency enabled (like Apple defaults) */
-    modes->off_enabled = false;
-    modes->transparency_enabled = true;
-    modes->anc_enabled = true;
-    modes->adaptive_enabled = false;
+    *modes = AIRPODS_DEFAULT_LISTENING_MODES;
 }
 
 bool config_load_device_listening_modes(const char *device_address, ListeningModesConfig *modes)
@@ -342,15 +338,11 @@ void config_get_default_profile(DeviceProfile *profile)
     /* Empty display_name means use device model */
     profile->display_name[0] = '\0';
 
-    /* Default listening modes (like Apple defaults) */
-    profile->listening_modes.off_enabled = false;
-    profile->listening_modes.transparency_enabled = true;
-    profile->listening_modes.anc_enabled = true;
-    profile->listening_modes.adaptive_enabled = false;
+    profile->listening_modes = AIRPODS_DEFAULT_LISTENING_MODES;
 
     /* Default feature settings */
     profile->conversational_awareness = false;
-    profile->adaptive_noise_level = 50;
+    profile->adaptive_noise_level = AIRPODS_DEFAULT_ADAPTIVE_LEVEL;
     strncpy(profile->preferred_nc_mode, "anc", sizeof(profile->preferred_nc_mode) - 1);
 
     profile->has_saved_settings = false;

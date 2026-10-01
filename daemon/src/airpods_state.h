@@ -75,6 +75,14 @@ typedef struct {
     bool adaptive_enabled;      /* Adaptive mode available */
 } ListeningModesConfig;
 
+/* Defaults, shared by the state and the device profiles: Apple's
+ * long-press modes (Noise Cancellation and Transparency) and the middle
+ * of the adaptive scale */
+#define AIRPODS_DEFAULT_LISTENING_MODES ((ListeningModesConfig) { \
+    .off_enabled = false, .transparency_enabled = true, \
+    .anc_enabled = true, .adaptive_enabled = false })
+#define AIRPODS_DEFAULT_ADAPTIVE_LEVEL 50
+
 /* Complete AirPods state */
 typedef struct {
     /* Connection info */

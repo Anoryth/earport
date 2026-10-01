@@ -166,6 +166,8 @@ static void test_disconnection(Fixture *f, gconstpointer data)
     g_assert_false(f->device.ca_speaking);
     /* Settings of the next AirPods are not known yet */
     g_assert_false(airpods_state_get_setting(&f->state, 0x1B, &value));
+    g_assert_true(f->state.listening_modes.anc_enabled);
+    g_assert_false(f->state.listening_modes.adaptive_enabled);
 }
 
 int main(int argc, char *argv[])

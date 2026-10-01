@@ -26,13 +26,8 @@ void airpods_state_init(AirPodsState *state)
 
     state->noise_control_mode = NOISE_CONTROL_OFF;
     state->conversational_awareness = false;
-    state->adaptive_noise_level = 50;
-
-    /* Default: Transparency and ANC enabled for long press */
-    state->listening_modes.off_enabled = false;
-    state->listening_modes.transparency_enabled = true;
-    state->listening_modes.anc_enabled = true;
-    state->listening_modes.adaptive_enabled = true;
+    state->adaptive_noise_level = AIRPODS_DEFAULT_ADAPTIVE_LEVEL;
+    state->listening_modes = AIRPODS_DEFAULT_LISTENING_MODES;
 
     state->ear_detection.left_in_ear = false;
     state->ear_detection.right_in_ear = false;
@@ -73,7 +68,9 @@ void airpods_state_reset(AirPodsState *state)
 
     state->noise_control_mode = NOISE_CONTROL_OFF;
     state->conversational_awareness = false;
-    state->adaptive_noise_level = 50;
+    state->adaptive_noise_level = AIRPODS_DEFAULT_ADAPTIVE_LEVEL;
+    /* Not announced: the next AirPods must not inherit these */
+    state->listening_modes = AIRPODS_DEFAULT_LISTENING_MODES;
 
     state->ear_detection.left_in_ear = false;
     state->ear_detection.right_in_ear = false;
