@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <glib-unix.h>
 
 #include <sys/socket.h>
 #include <bluetooth/bluetooth.h>
@@ -30,7 +31,16 @@ struct BluetoothConnection {
 
     GSource *source;
     uint8_t recv_buffer[BT_MAX_PACKET_SIZE];
+
+    /* Connection in progress */
+    guint connect_watch_id;
+    guint connect_timeout_id;
 };
+
+/* The connection runs in the background (non-blocking socket watched from
+ * the main loop): a slow or absent device must not freeze the service.
+ * The kernel gives up on its own, but not always quickly. */
+#define CONNECT_TIMEOUT_SEC 20
 
 BluetoothConnection *bt_connection_new(void)
 {
@@ -94,6 +104,64 @@ static bool parse_bdaddr(const char *address, bdaddr_t *bdaddr)
     return true;
 }
 
+static void stop_connecting(BluetoothConnection *conn)
+{
+    if (conn->connect_watch_id > 0) {
+        g_source_remove(conn->connect_watch_id);
+        conn->connect_watch_id = 0;
+    }
+    if (conn->connect_timeout_id > 0) {
+        g_source_remove(conn->connect_timeout_id);
+        conn->connect_timeout_id = 0;
+    }
+}
+
+static void connect_failed(BluetoothConnection *conn, const char *error)
+{
+    stop_connecting(conn);
+    g_warning("Failed to connect to %s: %s", conn->address, error);
+    if (conn->socket_fd >= 0) {
+        close(conn->socket_fd);
+        conn->socket_fd = -1;
+    }
+    set_state(conn, BT_STATE_ERROR, error);
+    /* Leave the state machine ready for another attempt */
+    conn->state = BT_STATE_DISCONNECTED;
+}
+
+static void connect_succeeded(BluetoothConnection *conn)
+{
+    stop_connecting(conn);
+    g_message("Connected to %s", conn->address);
+    set_state(conn, BT_STATE_CONNECTED, NULL);
+}
+
+static gboolean on_connect_ready(gint fd, GIOCondition condition, gpointer user_data)
+{
+    (void)condition;
+    BluetoothConnection *conn = user_data;
+    int err = 0;
+    socklen_t len = sizeof(err);
+
+    conn->connect_watch_id = 0;
+    if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &len) < 0)
+        err = errno;
+
+    if (err == 0)
+        connect_succeeded(conn);
+    else
+        connect_failed(conn, strerror(err));
+    return G_SOURCE_REMOVE;
+}
+
+static gboolean on_connect_timeout(gpointer user_data)
+{
+    BluetoothConnection *conn = user_data;
+    conn->connect_timeout_id = 0;
+    connect_failed(conn, "Connection timed out");
+    return G_SOURCE_REMOVE;
+}
+
 bool bt_connection_connect(BluetoothConnection *conn, const char *address)
 {
     if (conn->state != BT_STATE_DISCONNECTED) {
@@ -107,8 +175,11 @@ bool bt_connection_connect(BluetoothConnection *conn, const char *address)
         return false;
     }
 
-    /* Create L2CAP socket */
-    conn->socket_fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET, BTPROTO_L2CAP);
+    g_free(conn->address);
+    conn->address = g_strdup(address);
+
+    /* Create L2CAP socket, non-blocking from the start */
+    conn->socket_fd = socket(AF_BLUETOOTH, SOCK_SEQPACKET | SOCK_NONBLOCK, BTPROTO_L2CAP);
     if (conn->socket_fd < 0) {
         int err = errno;
         g_warning("Failed to create L2CAP socket: %s", strerror(err));
@@ -134,39 +205,31 @@ bool bt_connection_connect(BluetoothConnection *conn, const char *address)
     addr.l2_psm = htobs(AIRPODS_L2CAP_PSM);
     bacpy(&addr.l2_bdaddr, &bdaddr);
 
-    g_free(conn->address);
-    conn->address = g_strdup(address);
-
     set_state(conn, BT_STATE_CONNECTING, NULL);
 
     g_message("Connecting to %s on PSM 0x%04X...", address, AIRPODS_L2CAP_PSM);
 
-    /* Connect (blocking for now, could be made async) */
-    if (connect(conn->socket_fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        int err = errno;
-        g_warning("Failed to connect to %s: %s", address, strerror(err));
-        close(conn->socket_fd);
-        conn->socket_fd = -1;
-        set_state(conn, BT_STATE_ERROR, strerror(err));
-        /* Leave the state machine ready for another attempt */
-        conn->state = BT_STATE_DISCONNECTED;
+    if (connect(conn->socket_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+        connect_succeeded(conn);
+        return true;
+    }
+
+    if (errno != EINPROGRESS) {
+        connect_failed(conn, strerror(errno));
         return false;
     }
 
-    /* Set non-blocking after connect */
-    int flags = fcntl(conn->socket_fd, F_GETFL, 0);
-    if (flags < 0 || fcntl(conn->socket_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-        g_warning("Failed to set non-blocking mode: %s", strerror(errno));
-    }
-
-    g_message("Connected to %s", address);
-    set_state(conn, BT_STATE_CONNECTED, NULL);
-
+    /* Writable once connected, or with SO_ERROR set if it failed */
+    conn->connect_watch_id = g_unix_fd_add(conn->socket_fd, G_IO_OUT | G_IO_ERR | G_IO_HUP,
+                                           on_connect_ready, conn);
+    conn->connect_timeout_id = g_timeout_add_seconds(CONNECT_TIMEOUT_SEC, on_connect_timeout, conn);
     return true;
 }
 
 void bt_connection_disconnect(BluetoothConnection *conn)
 {
+    stop_connecting(conn);
+
     if (conn->source) {
         g_source_destroy(conn->source);
         g_source_unref(conn->source);
