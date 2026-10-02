@@ -21,7 +21,8 @@ struct SleepPause {
     void *user_data;
 
     guint cool_off_id;
-    int rewind_seconds;
+    int rewind_seconds;        /* AirPods' estimate when sleep was detected */
+    gint64 detected_us;        /* When it was detected */
 };
 
 static void send_msg(SleepPause *sp, uint8_t msg_type, uint8_t value)
@@ -54,8 +55,12 @@ static gboolean cool_off_done_cb(gpointer user_data)
         return G_SOURCE_REMOVE;
     }
 
-    g_message("Sleep detection: pausing playback, rewinding %d s", sp->rewind_seconds);
-    sp->callbacks.pause_media(sp->rewind_seconds, sp->user_data);
+    /* Back to when the user fell asleep: the AirPods' estimate, plus the
+     * time playback kept going since */
+    gint64 elapsed_s = (g_get_monotonic_time() - sp->detected_us + G_USEC_PER_SEC / 2) / G_USEC_PER_SEC;
+    int rewind = sp->rewind_seconds + (int)elapsed_s;
+    g_message("Sleep detection: pausing playback, rewinding %d s", rewind);
+    sp->callbacks.pause_media(rewind, sp->user_data);
     return G_SOURCE_REMOVE;
 }
 
@@ -105,8 +110,10 @@ void sleep_pause_handle(SleepPause *sp, const AapSleepDetection *msg)
     if (msg->confidence < SLEEP_CONFIDENCE_THRESHOLD)
         return;
 
-    sp->rewind_seconds = msg->rewind_seconds;
+    /* The first report dates the sleep; later ones change nothing */
     if (sp->cool_off_id == 0) {
+        sp->rewind_seconds = msg->rewind_seconds;
+        sp->detected_us = g_get_monotonic_time();
         g_message("Sleep detection: pausing in %d min unless the computer is used",
                   SLEEP_COOL_OFF_MS / 60000);
         sp->cool_off_id = g_timeout_add(SLEEP_COOL_OFF_MS, cool_off_done_cb, sp);

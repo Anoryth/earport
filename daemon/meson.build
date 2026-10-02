@@ -162,7 +162,7 @@ test_sleep_pause = executable('test-sleep-pause',
     files('tests/test_sleep_pause.c', 'src/sleep_pause.c', 'src/aap_protocol.c',
           'src/airpods_settings.c', 'src/airpods_state.c'),
     include_directories: include_directories('src'),
-    c_args: ['-DSLEEP_COOL_OFF_MS=50'],
+    c_args: ['-DSLEEP_COOL_OFF_MS=1000'],
     dependencies: [glib_dep],
 )
 test('sleep-pause', test_sleep_pause)

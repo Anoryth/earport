@@ -11,7 +11,7 @@
 
 #include "sleep_pause.h"
 
-#define COOL_OFF_MS 50   /* Same value as passed by meson.build */
+#define COOL_OFF_MS 1000   /* Same value as passed by meson.build */
 
 typedef struct {
     SleepPause *sp;
@@ -109,23 +109,28 @@ static void test_threshold_sent(Fixture *f, gconstpointer data)
     g_assert_true(sent(f, AAP_SLEEP_MSG_THRESHOLD, 65));
 }
 
-/* Not at once: after the cool-off, rewound as asked */
+/* Not at once: after the cool-off, rewound to when the user fell asleep:
+ * the AirPods' estimate plus the cool-off */
 static void test_pause_after_cool_off(Fixture *f, gconstpointer data)
 {
     (void)data;
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 50);
     g_assert_cmpint(f->pauses, ==, 0);
 
-    run_for(COOL_OFF_MS * 3);
+    /* A later report doesn't move the starting point */
+    run_for(COOL_OFF_MS / 2);
+    status(f, AAP_SLEEP_STATUS_ASLEEP, 70, 5);
+
+    run_for(COOL_OFF_MS / 2 + 300);
     g_assert_cmpint(f->pauses, ==, 1);
-    g_assert_cmpint(f->rewind, ==, 50);
+    g_assert_cmpint(f->rewind, ==, 50 + COOL_OFF_MS / 1000);
 }
 
 static void test_low_confidence(Fixture *f, gconstpointer data)
 {
     (void)data;
     status(f, AAP_SLEEP_STATUS_ASLEEP, 64, 0);
-    run_for(COOL_OFF_MS * 3);
+    run_for(COOL_OFF_MS + 300);
     g_assert_cmpint(f->pauses, ==, 0);
 }
 
@@ -135,7 +140,7 @@ static void test_awake_again(Fixture *f, gconstpointer data)
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 0);
     run_for(COOL_OFF_MS / 2);
     status(f, 0x02, 64, 0);
-    run_for(COOL_OFF_MS * 3);
+    run_for(COOL_OFF_MS + 300);
     g_assert_cmpint(f->pauses, ==, 0);
 }
 
@@ -145,7 +150,7 @@ static void test_computer_used(Fixture *f, gconstpointer data)
     (void)data;
     f->idle_ms = 10;   /* Input during the cool-off */
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 0);
-    run_for(COOL_OFF_MS * 3);
+    run_for(COOL_OFF_MS + 300);
     g_assert_cmpint(f->pauses, ==, 0);
     g_assert_true(sent(f, AAP_SLEEP_MSG_RESET, AAP_SLEEP_RESET_USER_ACTIVE));
     g_assert_true(sent(f, AAP_SLEEP_MSG_THRESHOLD, 65));
@@ -157,7 +162,7 @@ static void test_idle_unknown(Fixture *f, gconstpointer data)
     (void)data;
     f->idle_ms = -1;
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 0);
-    run_for(COOL_OFF_MS * 3);
+    run_for(COOL_OFF_MS + 300);
     g_assert_cmpint(f->pauses, ==, 1);
 }
 
@@ -166,7 +171,7 @@ static void test_setting_off(Fixture *f, gconstpointer data)
     (void)data;
     f->enabled = false;
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 0);
-    run_for(COOL_OFF_MS * 3);
+    run_for(COOL_OFF_MS + 300);
     g_assert_cmpint(f->pauses, ==, 0);
 }
 
@@ -175,7 +180,7 @@ static void test_disconnected_meanwhile(Fixture *f, gconstpointer data)
     (void)data;
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 0);
     sleep_pause_session_ended(f->sp);
-    run_for(COOL_OFF_MS * 3);
+    run_for(COOL_OFF_MS + 300);
     g_assert_cmpint(f->pauses, ==, 0);
 }
 
