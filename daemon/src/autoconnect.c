@@ -418,6 +418,7 @@ void autoconnect_set_model(AutoConnect *ac, uint16_t model)
 {
     if (model == ac->model)
         return;
+    g_message("AirPods model: 0x%04x (%s)", model, airpods_model_to_string((AirPodsModel)model));
     ac->model = model;
     /* A case address may have been rejected for the previous model */
     ble_scanner_reset_filter(ac->ble_scanner);

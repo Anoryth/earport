@@ -11,7 +11,8 @@
 #include <stdbool.h>
 #include "airpods_settings.h"
 
-/* AirPods model identifiers (from BLE advertisement) */
+/* AirPods model identifiers, as the two bytes appear in BLE adverts: Apple's
+ * Bluetooth product ID, little-endian (product 0x2024 -> 0x2420) */
 typedef enum {
     AIRPODS_MODEL_UNKNOWN = 0,
     AIRPODS_MODEL_1 = 0x0220,
@@ -22,13 +23,12 @@ typedef enum {
     AIRPODS_MODEL_PRO = 0x0E20,
     AIRPODS_MODEL_PRO_2 = 0x1420,
     AIRPODS_MODEL_PRO_2_USBC = 0x2420,
-    AIRPODS_MODEL_PRO_3 = 0x2027,
+    AIRPODS_MODEL_PRO_3 = 0x2720,
     AIRPODS_MODEL_MAX = 0x0A20,
     AIRPODS_MODEL_MAX_USBC = 0x1F20,
     AIRPODS_MODEL_5_WIRELESS_CHARGING = 0x3020,
-    /* BLE IDs not known yet: placeholder values, detection uses the model number */
-    AIRPODS_MODEL_5 = 0xFF01,
-    AIRPODS_MODEL_MAX_2 = 0xFF02,
+    AIRPODS_MODEL_5 = 0x3620,
+    AIRPODS_MODEL_MAX_2 = 0x2D20,
 } AirPodsModel;
 
 /* Noise control modes */
