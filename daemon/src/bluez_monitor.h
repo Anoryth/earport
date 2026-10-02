@@ -84,6 +84,10 @@ void bluez_monitor_check_existing_devices(BluezMonitor *monitor);
  */
 void bluez_device_info_free(BluezDeviceInfo *info);
 
+/* BlueZ object path of a device: "/org/bluez/hci0" + "AA:BB:..." ->
+ * "/org/bluez/hci0/dev_AA_BB_..." (free with g_free) */
+char *bluez_device_path(const char *adapter_path, const char *address);
+
 /**
  * Copy device info structure
  */

@@ -472,3 +472,12 @@ void bluez_monitor_check_existing_devices(BluezMonitor *monitor)
     g_variant_unref(objects);
     g_variant_unref(result);
 }
+
+char *bluez_device_path(const char *adapter_path, const char *address)
+{
+    char *device = g_strdup(address);
+    g_strdelimit(device, ":", '_');
+    char *path = g_strdup_printf("%s/dev_%s", adapter_path, device);
+    g_free(device);
+    return path;
+}

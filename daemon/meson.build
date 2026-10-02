@@ -101,7 +101,8 @@ test_aes128 = executable('test-aes128',
 test('aes128', test_aes128)
 
 test_ble_proximity = executable('test-ble-proximity',
-    files('tests/test_ble_proximity.c', 'src/ble_proximity.c', 'src/aes128.c'),
+    files('tests/test_ble_proximity.c', 'src/ble_proximity.c', 'src/aes128.c',
+          'src/airpods_state.c', 'src/airpods_settings.c'),
     include_directories: include_directories('src'),
     dependencies: [glib_dep],
 )

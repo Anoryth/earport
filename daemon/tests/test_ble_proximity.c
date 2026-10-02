@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "aes128.h"
+#include "airpods_state.h"
 #include "ble_proximity.h"
 
 /* Advert captured from AirPods Pro 2 USB-C in both ears, playing music on an
@@ -117,6 +118,36 @@ static void test_worth_waiting(void)
     g_assert_false(autoconnect_worth_waiting(&not_worn));
 }
 
+/* The advert carries Apple's product ID little-endian: the model enum must
+ * use the bytes as they come (0x2027 is sent 27 20) */
+static void test_model_ids(void)
+{
+    static const struct {
+        uint8_t bytes[2];
+        AirPodsModel model;
+    } cases[] = {
+        { { 0x24, 0x20 }, AIRPODS_MODEL_PRO_2_USBC },  /* Captured */
+        { { 0x27, 0x20 }, AIRPODS_MODEL_PRO_3 },
+        { { 0x36, 0x20 }, AIRPODS_MODEL_5 },
+        { { 0x30, 0x20 }, AIRPODS_MODEL_5_WIRELESS_CHARGING },
+        { { 0x2D, 0x20 }, AIRPODS_MODEL_MAX_2 },
+    };
+    uint8_t advert[sizeof(advert_music)];
+    ProximityInfo info;
+
+    for (size_t i = 0; i < G_N_ELEMENTS(cases); i++) {
+        memcpy(advert, advert_music, sizeof(advert));
+        advert[3] = cases[i].bytes[0];
+        advert[4] = cases[i].bytes[1];
+        g_assert_true(proximity_parse(advert, sizeof(advert), &info));
+        g_assert_cmpuint(info.model, ==, cases[i].model);
+    }
+
+    g_assert_true(airpods_model_has_ble_case(AIRPODS_MODEL_PRO_3));
+    g_assert_true(airpods_model_is_headphones(AIRPODS_MODEL_MAX_2));
+    g_assert_false(airpods_model_has_ble_case(AIRPODS_MODEL_MAX_2));
+}
+
 /* An advert encrypted here with a made-up key (the real ENC key is a
  * secret): right pod primary, so the pods arrive swapped */
 static void test_decrypt_battery(void)
@@ -181,6 +212,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/proximity/address-resolution", test_address_resolution);
     g_test_add_func("/proximity/autoconnect-rules", test_autoconnect_rules);
     g_test_add_func("/proximity/worth-waiting", test_worth_waiting);
+    g_test_add_func("/proximity/model-ids", test_model_ids);
     g_test_add_func("/proximity/decrypt-battery", test_decrypt_battery);
     g_test_add_func("/proximity/decrypt-case", test_decrypt_case);
 

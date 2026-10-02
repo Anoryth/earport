@@ -8,6 +8,7 @@
 #include "airpods_state.h"
 #include "ble_proximity.h"
 #include "ble_scanner.h"
+#include "bluez_monitor.h"
 #include "config.h"
 
 #include <gio/gio.h>
@@ -93,9 +94,7 @@ static void try_connect(AutoConnect *ac, const char *reason)
     if (bus == NULL)
         return;
 
-    char *device = g_strdup(ac->irk_address);
-    g_strdelimit(device, ":", '_');
-    char *path = g_strdup_printf("%s/dev_%s", ac->adapter_path, device);
+    char *path = bluez_device_path(ac->adapter_path, ac->irk_address);
 
     g_message("Connecting to the AirPods automatically (%s)", reason);
     g_dbus_connection_call(bus, "org.bluez", path, "org.bluez.Device1", "Connect",
@@ -103,7 +102,6 @@ static void try_connect(AutoConnect *ac, const char *reason)
                            on_device_connect_done, NULL);
 
     g_free(path);
-    g_free(device);
     g_object_unref(bus);
 }
 

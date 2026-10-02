@@ -72,8 +72,30 @@ static const char *nearby_host(uint8_t connection_state)
     }
 }
 
+/* Bluetooth name of the AirPods, when they have no custom one */
+static void on_alias_ready(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    (void)user_data;
+    GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
+    if (result == NULL)
+        return;
+
+    GVariant *value;
+    g_variant_get(result, "(v)", &value);
+    /* Still nearby, and still not renamed */
+    if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING) &&
+        g_variant_get_string(value, NULL)[0] != '\0' && app.state.nearby_valid) {
+        g_free(app.state.nearby_name);
+        app.state.nearby_name = g_variant_dup_string(value, NULL);
+        dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
+    }
+    g_variant_unref(value);
+    g_variant_unref(result);
+}
+
 /* Name to show for the AirPods while they are not connected here: the
- * one given in the preferences, else their Bluetooth name */
+ * one given in the preferences, else their Bluetooth name (asked to BlueZ,
+ * the model name meanwhile) */
 static char *nearby_name(const char *address, uint16_t model)
 {
     DeviceProfile profile;
@@ -82,34 +104,18 @@ static char *nearby_name(const char *address, uint16_t model)
     if (config_load_device_profile(address, &profile) && profile.display_name[0] != '\0')
         return g_strdup(profile.display_name);
 
-    char *name = NULL;
     GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
     if (bus != NULL) {
-        char *device = g_strdup(address);
-        g_strdelimit(device, ":", '_');
-        char *path = g_strdup_printf("%s/dev_%s",
-                                     app.adapter_path ? app.adapter_path : "/org/bluez/hci0", device);
-        GVariant *result = g_dbus_connection_call_sync(
-            bus, "org.bluez", path, "org.freedesktop.DBus.Properties", "Get",
-            g_variant_new("(ss)", "org.bluez.Device1", "Alias"), G_VARIANT_TYPE("(v)"),
-            G_DBUS_CALL_FLAGS_NONE, 1000, NULL, NULL);
-        if (result != NULL) {
-            GVariant *value;
-            g_variant_get(result, "(v)", &value);
-            if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING))
-                name = g_variant_dup_string(value, NULL);
-            g_variant_unref(value);
-            g_variant_unref(result);
-        }
+        char *path = bluez_device_path(app.adapter_path ? app.adapter_path : "/org/bluez/hci0",
+                                       address);
+        g_dbus_connection_call(bus, "org.bluez", path, "org.freedesktop.DBus.Properties", "Get",
+                               g_variant_new("(ss)", "org.bluez.Device1", "Alias"),
+                               G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE, 1000, NULL,
+                               on_alias_ready, NULL);
         g_free(path);
-        g_free(device);
         g_object_unref(bus);
     }
-    if (name == NULL || name[0] == '\0') {
-        g_free(name);
-        name = g_strdup(model != 0 ? airpods_model_to_string((AirPodsModel)model) : "AirPods");
-    }
-    return name;
+    return g_strdup(model != 0 ? airpods_model_to_string((AirPodsModel)model) : "AirPods");
 }
 
 static void on_nearby_battery(const ProximityBattery *battery, const ProximityInfo *info,
@@ -151,10 +157,25 @@ static void on_nearby_battery(const ProximityBattery *battery, const ProximityIn
     dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
 }
 
+/* Whether the AirPods connected here are the ones watched over BLE (the
+ * last that gave their keys) */
+static bool connected_are_watched(void)
+{
+    const char *watched = autoconnect_get_address(app.autoconnect);
+    return watched != NULL && app.state.device_address != NULL &&
+           g_ascii_strcasecmp(watched, app.state.device_address) == 0;
+}
+
 static void on_case_battery(int level, bool charging, void *user_data)
 {
     (void)user_data;
     AirPodsState *s = &app.state;
+
+    /* Other AirPods connected, until they give their keys */
+    if (s->connected && !connected_are_watched()) {
+        level = -1;
+        charging = false;
+    }
 
     if (s->case_advert_level == level && s->case_advert_charging == charging)
         return;
@@ -206,7 +227,7 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 
     if (pkt->type == AAP_PKT_TYPE_BATTERY)
         publish_battery();
-    else if (pkt->type == AAP_PKT_TYPE_METADATA)
+    else if (pkt->type == AAP_PKT_TYPE_METADATA && app.state.model != AIRPODS_MODEL_UNKNOWN)
         autoconnect_set_model(app.autoconnect, app.state.model);
 }
 
@@ -222,6 +243,9 @@ static void on_link_connected(const char *address, const char *name, void *user_
     (void)user_data;
     device_session_started(&app.device, address, name);
     controls_send_saved_settings(&app.controls, address);
+    /* Not the case of these AirPods */
+    if (!connected_are_watched())
+        on_case_battery(-1, false, NULL);
 }
 
 /* ============================================================================

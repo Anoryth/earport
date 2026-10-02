@@ -161,10 +161,11 @@ static void on_properties_changed(GDBusConnection *bus,
         report_manufacturer_data(scanner, address, data);
         g_variant_unref(data);
         g_free(address);
-    } else if (cached_match(scanner, address) > 0 &&
-               g_variant_lookup(changed, "RSSI", "n", NULL)) {
+    } else if (g_variant_lookup(changed, "RSSI", "n", NULL)) {
         /* Same advert again (only the RSSI changed): its data is still
-         * current, fetch it so that each advert gives a fresh state */
+         * current, fetch it so that each advert gives a fresh state, or so
+         * that an address not decided yet (first seen while not scanning,
+         * or forgotten by a filter reset) gets decided */
         DataRequest *request = g_new0(DataRequest, 1);
         request->scanner = scanner;
         request->cancellable = g_object_ref(scanner->cancellable);
