@@ -147,6 +147,15 @@ export default class EarPortPreferences extends ExtensionPreferences {
             GObject.BindingFlags.SYNC_CREATE);
         featuresGroup.add(this._conversationVolumeRow);
 
+        /* Banners and their sounds wait until the conversation ends */
+        this._holdNotificationsRow = new Adw.SwitchRow({
+            title: _('Hold Notifications During Conversations'),
+            subtitle: _('Show them once you stop speaking'),
+        });
+        this._caRow.bind_property('active', this._holdNotificationsRow, 'sensitive',
+            GObject.BindingFlags.SYNC_CREATE);
+        featuresGroup.add(this._holdNotificationsRow);
+
         /* Adaptive Noise Level */
         this._adaptiveRow = new Adw.SpinRow({
             title: _('Adaptive Noise Level'),
@@ -307,6 +316,8 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._batteryNotifRow.active = this._settings.get_boolean('enable-low-battery-notifications');
         this._batteryThresholdRow.value = this._settings.get_int('low-battery-threshold');
         this._conversationVolumeRow.value = this._settings.get_int('conversation-volume');
+        this._settings.bind('hold-notifications-during-conversations',
+            this._holdNotificationsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         const shortcuts = this._settings.get_strv('cycle-noise-mode-shortcut');
         this._shortcutLabel.accelerator = shortcuts.length > 0 ? shortcuts[0] : '';

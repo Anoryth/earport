@@ -22,6 +22,11 @@
       <summary>Volume during conversations</summary>
       <description>Share of the current volume, in percent, kept while conversation awareness detects that you speak</description>
     </key>
+    <key name="hold-notifications-during-conversations" type="b">
+      <default>true</default>
+      <summary>Hold notifications during conversations</summary>
+      <description>Delay notification banners and sounds while conversation awareness detects that you speak</description>
+    </key>
     <key name="cycle-noise-mode-shortcut" type="as">
       <default><![CDATA[['<Super><Shift>n']]]></default>
       <summary>Cycle noise control mode</summary>

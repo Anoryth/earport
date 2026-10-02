@@ -259,6 +259,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             this._conversationVolume.lower(this._proxy?.DeviceAddress);
         else
             this._conversationVolume.restore();
+        this._notifications.holdForConversation(speaking);
     }
 
     _onBatteryChanged(proxy, sender, [left, right, caseBattery]) {

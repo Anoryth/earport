@@ -18,6 +18,7 @@ export class Notifications {
     constructor(settings) {
         this._settings = settings;
         this._source = null;
+        this._holdingBanners = false;
         /* Low battery notified, armed again above the threshold */
         this._lowBatteryNotified = {left: false, right: false};
     }
@@ -76,7 +77,20 @@ export class Notifications {
                 : _('Paste it in a terminal to install the EarPort service.'));
     }
 
+    /* While the user speaks, banners (and their sounds) wait in the queue
+     * and show up afterwards, like when a panel menu is open */
+    holdForConversation(speaking) {
+        if (speaking && !this._settings.get_boolean('hold-notifications-during-conversations'))
+            return;
+        if (speaking === this._holdingBanners)
+            return;
+
+        this._holdingBanners = speaking;
+        Main.messageTray.bannerBlocked = speaking;
+    }
+
     destroy() {
+        this.holdForConversation(false);
         this._source?.destroy();
         this._source = null;
     }
