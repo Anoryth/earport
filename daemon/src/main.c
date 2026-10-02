@@ -16,6 +16,7 @@
 #include "aap_link.h"
 #include "aap_protocol.h"
 #include "autoconnect.h"
+#include "battery_provider.h"
 #include "bluez_monitor.h"
 #include "config.h"
 #include "controls.h"
@@ -36,6 +37,8 @@ typedef struct {
     Device device;
     Controls controls;
     AutoConnect *autoconnect;
+    BatteryProvider *battery_provider;
+    char *adapter_path;          /* Adapter the AirPods are connected through */
 } AppContext;
 
 static AppContext app = {0};
@@ -60,6 +63,23 @@ static void on_playback_started(void *user_data)
  * AirPods link
  * ========================================================================== */
 
+/* ============================================================================
+ * Battery in GNOME (through BlueZ)
+ * ========================================================================== */
+
+/* The lowest pod, as the panel shows; the only battery for headphones */
+static void publish_battery(void)
+{
+    int left = app.state.battery.left.level;
+    int right = app.state.battery.right.level;
+    int level = left;
+
+    if (!airpods_model_is_headphones(app.state.model) && (left < 0 || (right >= 0 && right < left)))
+        level = right;
+    battery_provider_update(app.battery_provider, app.adapter_path,
+                            app.state.device_address, app.state.connected ? level : -1);
+}
+
 static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 {
     (void)user_data;
@@ -68,11 +88,15 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         on_proximity_keys(&pkt->data.proximity_keys);
     else
         device_handle_packet(&app.device, pkt);
+
+    if (pkt->type == AAP_PKT_TYPE_BATTERY)
+        publish_battery();
 }
 
 static void on_link_disconnected(void *user_data)
 {
     (void)user_data;
+    battery_provider_update(app.battery_provider, NULL, NULL, -1);
     device_session_ended(&app.device);
 }
 
@@ -94,7 +118,8 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
     /* The adapter the AirPods use is the one to scan on */
     char *adapter_path = device->object_path ? g_path_get_dirname(device->object_path) : NULL;
     autoconnect_set_airpods_connected(app.autoconnect, true, adapter_path);
-    g_free(adapter_path);
+    g_free(app.adapter_path);
+    app.adapter_path = adapter_path;
 
     aap_link_device_connected(app.link, device->address, device->name);
 }
@@ -171,6 +196,9 @@ static void cleanup(void)
 {
     g_message("Cleaning up...");
 
+    battery_provider_free(app.battery_provider);
+    app.battery_provider = NULL;
+    g_free(app.adapter_path);
     autoconnect_free(app.autoconnect);
     app.autoconnect = NULL;
 
@@ -264,6 +292,7 @@ int main(int argc, char *argv[])
 
     device_init(&app.device, &app.state, app.dbus_service, app.media_control);
     app.autoconnect = autoconnect_new(app.config.auto_connect);
+    app.battery_provider = battery_provider_new();
 
     static const AapLinkCallbacks link_callbacks = {
         .connected = on_link_connected,

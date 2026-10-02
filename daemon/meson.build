@@ -32,6 +32,14 @@ else
     bluetooth_dep = declare_dependency()
 endif
 
+# BlueZ battery provider interface (GNOME shows the battery natively)
+gnome = import('gnome')
+battery_provider_gen = gnome.gdbus_codegen('bluez-battery-provider',
+    sources: 'data/org.bluez.BatteryProvider1.xml',
+    interface_prefix: 'org.bluez.',
+    namespace: 'Bluez',
+)
+
 # Source files
 sources = files(
     'src/main.c',
@@ -42,6 +50,7 @@ sources = files(
     'src/aes128.c',
     'src/autoconnect.c',
     'src/battery_estimator.c',
+    'src/battery_provider.c',
     'src/ble_proximity.c',
     'src/ble_scanner.c',
     'src/bluetooth.c',
@@ -56,7 +65,7 @@ sources = files(
 
 # Build executable
 executable('earport-daemon',
-    sources,
+    sources, battery_provider_gen,
     dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep, m_dep],
     install: true,
     install_dir: get_option('bindir'),
