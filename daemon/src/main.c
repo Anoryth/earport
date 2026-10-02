@@ -263,10 +263,24 @@ static int64_t sleep_idle_ms(void *user_data)
     return (int64_t)idle;
 }
 
+static bool sleep_pause_announced;
+
 static void sleep_pause_media(int rewind_seconds, void *user_data)
 {
     (void)user_data;
+    sleep_pause_announced = false;
     media_control_pause_for_sleep(app.media_control, rewind_seconds);
+}
+
+/* Several players may be paused: one notification is enough */
+static void on_paused_for_sleep(const char *player, void *user_data)
+{
+    (void)player;
+    (void)user_data;
+    if (!sleep_pause_announced) {
+        sleep_pause_announced = true;
+        dbus_service_emit_paused_for_sleep(app.dbus_service);
+    }
 }
 
 static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
@@ -496,6 +510,7 @@ int main(int argc, char *argv[])
         media_control_set_ear_pause_mode(app.media_control, (EarPauseMode)app.config.ear_pause_mode);
         g_message("Media control enabled (ear_pause_mode=%d)", app.config.ear_pause_mode);
         media_control_set_playback_started_callback(app.media_control, on_playback_started, NULL);
+        media_control_set_paused_for_sleep_callback(app.media_control, on_paused_for_sleep, NULL);
     }
 
     device_init(&app.device, &app.state, app.dbus_service, app.media_control);

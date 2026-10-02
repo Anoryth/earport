@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-02 21:10+0200\n"
+"POT-Creation-Date: 2026-10-02 21:39+0200\n"
 "PO-Revision-Date: 2026-07-07 12:00+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: French\n"
@@ -28,8 +28,8 @@ msgstr "indisponible"
 msgid "charging"
 msgstr "en charge"
 
-#: extension/earportToggle.js:40 extension/earportToggle.js:364
-#: extension/earportToggle.js:381 extension/prefs.js:513
+#: extension/earportToggle.js:40 extension/earportToggle.js:367
+#: extension/earportToggle.js:384 extension/prefs.js:513
 msgid "Disconnected"
 msgstr "Déconnecté"
 
@@ -99,25 +99,25 @@ msgstr "Copier la commande d'installation"
 msgid "Update the EarPort Service"
 msgstr "Mettre à jour le service EarPort"
 
-#: extension/earportToggle.js:364
+#: extension/earportToggle.js:367
 msgid "Service not running"
 msgstr "Service arrêté"
 
-#: extension/earportToggle.js:405
+#: extension/earportToggle.js:408
 msgid "Other device"
 msgstr "Autre appareil"
 
-#: extension/earportToggle.js:432
+#: extension/earportToggle.js:435
 msgid "Less than 5 min of listening left"
 msgstr "Moins de 5 min d’écoute restante"
 
-#: extension/earportToggle.js:434
+#: extension/earportToggle.js:437
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Environ %d min d’écoute restante"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:439
+#: extension/earportToggle.js:442
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Environ %d∶%02d d’écoute restante"
@@ -142,14 +142,22 @@ msgid "%s Low Battery"
 msgstr "%s : batterie faible"
 
 #: extension/notifications.js:74
+msgid "Playback Paused"
+msgstr "Lecture mise en pause"
+
+#: extension/notifications.js:75
+msgid "You seemed to have fallen asleep, so playback was paused."
+msgstr "Vous sembliez dormir : la lecture a été mise en pause."
+
+#: extension/notifications.js:80
 msgid "Command Copied"
 msgstr "Commande copiée"
 
-#: extension/notifications.js:76
+#: extension/notifications.js:82
 msgid "Paste it in a terminal to update the EarPort service."
 msgstr "Collez-la dans un terminal pour mettre à jour le service EarPort."
 
-#: extension/notifications.js:77
+#: extension/notifications.js:83
 msgid "Paste it in a terminal to install the EarPort service."
 msgstr "Collez-la dans un terminal pour installer le service EarPort."
 
@@ -433,72 +441,74 @@ msgstr "Volume personnalisé"
 msgid "Adjust media volume based on your environment"
 msgstr "Ajuste le volume des médias selon votre environnement"
 
-#: extension/prefs.js:564
+#: extension/prefs.js:561
+msgid "Pause Media When Falling Asleep"
+msgstr "Mettre en pause le contenu multimédia quand je m’endors"
+
+#: extension/prefs.js:562
+msgid "Pause playback when you fall asleep"
+msgstr "Met la lecture en pause quand vous vous endormez"
+
+#: extension/prefs.js:566
 msgid "Stem Controls"
 msgstr "Commandes de la tige"
 
-#: extension/prefs.js:566
+#: extension/prefs.js:568
 msgid "Press Speed"
 msgstr "Vitesse de l’appui"
 
-#: extension/prefs.js:567
+#: extension/prefs.js:569
 msgid "Speed required to press two or three times"
 msgstr "Vitesse nécessaire pour appuyer deux ou trois fois"
 
-#: extension/prefs.js:568 extension/prefs.js:571 extension/prefs.js:576
+#: extension/prefs.js:570 extension/prefs.js:573 extension/prefs.js:578
 msgid "Default"
 msgstr "Par défaut"
 
-#: extension/prefs.js:568
+#: extension/prefs.js:570
 msgid "Slower"
 msgstr "Lent"
 
-#: extension/prefs.js:568
+#: extension/prefs.js:570
 msgid "Slowest"
 msgstr "Très lent"
 
-#: extension/prefs.js:569
+#: extension/prefs.js:571
 msgid "Press and Hold Duration"
 msgstr "Durée du maintien"
 
-#: extension/prefs.js:570
+#: extension/prefs.js:572
 msgid "Time required to press and hold"
 msgstr "Temps nécessaire pour un appui maintenu"
 
-#: extension/prefs.js:571
+#: extension/prefs.js:573
 msgid "Shorter"
 msgstr "Plus courte"
 
-#: extension/prefs.js:571
+#: extension/prefs.js:573
 msgid "Shortest"
 msgstr "Très courte"
 
-#: extension/prefs.js:572
+#: extension/prefs.js:574
 msgid "Volume Swipe"
 msgstr "Balayage du volume"
 
-#: extension/prefs.js:573
+#: extension/prefs.js:575
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Balayez la tige vers le haut ou le bas pour régler le volume"
 
-#: extension/prefs.js:574
+#: extension/prefs.js:576
 msgid "Volume Swipe Duration"
 msgstr "Durée de balayage du volume"
 
-#: extension/prefs.js:575
+#: extension/prefs.js:577
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr "Délai entre deux balayages pour éviter les changements involontaires"
 
-#: extension/prefs.js:576
+#: extension/prefs.js:578
 msgid "Longer"
 msgstr "Plus longue"
 
-#: extension/prefs.js:576
+#: extension/prefs.js:578
 msgid "Longest"
 msgstr "La plus longue"
-
-#~ msgid "Pause Media When Falling Asleep"
-#~ msgstr "Mettre en pause le contenu multimédia quand je m’endors"
-
-#~ msgid "Pause playback when you fall asleep"
-#~ msgstr "Met la lecture en pause quand vous vous endormez"

@@ -69,6 +69,12 @@ export class Notifications {
         }
     }
 
+    /* Waking up to silence: say why */
+    pausedForSleep() {
+        this._show(_('Playback Paused'),
+            _('You seemed to have fallen asleep, so playback was paused.'));
+    }
+
     /* The installation command was copied to the clipboard */
     commandCopied(update) {
         this._show(_('Command Copied'),

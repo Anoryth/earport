@@ -35,6 +35,8 @@ struct MediaControl {
     /* Any MPRIS player starting to play */
     guint playback_subscription_id;
     MediaPlaybackStartedCallback playback_started_callback;
+    MediaPausedForSleepCallback paused_for_sleep_callback;
+    void *paused_for_sleep_user_data;
     void *playback_started_user_data;
 };
 
@@ -117,10 +119,19 @@ static void player_play(MediaControl *mc, const char *player)
 
 static void on_seek_done(GObject *source, GAsyncResult *res, gpointer user_data)
 {
-    (void)user_data;
-    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
-    if (reply != NULL)
+    char *player = user_data;
+    GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+
+    if (reply != NULL) {
+        g_message("Rewound media player: %s", player);
         g_variant_unref(reply);
+    } else {
+        if (!call_cancelled(error))
+            g_message("Could not rewind %s: %s", player, error->message);
+        g_error_free(error);
+    }
+    g_free(player);
 }
 
 static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data)
@@ -148,8 +159,10 @@ static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data
                                    MPRIS_PLAYER_INTERFACE, "Seek",
                                    g_variant_new("(x)", -(gint64)op->rewind_seconds * G_USEC_PER_SEC),
                                    NULL, G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS,
-                                   mc->cancellable, on_seek_done, NULL);
+                                   mc->cancellable, on_seek_done, g_strdup(op->player));
         }
+        if (mc->paused_for_sleep_callback != NULL)
+            mc->paused_for_sleep_callback(op->player, mc->paused_for_sleep_user_data);
         pause_op_free(op);
         return;
     }
@@ -416,6 +429,16 @@ void media_control_pause_all(MediaControl *mc)
 
     /* Then pause the players playing, and remember them */
     pause_playing(mc, false, 0);
+}
+
+void media_control_set_paused_for_sleep_callback(MediaControl *mc,
+                                                 MediaPausedForSleepCallback callback,
+                                                 void *user_data)
+{
+    if (mc == NULL)
+        return;
+    mc->paused_for_sleep_callback = callback;
+    mc->paused_for_sleep_user_data = user_data;
 }
 
 void media_control_pause_for_sleep(MediaControl *mc, int rewind_seconds)

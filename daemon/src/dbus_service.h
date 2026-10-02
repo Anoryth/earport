@@ -169,6 +169,9 @@ void dbus_service_emit_ear_detection_changed(DbusService *service,
  */
 void dbus_service_emit_speaking_changed(DbusService *service, bool speaking);
 
+/* Playback was paused because the user fell asleep (once per pause) */
+void dbus_service_emit_paused_for_sleep(DbusService *service);
+
 /**
  * Notify that a property has changed (emits PropertiesChanged)
  */

@@ -235,6 +235,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._signalIds.push(
             this._proxy.connectSignal('SpeakingChanged', this._onSpeakingChanged.bind(this))
         );
+        this._signalIds.push(
+            this._proxy.connectSignal('PausedForSleep', () => this._notifications.pausedForSleep())
+        );
 
         /* Initial state update */
         this._updateState();

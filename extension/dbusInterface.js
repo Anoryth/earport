@@ -93,6 +93,7 @@ export const AirPodsInterface = `
     <signal name="SpeakingChanged">
       <arg type="b" name="speaking"/>
     </signal>
+    <signal name="PausedForSleep"/>
   </interface>
 </node>
 `;

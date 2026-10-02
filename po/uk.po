@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-02 21:10+0200\n"
+"POT-Creation-Date: 2026-10-02 21:39+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -27,8 +27,8 @@ msgstr "недоступно"
 msgid "charging"
 msgstr "заряджається"
 
-#: extension/earportToggle.js:40 extension/earportToggle.js:364
-#: extension/earportToggle.js:381 extension/prefs.js:513
+#: extension/earportToggle.js:40 extension/earportToggle.js:367
+#: extension/earportToggle.js:384 extension/prefs.js:513
 msgid "Disconnected"
 msgstr "Відключено"
 
@@ -98,25 +98,25 @@ msgstr "Скопіювати команду встановлення"
 msgid "Update the EarPort Service"
 msgstr "Оновити службу EarPort"
 
-#: extension/earportToggle.js:364
+#: extension/earportToggle.js:367
 msgid "Service not running"
 msgstr "Службу не запущено"
 
-#: extension/earportToggle.js:405
+#: extension/earportToggle.js:408
 msgid "Other device"
 msgstr "Інший пристрій"
 
-#: extension/earportToggle.js:432
+#: extension/earportToggle.js:435
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/earportToggle.js:434
+#: extension/earportToggle.js:437
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:439
+#: extension/earportToggle.js:442
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"
@@ -141,14 +141,22 @@ msgid "%s Low Battery"
 msgstr "%s: низький заряд"
 
 #: extension/notifications.js:74
+msgid "Playback Paused"
+msgstr "Відтворення призупинено"
+
+#: extension/notifications.js:75
+msgid "You seemed to have fallen asleep, so playback was paused."
+msgstr "Схоже, ви заснули: відтворення призупинено."
+
+#: extension/notifications.js:80
 msgid "Command Copied"
 msgstr "Команду скопійовано"
 
-#: extension/notifications.js:76
+#: extension/notifications.js:82
 msgid "Paste it in a terminal to update the EarPort service."
 msgstr "Вставте її в термінал, щоб оновити службу EarPort."
 
-#: extension/notifications.js:77
+#: extension/notifications.js:83
 msgid "Paste it in a terminal to install the EarPort service."
 msgstr "Вставте її в термінал, щоб установити службу EarPort."
 
@@ -433,72 +441,74 @@ msgstr "Персоналізована гучність"
 msgid "Adjust media volume based on your environment"
 msgstr "Налаштовує гучність медіа відповідно до оточення"
 
-#: extension/prefs.js:564
+#: extension/prefs.js:561
+msgid "Pause Media When Falling Asleep"
+msgstr "Призупиняти відтворення медіавмісту, коли я засинаю"
+
+#: extension/prefs.js:562
+msgid "Pause playback when you fall asleep"
+msgstr "Призупиняє відтворення, коли ви засинаєте"
+
+#: extension/prefs.js:566
 msgid "Stem Controls"
 msgstr "Керування на ніжці"
 
-#: extension/prefs.js:566
+#: extension/prefs.js:568
 msgid "Press Speed"
 msgstr "Темп натискання"
 
-#: extension/prefs.js:567
+#: extension/prefs.js:569
 msgid "Speed required to press two or three times"
 msgstr "Швидкість, потрібна для подвійного чи потрійного натискання"
 
-#: extension/prefs.js:568 extension/prefs.js:571 extension/prefs.js:576
+#: extension/prefs.js:570 extension/prefs.js:573 extension/prefs.js:578
 msgid "Default"
 msgstr "Стандартно"
 
-#: extension/prefs.js:568
+#: extension/prefs.js:570
 msgid "Slower"
 msgstr "Повільніше"
 
-#: extension/prefs.js:568
+#: extension/prefs.js:570
 msgid "Slowest"
 msgstr "Найповільніше"
 
-#: extension/prefs.js:569
+#: extension/prefs.js:571
 msgid "Press and Hold Duration"
 msgstr "Час натискання і тримання"
 
-#: extension/prefs.js:570
+#: extension/prefs.js:572
 msgid "Time required to press and hold"
 msgstr "Час, потрібний для натискання й утримання"
 
-#: extension/prefs.js:571
+#: extension/prefs.js:573
 msgid "Shorter"
 msgstr "Коротше"
 
-#: extension/prefs.js:571
+#: extension/prefs.js:573
 msgid "Shortest"
 msgstr "Найкоротше"
 
-#: extension/prefs.js:572
+#: extension/prefs.js:574
 msgid "Volume Swipe"
 msgstr "Змінення гучності"
 
-#: extension/prefs.js:573
+#: extension/prefs.js:575
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Проведіть по ніжці вгору чи вниз, щоб змінити гучність"
 
-#: extension/prefs.js:574
+#: extension/prefs.js:576
 msgid "Volume Swipe Duration"
 msgstr "Інтервал проведення для гучності"
 
-#: extension/prefs.js:575
+#: extension/prefs.js:577
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr "Затримка між проведеннями, щоб уникнути випадкових змін"
 
-#: extension/prefs.js:576
+#: extension/prefs.js:578
 msgid "Longer"
 msgstr "Довше"
 
-#: extension/prefs.js:576
+#: extension/prefs.js:578
 msgid "Longest"
 msgstr "Найдовше"
-
-#~ msgid "Pause Media When Falling Asleep"
-#~ msgstr "Призупиняти відтворення медіавмісту, коли я засинаю"
-
-#~ msgid "Pause playback when you fall asleep"
-#~ msgstr "Призупиняє відтворення, коли ви засинаєте"
