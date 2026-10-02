@@ -23,6 +23,8 @@
 #define PLAYBACK_WINDOW_SEC 8
 #define AUTOCONNECT_COOLDOWN_SEC 30
 #define DEFAULT_ADAPTER_PATH "/org/bluez/hci0"
+/* Not seen for this long: away, or the keys changed */
+#define NEARBY_TIMEOUT_SEC (2 * SCAN_INTERVAL_SEC + 15)
 
 struct AutoConnect {
     bool enabled;
@@ -33,6 +35,12 @@ struct AutoConnect {
     char *irk_address;           /* AirPods the IRK belongs to */
     uint8_t irk[AAP_PROXIMITY_KEY_SIZE];
     bool has_irk;
+    uint8_t enc[AAP_PROXIMITY_KEY_SIZE];   /* Decrypts the battery */
+    bool has_enc;
+
+    AutoConnectNearbyCallback nearby_callback;
+    void *nearby_user_data;
+    gint64 nearby_seen_us;       /* Last advert while not connected here */
 
     guint scan_timer_id;         /* Periodic short scans */
     guint burst_timer_id;        /* End of the current short scan */
@@ -126,9 +134,17 @@ static void on_ble_advert(const char *address, const uint8_t *data, size_t len, 
     if (!proximity_parse(data, len, &info) || ac->airpods_connected)
         return;
 
+    /* Battery of AirPods used by another device (or idle in their case) */
+    ProximityBattery battery;
+    if (ac->has_enc && proximity_decrypt_battery(ac->enc, data, len, &info, &battery)) {
+        ac->nearby_seen_us = g_get_monotonic_time();
+        if (ac->nearby_callback != NULL)
+            ac->nearby_callback(&battery, info.connection_state, ac->nearby_user_data);
+    }
+
     /* React to the pods being put in, not to them being in: after a manual
      * disconnection, AirPods still in the ears must stay disconnected */
-    if (ac->prev_in_ear_known && !ac->prev_in_ear && info.in_ear &&
+    if (ac->enabled && ac->prev_in_ear_known && !ac->prev_in_ear && info.in_ear &&
         autoconnect_allowed(&info, AUTOCONNECT_TRIGGER_EARS))
         try_connect(ac, "AirPods put in");
     ac->prev_in_ear = info.in_ear;
@@ -179,9 +195,22 @@ static gboolean burst_end_cb(gpointer user_data)
 }
 
 /* Periodic short scan, to notice the pods being put in */
+static void nearby_gone(AutoConnect *ac)
+{
+    if (ac->nearby_seen_us == 0)
+        return;
+    ac->nearby_seen_us = 0;
+    if (ac->nearby_callback != NULL)
+        ac->nearby_callback(NULL, 0, ac->nearby_user_data);
+}
+
 static gboolean scan_cycle_cb(gpointer user_data)
 {
     AutoConnect *ac = user_data;
+
+    if (ac->nearby_seen_us > 0 &&
+        g_get_monotonic_time() - ac->nearby_seen_us > NEARBY_TIMEOUT_SEC * G_USEC_PER_SEC)
+        nearby_gone(ac);
 
     ble_scanner_start(ac->ble_scanner);
     if (ac->burst_timer_id > 0)
@@ -190,17 +219,18 @@ static gboolean scan_cycle_cb(gpointer user_data)
     return G_SOURCE_CONTINUE;
 }
 
-/* Scan only when it can lead somewhere: option on, keys known, AirPods
- * not connected to this computer */
+/* Scan only when it can lead somewhere: keys known, AirPods not connected
+ * to this computer (for their battery, and to connect them if the option
+ * is on) */
 static void update(AutoConnect *ac)
 {
-    bool wanted = ac->enabled && ac->has_irk && !ac->airpods_connected;
+    bool wanted = ac->has_irk && !ac->airpods_connected;
 
     if (wanted && ac->ble_scanner == NULL)
         ac->ble_scanner = ble_scanner_new(ac->adapter_path, ble_address_is_ours, on_ble_advert, ac);
 
     if (wanted && ac->scan_timer_id == 0 && ac->ble_scanner != NULL) {
-        g_message("Watching for the AirPods to connect automatically");
+        g_message("Watching for the AirPods nearby");
         scan_cycle_cb(ac);
         ac->scan_timer_id = g_timeout_add_seconds(SCAN_INTERVAL_SEC, scan_cycle_cb, ac);
     } else if (!wanted && ac->scan_timer_id > 0) {
@@ -216,15 +246,21 @@ static void update(AutoConnect *ac)
     if (!wanted) {
         ac->playback_pending = false;
         ac->prev_in_ear_known = false;
+        nearby_gone(ac);
     }
 }
 
-AutoConnect *autoconnect_new(bool enabled)
+AutoConnect *autoconnect_new(bool enabled, AutoConnectNearbyCallback nearby_callback,
+                             void *user_data)
 {
     AutoConnect *ac = g_new0(AutoConnect, 1);
     ac->enabled = enabled;
+    ac->nearby_callback = nearby_callback;
+    ac->nearby_user_data = user_data;
     ac->adapter_path = g_strdup(DEFAULT_ADAPTER_PATH);
     ac->has_irk = config_load_proximity_irk(&ac->irk_address, ac->irk);
+    if (ac->has_irk)
+        ac->has_enc = config_load_proximity_enc(ac->irk_address, ac->enc);
     return ac;
 }
 
@@ -276,9 +312,21 @@ void autoconnect_set_irk(AutoConnect *ac, const char *address, const uint8_t *ir
 
     memcpy(ac->irk, irk, sizeof(ac->irk));
     ac->has_irk = true;
+    ac->has_enc = false;   /* Belonged to the previous AirPods, if any */
     g_free(ac->irk_address);
     ac->irk_address = g_strdup(address);
     config_save_proximity_irk(address, irk);
     ble_scanner_reset_filter(ac->ble_scanner);
     g_message("Stored the keys to recognize the AirPods nearby");
+}
+
+void autoconnect_set_enc(AutoConnect *ac, const char *address, const uint8_t *enc)
+{
+    bool changed = !ac->has_enc || memcmp(ac->enc, enc, sizeof(ac->enc)) != 0;
+    if (!changed)
+        return;
+
+    memcpy(ac->enc, enc, sizeof(ac->enc));
+    ac->has_enc = true;
+    config_save_proximity_enc(address, enc);
 }

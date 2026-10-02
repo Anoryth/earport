@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-02 21:01+0200\n"
+"POT-Creation-Date: 2026-10-02 21:10+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: German\n"
@@ -105,17 +105,21 @@ msgstr "EarPort-Dienst aktualisieren"
 msgid "Service not running"
 msgstr "Dienst läuft nicht"
 
-#: extension/earportToggle.js:411
+#: extension/earportToggle.js:405
+msgid "Other device"
+msgstr "Anderes Gerät"
+
+#: extension/earportToggle.js:432
 msgid "Less than 5 min of listening left"
 msgstr "Weniger als 5 Min. Wiedergabe übrig"
 
-#: extension/earportToggle.js:413
+#: extension/earportToggle.js:434
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Noch etwa %d Min. Wiedergabe"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:418
+#: extension/earportToggle.js:439
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Noch etwa %d∶%02d Wiedergabe"

@@ -51,6 +51,57 @@ static void on_proximity_keys(const AapProximityKeys *keys)
 {
     if (keys->has_irk && app.state.device_address != NULL)
         autoconnect_set_irk(app.autoconnect, app.state.device_address, keys->irk);
+    if (keys->has_irk && keys->has_enc && app.state.device_address != NULL)
+        autoconnect_set_enc(app.autoconnect, app.state.device_address, keys->enc);
+}
+
+/* What the AirPods do with the device they are connected to */
+static const char *nearby_host(uint8_t connection_state)
+{
+    switch (connection_state) {
+    case PROXIMITY_CONN_DISCONNECTED:
+        return "none";
+    case PROXIMITY_CONN_MUSIC:
+        return "music";
+    case PROXIMITY_CONN_CALL:
+    case PROXIMITY_CONN_RINGING:
+    case PROXIMITY_CONN_HANGING_UP:
+        return "call";
+    default:
+        return "idle";
+    }
+}
+
+static void on_nearby_battery(const ProximityBattery *battery, uint8_t connection_state,
+                              void *user_data)
+{
+    (void)user_data;
+    AirPodsState *s = &app.state;
+    bool was_valid = s->nearby_valid;
+
+    s->nearby_valid = battery != NULL;
+    if (battery != NULL) {
+        bool changed = !was_valid || s->nearby_left != battery->left ||
+                       s->nearby_right != battery->right || s->nearby_case != battery->case_level ||
+                       s->nearby_left_charging != battery->left_charging ||
+                       s->nearby_right_charging != battery->right_charging ||
+                       s->nearby_case_charging != battery->case_charging ||
+                       g_strcmp0(s->nearby_host, nearby_host(connection_state)) != 0;
+        s->nearby_left = battery->left;
+        s->nearby_right = battery->right;
+        s->nearby_case = battery->case_level;
+        s->nearby_left_charging = battery->left_charging;
+        s->nearby_right_charging = battery->right_charging;
+        s->nearby_case_charging = battery->case_charging;
+        s->nearby_host = nearby_host(connection_state);
+        if (!changed)
+            return;
+        g_message("Nearby AirPods: L=%d%% R=%d%% Case=%d%% (%s)",
+                  battery->left, battery->right, battery->case_level, s->nearby_host);
+    } else if (!was_valid) {
+        return;
+    }
+    dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
 }
 
 static void on_playback_started(void *user_data)
@@ -291,7 +342,7 @@ int main(int argc, char *argv[])
     }
 
     device_init(&app.device, &app.state, app.dbus_service, app.media_control);
-    app.autoconnect = autoconnect_new(app.config.auto_connect);
+    app.autoconnect = autoconnect_new(app.config.auto_connect, on_nearby_battery, NULL);
     app.battery_provider = battery_provider_new();
 
     static const AapLinkCallbacks link_callbacks = {

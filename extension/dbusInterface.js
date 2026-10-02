@@ -40,6 +40,7 @@ export const AirPodsInterface = `
     <property name="ListeningModeANC" type="b" access="read"/>
     <property name="ListeningModeAdaptive" type="b" access="read"/>
     <property name="Settings" type="a{sv}" access="read"/>
+    <property name="NearbyBattery" type="a{sv}" access="read"/>
     <property name="AutoConnect" type="b" access="read"/>
     <method name="SetNoiseControlMode">
       <arg type="s" name="mode" direction="in"/>

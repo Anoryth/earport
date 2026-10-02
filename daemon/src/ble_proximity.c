@@ -15,6 +15,12 @@
 #define STATUS_POD_IN_EAR_1  0x02
 #define STATUS_BOTH_IN_CASE  0x04
 #define STATUS_POD_IN_EAR_2  0x08
+#define STATUS_PRIMARY_LEFT  0x20
+
+/* Encrypted block at the end of the advert: [?] [primary pod] [other pod]
+ * [case], each level & 0x7F (0x7F unknown), bit 7 = charging */
+#define ENCRYPTED_SIZE 16
+#define LEVEL_UNKNOWN 0x7F
 
 bool proximity_parse(const uint8_t *data, size_t len, ProximityInfo *info)
 {
@@ -32,6 +38,31 @@ bool proximity_parse(const uint8_t *data, size_t len, ProximityInfo *info)
     info->in_ear = (status & (STATUS_POD_IN_EAR_1 | STATUS_POD_IN_EAR_2)) != 0;
     info->both_in_case = (status & STATUS_BOTH_IN_CASE) != 0;
     info->connection_state = data[10];
+    info->primary_left = (status & STATUS_PRIMARY_LEFT) != 0;
+    return true;
+}
+
+static void read_level(uint8_t byte, int *level, bool *charging)
+{
+    *level = (byte & 0x7F) == LEVEL_UNKNOWN ? -1 : (byte & 0x7F);
+    *charging = *level >= 0 && (byte & 0x80) != 0;
+}
+
+bool proximity_decrypt_battery(const uint8_t *enc_key, const uint8_t *data, size_t len,
+                               const ProximityInfo *info, ProximityBattery *battery)
+{
+    if (enc_key == NULL || len < PROXIMITY_MIN_SIZE + ENCRYPTED_SIZE)
+        return false;
+
+    uint8_t plain[ENCRYPTED_SIZE];
+    aes128_decrypt_block(enc_key, data + len - ENCRYPTED_SIZE, plain);
+
+    /* Primary pod first: swapped when the right one is primary */
+    int left_index = info->primary_left ? 1 : 2;
+    int right_index = info->primary_left ? 2 : 1;
+    read_level(plain[left_index], &battery->left, &battery->left_charging);
+    read_level(plain[right_index], &battery->right, &battery->right_charging);
+    read_level(plain[3], &battery->case_level, &battery->case_charging);
     return true;
 }
 

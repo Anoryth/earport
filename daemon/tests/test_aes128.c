@@ -48,12 +48,35 @@ static void test_fips197_appendix_c1(void)
     g_assert_cmpmem(block, 16, expected, 16);
 }
 
+/* FIPS-197 C.1, the other way, and back */
+static void test_decrypt(void)
+{
+    uint8_t key[16], plain[16], block[16];
+    const uint8_t cipher[16] = {
+        0x69, 0xc4, 0xe0, 0xd8, 0x6a, 0x7b, 0x04, 0x30,
+        0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a,
+    };
+
+    for (int i = 0; i < 16; i++) {
+        key[i] = (uint8_t)i;
+        plain[i] = (uint8_t)(i * 0x11);
+    }
+
+    aes128_decrypt_block(key, cipher, block);
+    g_assert_cmpmem(block, 16, plain, 16);
+
+    aes128_encrypt_block(key, block, block);
+    aes128_decrypt_block(key, block, block);
+    g_assert_cmpmem(block, 16, plain, 16);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/aes128/fips197-appendix-b", test_fips197_appendix_b);
     g_test_add_func("/aes128/fips197-appendix-c1", test_fips197_appendix_c1);
+    g_test_add_func("/aes128/decrypt", test_decrypt);
 
     return g_test_run();
 }

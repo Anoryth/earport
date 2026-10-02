@@ -37,6 +37,7 @@ static const gchar introspection_xml[] =
     "    <property name='ListeningModeANC' type='b' access='read'/>"
     "    <property name='ListeningModeAdaptive' type='b' access='read'/>"
     "    <property name='Settings' type='a{sv}' access='read'/>"
+    "    <property name='NearbyBattery' type='a{sv}' access='read'/>"
     "    <property name='AutoConnect' type='b' access='read'/>"
     "    <method name='SetNoiseControlMode'>"
     "      <arg type='s' name='mode' direction='in'/>"
@@ -293,6 +294,23 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(state->listening_modes.adaptive_enabled);
     } else if (g_strcmp0(property_name, "AutoConnect") == 0) {
         result = g_variant_new_boolean(service->auto_connect);
+    } else if (g_strcmp0(property_name, "NearbyBattery") == 0) {
+        /* Empty unless the AirPods are seen nearby but not connected here */
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sv}"));
+        if (state->nearby_valid) {
+            g_variant_builder_add(&builder, "{sv}", "Left", g_variant_new_int32(state->nearby_left));
+            g_variant_builder_add(&builder, "{sv}", "Right", g_variant_new_int32(state->nearby_right));
+            g_variant_builder_add(&builder, "{sv}", "Case", g_variant_new_int32(state->nearby_case));
+            g_variant_builder_add(&builder, "{sv}", "LeftCharging",
+                                  g_variant_new_boolean(state->nearby_left_charging));
+            g_variant_builder_add(&builder, "{sv}", "RightCharging",
+                                  g_variant_new_boolean(state->nearby_right_charging));
+            g_variant_builder_add(&builder, "{sv}", "CaseCharging",
+                                  g_variant_new_boolean(state->nearby_case_charging));
+            g_variant_builder_add(&builder, "{sv}", "Host", g_variant_new_string(state->nearby_host));
+        }
+        result = g_variant_builder_end(&builder);
     } else if (g_strcmp0(property_name, "Settings") == 0) {
         result = build_settings_variant(state);
     }

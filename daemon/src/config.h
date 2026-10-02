@@ -120,4 +120,8 @@ void config_get_default_listening_modes(ListeningModesConfig *modes);
 bool config_save_proximity_irk(const char *device_address, const uint8_t *irk);
 bool config_load_proximity_irk(char **device_address, uint8_t *irk);
 
+/* Key decrypting the battery in the AirPods' adverts (same file) */
+bool config_save_proximity_enc(const char *device_address, const uint8_t *enc);
+bool config_load_proximity_enc(const char *device_address, uint8_t *enc);
+
 #endif /* CONFIG_H */

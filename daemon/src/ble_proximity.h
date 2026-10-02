@@ -32,7 +32,20 @@ typedef struct {
     bool in_ear;                /* At least one pod in an ear */
     bool both_in_case;
     uint8_t connection_state;   /* ProximityConnectionState */
+    bool primary_left;          /* Pod pairs below are primary first */
 } ProximityInfo;
+
+/* Precise battery from the encrypted part of the advert, -1 if unknown */
+typedef struct {
+    int left;
+    int right;
+    int case_level;
+    bool left_charging;
+    bool right_charging;
+    bool case_charging;
+} ProximityBattery;
+
+#define PROXIMITY_ENC_KEY_SIZE 16
 
 /* Parse Apple manufacturer data; false if it is not a paired AirPods advert */
 bool proximity_parse(const uint8_t *data, size_t len, ProximityInfo *info);
@@ -40,6 +53,11 @@ bool proximity_parse(const uint8_t *data, size_t len, ProximityInfo *info);
 /* Whether a BLE resolvable private address ("70:7A:EC:AE:5F:F8") belongs to
  * the device owning this IRK (16 bytes, little-endian as sent by AirPods) */
 bool proximity_address_matches(const uint8_t *irk, const char *address);
+
+/* Decrypt the battery levels with the ENC key the AirPods give over AAP
+ * (used as sent); false if the advert is too short */
+bool proximity_decrypt_battery(const uint8_t *enc_key, const uint8_t *data, size_t len,
+                               const ProximityInfo *info, ProximityBattery *battery);
 
 typedef enum {
     AUTOCONNECT_TRIGGER_EARS,       /* Pods just put in the ears */

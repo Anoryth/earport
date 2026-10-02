@@ -109,6 +109,12 @@ typedef struct {
     /* Ear detection */
     EarDetectionState ear_detection;
 
+    /* Battery of the AirPods while not connected here (BLE adverts) */
+    bool nearby_valid;
+    int nearby_left, nearby_right, nearby_case;   /* -1 if unknown */
+    bool nearby_left_charging, nearby_right_charging, nearby_case_charging;
+    const char *nearby_host;     /* "none", "idle", "music", "call" */
+
     /* Extension settings (stored in daemon) */
     int ear_pause_mode;   /* 0=disabled, 1=one_out, 2=both_out */
 } AirPodsState;

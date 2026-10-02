@@ -184,6 +184,17 @@ static void test_irk(void)
     g_assert_cmpmem(loaded, 16, irk, 16);
     g_clear_pointer(&address, g_free);
 
+    /* The battery key lives next to it */
+    uint8_t enc[16], enc_loaded[16];
+    memset(enc, 0x5A, sizeof(enc));
+    g_assert_false(config_load_proximity_enc(ADDRESS, enc_loaded));
+    g_assert_true(config_save_proximity_enc(ADDRESS, enc));
+    g_assert_true(config_load_proximity_enc(ADDRESS, enc_loaded));
+    g_assert_cmpmem(enc_loaded, 16, enc, 16);
+    g_assert_true(config_load_proximity_irk(&address, loaded));
+    g_assert_cmpmem(loaded, 16, irk, 16);
+    g_clear_pointer(&address, g_free);
+
     /* Keys are secrets: readable by the user only, in a private directory */
     g_autofree char *path = config_file("keys.conf");
     g_assert_cmpint(g_stat(path, &st), ==, 0);

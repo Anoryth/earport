@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-02 21:01+0200\n"
+"POT-Creation-Date: 2026-10-02 21:10+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -102,17 +102,21 @@ msgstr "Оновити службу EarPort"
 msgid "Service not running"
 msgstr "Службу не запущено"
 
-#: extension/earportToggle.js:411
+#: extension/earportToggle.js:405
+msgid "Other device"
+msgstr "Інший пристрій"
+
+#: extension/earportToggle.js:432
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/earportToggle.js:413
+#: extension/earportToggle.js:434
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:418
+#: extension/earportToggle.js:439
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"

@@ -567,20 +567,40 @@ static gchar *get_keys_path(void)
     return path;
 }
 
-bool config_save_proximity_irk(const char *device_address, const uint8_t *irk)
+static gchar *key_to_hex(const uint8_t *key)
+{
+    gchar *hex = g_malloc(2 * 16 + 1);
+    for (int i = 0; i < 16; i++)
+        g_snprintf(hex + 2 * i, 3, "%02x", key[i]);
+    return hex;
+}
+
+static bool hex_to_key(const gchar *hex, uint8_t *key)
+{
+    if (hex == NULL || strlen(hex) != 32)
+        return false;
+    for (int i = 0; i < 16; i++) {
+        unsigned int byte;
+        if (sscanf(hex + 2 * i, "%2x", &byte) != 1)
+            return false;
+        key[i] = (uint8_t)byte;
+    }
+    return true;
+}
+
+/* Set one key of these AirPods in keys.conf */
+static bool save_key(const char *device_address, const char *name, const uint8_t *key)
 {
     if (device_address == NULL || device_address[0] == '\0' || !ensure_config_dir())
         return false;
 
     gchar *path = get_keys_path();
     gchar *group = address_to_group(device_address);
-    gchar *hex = g_malloc(2 * 16 + 1);
-    for (int i = 0; i < 16; i++)
-        g_snprintf(hex + 2 * i, 3, "%02x", irk[i]);
+    gchar *hex = key_to_hex(key);
 
     GKeyFile *keyfile = g_key_file_new();
     g_key_file_load_from_file(keyfile, path, G_KEY_FILE_NONE, NULL);
-    g_key_file_set_string(keyfile, group, "irk", hex);
+    g_key_file_set_string(keyfile, group, name, hex);
     g_key_file_set_string(keyfile, KEYS_GENERAL_GROUP, "last_device", device_address);
 
     gsize len;
@@ -604,6 +624,16 @@ bool config_save_proximity_irk(const char *device_address, const uint8_t *irk)
     return ok;
 }
 
+bool config_save_proximity_irk(const char *device_address, const uint8_t *irk)
+{
+    return save_key(device_address, "irk", irk);
+}
+
+bool config_save_proximity_enc(const char *device_address, const uint8_t *enc)
+{
+    return save_key(device_address, "enc", enc);
+}
+
 bool config_load_proximity_irk(char **device_address, uint8_t *irk)
 {
     gchar *path = get_keys_path();
@@ -615,15 +645,7 @@ bool config_load_proximity_irk(char **device_address, uint8_t *irk)
         gchar *group = address ? address_to_group(address) : NULL;
         gchar *hex = group ? g_key_file_get_string(keyfile, group, "irk", NULL) : NULL;
 
-        if (hex != NULL && strlen(hex) == 32) {
-            ok = true;
-            for (int i = 0; i < 16 && ok; i++) {
-                unsigned int byte;
-                ok = sscanf(hex + 2 * i, "%2x", &byte) == 1;
-                irk[i] = (uint8_t)byte;
-            }
-        }
-
+        ok = hex_to_key(hex, irk);
         if (ok)
             *device_address = g_steal_pointer(&address);
         g_free(hex);
@@ -632,6 +654,28 @@ bool config_load_proximity_irk(char **device_address, uint8_t *irk)
     }
 
     g_key_file_free(keyfile);
+    g_free(path);
+    return ok;
+}
+
+bool config_load_proximity_enc(const char *device_address, uint8_t *enc)
+{
+    if (device_address == NULL)
+        return false;
+
+    gchar *path = get_keys_path();
+    gchar *group = address_to_group(device_address);
+    GKeyFile *keyfile = g_key_file_new();
+    bool ok = false;
+
+    if (g_key_file_load_from_file(keyfile, path, G_KEY_FILE_NONE, NULL)) {
+        gchar *hex = g_key_file_get_string(keyfile, group, "enc", NULL);
+        ok = hex_to_key(hex, enc);
+        g_free(hex);
+    }
+
+    g_key_file_free(keyfile);
+    g_free(group);
     g_free(path);
     return ok;
 }

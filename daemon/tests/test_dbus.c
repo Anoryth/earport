@@ -327,6 +327,10 @@ static void test_disconnected(Fixture *f, gconstpointer data)
     g_assert_false(get_bool(f, "Connected"));
     g_assert_cmpint(get_int(f, "BatteryLeft"), ==, -1);
 
+    /* Not seen nearby: nothing to show */
+    g_autoptr(GVariant) nearby = get_property(f, "NearbyBattery");
+    g_assert_cmpuint(g_variant_n_children(nearby), ==, 0);
+
     /* The extension compares it with its own version */
     g_autofree char *version = get_string(f, "Version");
     g_assert_cmpstr(version, ==, EARPORT_VERSION);

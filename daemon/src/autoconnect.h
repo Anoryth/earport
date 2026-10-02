@@ -13,10 +13,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "ble_proximity.h"
+
 typedef struct AutoConnect AutoConnect;
 
-/* Loads the keys of the AirPods used last */
-AutoConnect *autoconnect_new(bool enabled);
+/* Battery of the AirPods while they are not connected to this computer
+ * (on another device, or idle), with what they do with their current
+ * host (ProximityConnectionState); NULL when not seen for a while */
+typedef void (*AutoConnectNearbyCallback)(const ProximityBattery *battery,
+                                          uint8_t connection_state, void *user_data);
+
+/* Loads the keys of the AirPods used last. Watching also reports their
+ * battery when they are nearby but not connected here. */
+AutoConnect *autoconnect_new(bool enabled, AutoConnectNearbyCallback nearby_callback,
+                             void *user_data);
 void autoconnect_free(AutoConnect *ac);
 
 /* Start watching, once we know whether the AirPods are already connected */
@@ -35,5 +45,8 @@ void autoconnect_set_irk(AutoConnect *ac, const char *address, const uint8_t *ir
 
 /* A player started on this computer */
 void autoconnect_on_playback_started(AutoConnect *ac);
+
+/* Key decrypting the battery in their adverts; stored when it changed */
+void autoconnect_set_enc(AutoConnect *ac, const char *address, const uint8_t *enc);
 
 #endif /* AUTOCONNECT_H */

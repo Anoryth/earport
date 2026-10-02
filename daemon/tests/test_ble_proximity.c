@@ -8,6 +8,7 @@
 #include <glib.h>
 #include <string.h>
 
+#include "aes128.h"
 #include "ble_proximity.h"
 
 /* Advert captured from AirPods Pro 2 USB-C in both ears, playing music on an
@@ -116,6 +117,35 @@ static void test_worth_waiting(void)
     g_assert_false(autoconnect_worth_waiting(&not_worn));
 }
 
+/* An advert encrypted here with a made-up key (the real ENC key is a
+ * secret): right pod primary, so the pods arrive swapped */
+static void test_decrypt_battery(void)
+{
+    const uint8_t key[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+    /* [?] [primary = right: 64 %] [left: 70 %, charging] [case: unknown] */
+    const uint8_t plain[16] = { 0x00, 64, 0x80 | 70, 0x7F };
+    uint8_t advert[sizeof(advert_music)];
+    ProximityInfo info;
+    ProximityBattery battery;
+
+    memcpy(advert, advert_music, sizeof(advert));
+    advert[5] &= ~0x20;   /* Right pod primary */
+    aes128_encrypt_block(key, plain, advert + sizeof(advert) - 16);
+
+    g_assert_true(proximity_parse(advert, sizeof(advert), &info));
+    g_assert_false(info.primary_left);
+    g_assert_true(proximity_decrypt_battery(key, advert, sizeof(advert), &info, &battery));
+    g_assert_cmpint(battery.left, ==, 70);
+    g_assert_true(battery.left_charging);
+    g_assert_cmpint(battery.right, ==, 64);
+    g_assert_false(battery.right_charging);
+    g_assert_cmpint(battery.case_level, ==, -1);
+    g_assert_false(battery.case_charging);
+
+    /* Too short to hold the encrypted block */
+    g_assert_false(proximity_decrypt_battery(key, advert, 20, &info, &battery));
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -124,6 +154,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/proximity/address-resolution", test_address_resolution);
     g_test_add_func("/proximity/autoconnect-rules", test_autoconnect_rules);
     g_test_add_func("/proximity/worth-waiting", test_worth_waiting);
+    g_test_add_func("/proximity/decrypt-battery", test_decrypt_battery);
 
     return g_test_run();
 }

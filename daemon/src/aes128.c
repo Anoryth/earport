@@ -4,6 +4,7 @@
  */
 
 #include "aes128.h"
+#include <stdbool.h>
 #include <string.h>
 
 static const uint8_t sbox[256] = {
@@ -98,6 +99,79 @@ void aes128_encrypt_block(const uint8_t key[16], const uint8_t in[16], uint8_t o
     }
     sub_shift(s);
     add_round_key(s, &round_keys[160]);
+
+    memcpy(out, s, 16);
+}
+
+/* ============================================================================
+ * Decryption (FIPS-197 5.3)
+ * ========================================================================== */
+
+/* The inverse S-box, derived from the S-box rather than typed again */
+static const uint8_t *inv_sbox(void)
+{
+    static uint8_t inv[256];
+    static bool ready;
+
+    if (!ready) {
+        for (int i = 0; i < 256; i++)
+            inv[sbox[i]] = (uint8_t)i;
+        ready = true;
+    }
+    return inv;
+}
+
+/* Multiplication in GF(2^8) */
+static uint8_t gmul(uint8_t a, uint8_t b)
+{
+    uint8_t p = 0;
+    while (b) {
+        if (b & 1)
+            p ^= a;
+        a = xtime(a);
+        b >>= 1;
+    }
+    return p;
+}
+
+/* InvShiftRows and InvSubBytes together */
+static void inv_shift_sub(uint8_t s[16])
+{
+    const uint8_t *inv = inv_sbox();
+    uint8_t t[16];
+    for (int c = 0; c < 4; c++)
+        for (int r = 0; r < 4; r++)
+            t[4 * ((c + r) % 4) + r] = inv[s[4 * c + r]];
+    memcpy(s, t, 16);
+}
+
+static void inv_mix_columns(uint8_t s[16])
+{
+    for (int c = 0; c < 4; c++) {
+        uint8_t *col = &s[4 * c];
+        uint8_t a0 = col[0], a1 = col[1], a2 = col[2], a3 = col[3];
+        col[0] = gmul(a0, 14) ^ gmul(a1, 11) ^ gmul(a2, 13) ^ gmul(a3, 9);
+        col[1] = gmul(a0, 9) ^ gmul(a1, 14) ^ gmul(a2, 11) ^ gmul(a3, 13);
+        col[2] = gmul(a0, 13) ^ gmul(a1, 9) ^ gmul(a2, 14) ^ gmul(a3, 11);
+        col[3] = gmul(a0, 11) ^ gmul(a1, 13) ^ gmul(a2, 9) ^ gmul(a3, 14);
+    }
+}
+
+void aes128_decrypt_block(const uint8_t key[16], const uint8_t in[16], uint8_t out[16])
+{
+    uint8_t round_keys[176], s[16];
+
+    expand_key(key, round_keys);
+    memcpy(s, in, 16);
+
+    add_round_key(s, &round_keys[160]);
+    for (int round = 9; round >= 1; round--) {
+        inv_shift_sub(s);
+        add_round_key(s, &round_keys[16 * round]);
+        inv_mix_columns(s);
+    }
+    inv_shift_sub(s);
+    add_round_key(s, round_keys);
 
     memcpy(out, s, 16);
 }

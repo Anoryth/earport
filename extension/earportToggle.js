@@ -387,6 +387,27 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             button.setActive(false);
         }
         this._setNoiseControlSensitive(false);
+
+        this._showNearbyBattery();
+    }
+
+    /* Not connected here, but seen nearby: on the iPhone, or idle. Empty
+     * with an older service. */
+    _showNearbyBattery() {
+        if (this._serviceMissing || !this._proxy)
+            return;
+
+        const nearby = this._proxy.get_cached_property('NearbyBattery')?.recursiveUnpack() ?? {};
+        if (nearby.Left === undefined)
+            return;
+
+        if (nearby.Host !== 'none')
+            this.subtitle = _('Other device');
+        this._batteryBox.opacity = 255;
+        this._leftBattery.setLevel(nearby.Left, nearby.LeftCharging);
+        this._rightBattery.setLevel(nearby.Right, nearby.RightCharging);
+        this._caseBattery.setLevel(nearby.Case, nearby.CaseCharging);
+        this._updateBatteryAccessibleName();
     }
 
     _updateBatteryAccessibleName() {
