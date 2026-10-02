@@ -21,6 +21,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
+- **Pause when falling asleep** - When your AirPods notice you fell asleep, playback pauses after a 10-minute grace period, as on an iPhone, unless you use the computer meanwhile; players that allow it go back to where you dozed off (on models offering the setting, turned on in the AirPods settings)
 - **Quick Settings integration** - Native GNOME Shell Quick Settings panel
 - **Quick mode switching** - Click the Quick Settings tile or use a configurable keyboard shortcut (default `Super+Shift+N`) to cycle noise control modes, with OSD feedback
 - **Notifications** - Connection/disconnection and low battery notifications
