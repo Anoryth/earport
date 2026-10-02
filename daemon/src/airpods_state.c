@@ -21,6 +21,7 @@ void airpods_state_init(AirPodsState *state)
     state->battery.right.level = -1;
     state->battery.right.available = false;
     state->battery.case_battery.level = -1;
+    state->case_advert_level = -1;
     state->battery.case_battery.available = false;
     state->listening_minutes_left = -1;
 
@@ -133,6 +134,26 @@ void airpods_state_set_battery(AirPodsState *state,
     state->battery.case_battery.level = case_level;
     state->battery.case_battery.status = case_status;
     state->battery.case_battery.available = (case_level >= 0);
+}
+
+int airpods_state_case_level(const AirPodsState *state, bool *charging)
+{
+    if (state->battery.case_battery.level >= 0) {
+        *charging = state->battery.case_battery.status == BATTERY_STATUS_CHARGING;
+        return state->battery.case_battery.level;
+    }
+    *charging = state->case_advert_level >= 0 && state->case_advert_charging;
+    return state->case_advert_level;
+}
+
+int airpods_state_nearby_case_level(const AirPodsState *state, bool *charging)
+{
+    if (state->nearby_case >= 0) {
+        *charging = state->nearby_case_charging;
+        return state->nearby_case;
+    }
+    *charging = state->case_advert_level >= 0 && state->case_advert_charging;
+    return state->case_advert_level;
 }
 
 bool airpods_state_set_listening_minutes(AirPodsState *state, int minutes)

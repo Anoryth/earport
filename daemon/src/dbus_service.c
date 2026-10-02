@@ -263,13 +263,16 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
     } else if (g_strcmp0(property_name, "BatteryRight") == 0) {
         result = g_variant_new_int32(state->battery.right.level);
     } else if (g_strcmp0(property_name, "BatteryCase") == 0) {
-        result = g_variant_new_int32(state->battery.case_battery.level);
+        bool charging;
+        result = g_variant_new_int32(airpods_state_case_level(state, &charging));
     } else if (g_strcmp0(property_name, "ChargingLeft") == 0) {
         result = g_variant_new_boolean(state->battery.left.status == BATTERY_STATUS_CHARGING);
     } else if (g_strcmp0(property_name, "ChargingRight") == 0) {
         result = g_variant_new_boolean(state->battery.right.status == BATTERY_STATUS_CHARGING);
     } else if (g_strcmp0(property_name, "ChargingCase") == 0) {
-        result = g_variant_new_boolean(state->battery.case_battery.status == BATTERY_STATUS_CHARGING);
+        bool charging;
+        airpods_state_case_level(state, &charging);
+        result = g_variant_new_boolean(charging);
     } else if (g_strcmp0(property_name, "ListeningTimeRemaining") == 0) {
         result = g_variant_new_int32(state->listening_minutes_left);
     } else if (g_strcmp0(property_name, "NoiseControlMode") == 0) {
@@ -301,13 +304,15 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         if (state->nearby_valid) {
             g_variant_builder_add(&builder, "{sv}", "Left", g_variant_new_int32(state->nearby_left));
             g_variant_builder_add(&builder, "{sv}", "Right", g_variant_new_int32(state->nearby_right));
-            g_variant_builder_add(&builder, "{sv}", "Case", g_variant_new_int32(state->nearby_case));
+            bool case_charging;
+            int case_level = airpods_state_nearby_case_level(state, &case_charging);
+            g_variant_builder_add(&builder, "{sv}", "Case", g_variant_new_int32(case_level));
             g_variant_builder_add(&builder, "{sv}", "LeftCharging",
                                   g_variant_new_boolean(state->nearby_left_charging));
             g_variant_builder_add(&builder, "{sv}", "RightCharging",
                                   g_variant_new_boolean(state->nearby_right_charging));
             g_variant_builder_add(&builder, "{sv}", "CaseCharging",
-                                  g_variant_new_boolean(state->nearby_case_charging));
+                                  g_variant_new_boolean(case_charging));
             g_variant_builder_add(&builder, "{sv}", "Host", g_variant_new_string(state->nearby_host));
         }
         result = g_variant_builder_end(&builder);

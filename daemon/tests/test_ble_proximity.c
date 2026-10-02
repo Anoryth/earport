@@ -146,6 +146,33 @@ static void test_decrypt_battery(void)
     g_assert_false(proximity_decrypt_battery(key, advert, 20, &info, &battery));
 }
 
+/* The case's advert, behind another entry, encrypted with a made-up key */
+static void test_decrypt_case(void)
+{
+    const uint8_t key[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+    const uint8_t other_key[16] = { 0 };
+    /* Case at 49 %, charging; pods unknown */
+    uint8_t plain[16] = { 0x10, 0x20, 0x0E, 0x80 | 49, 0xFF, 0xFF, 0x50, 0x01 };
+    uint8_t advert[23] = { 0x12, 0x02, 0x64, 0x00, 0x07, 0x11, 0x06 };
+    int level;
+    bool charging;
+
+    aes128_encrypt_block(key, plain, advert + 7);
+    g_assert_true(proximity_decrypt_case(key, advert, sizeof(advert), &level, &charging));
+    g_assert_cmpint(level, ==, 49);
+    g_assert_true(charging);
+
+    /* Another case, or noise: rejected */
+    g_assert_false(proximity_decrypt_case(other_key, advert, sizeof(advert), &level, &charging));
+    plain[9] = 0x01;
+    aes128_encrypt_block(key, plain, advert + 7);
+    g_assert_false(proximity_decrypt_case(key, advert, sizeof(advert), &level, &charging));
+
+    /* Truncated, and the pods' advert */
+    g_assert_false(proximity_decrypt_case(key, advert, sizeof(advert) - 1, &level, &charging));
+    g_assert_false(proximity_decrypt_case(key, advert_music, sizeof(advert_music), &level, &charging));
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -155,6 +182,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/proximity/autoconnect-rules", test_autoconnect_rules);
     g_test_add_func("/proximity/worth-waiting", test_worth_waiting);
     g_test_add_func("/proximity/decrypt-battery", test_decrypt_battery);
+    g_test_add_func("/proximity/decrypt-case", test_decrypt_case);
 
     return g_test_run();
 }

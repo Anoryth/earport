@@ -115,6 +115,11 @@ typedef struct {
     bool nearby_left_charging, nearby_right_charging, nearby_case_charging;
     const char *nearby_host;     /* "none", "idle", "music", "call" */
 
+    /* Battery of the charging case from its own adverts, connected here
+     * or not */
+    int case_advert_level;       /* -1 if unknown */
+    bool case_advert_charging;
+
     /* Extension settings (stored in daemon) */
     int ear_pause_mode;   /* 0=disabled, 1=one_out, 2=both_out */
 } AirPodsState;
@@ -145,6 +150,13 @@ void airpods_state_set_battery(AirPodsState *state,
                                 int8_t left, BatteryStatus left_status,
                                 int8_t right, BatteryStatus right_status,
                                 int8_t case_level, BatteryStatus case_status);
+
+/* Case battery as the AirPods report it or, when they don't know it (pods
+ * out of the case), from the case's adverts; -1 if unknown */
+int airpods_state_case_level(const AirPodsState *state, bool *charging);
+
+/* Same for AirPods seen nearby but not connected here */
+int airpods_state_nearby_case_level(const AirPodsState *state, bool *charging);
 
 /* Update the estimated listening time; returns true if it changed */
 bool airpods_state_set_listening_minutes(AirPodsState *state, int minutes);

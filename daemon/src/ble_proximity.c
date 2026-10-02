@@ -66,6 +66,44 @@ bool proximity_decrypt_battery(const uint8_t *enc_key, const uint8_t *data, size
     return true;
 }
 
+/* Case advert: an entry of the Apple data, [07] [11] [06] [encrypted:16] */
+#define CASE_ENTRY_SIZE 0x11
+#define CASE_ENTRY_KIND 0x06
+
+static bool level_byte_valid(uint8_t byte)
+{
+    return (byte & 0x7F) <= 100 || (byte & 0x7F) == LEVEL_UNKNOWN;
+}
+
+bool proximity_decrypt_case(const uint8_t *enc_key, const uint8_t *data, size_t len,
+                            int *level, bool *charging)
+{
+    if (enc_key == NULL || data == NULL)
+        return false;
+
+    /* Apple data is a list of [type] [length] [value] entries */
+    for (size_t i = 0; i + 2 <= len; i += 2 + data[i + 1]) {
+        if (data[i] != PROXIMITY_TYPE || data[i + 1] != CASE_ENTRY_SIZE ||
+            i + 2 + CASE_ENTRY_SIZE > len || data[i + 2] != CASE_ENTRY_KIND)
+            continue;
+
+        uint8_t plain[ENCRYPTED_SIZE];
+        aes128_decrypt_block(enc_key, data + i + 3, plain);
+
+        /* With another key, the block decrypts to noise: these bytes are
+         * zero, and the levels in range, only with the right one */
+        static const uint8_t zeros[4] = { 0 };
+        if (memcmp(plain + 8, zeros, sizeof(zeros)) != 0 ||
+            !level_byte_valid(plain[3]) || !level_byte_valid(plain[4]) ||
+            !level_byte_valid(plain[5]))
+            return false;
+
+        read_level(plain[3], level, charging);
+        return true;
+    }
+    return false;
+}
+
 bool proximity_address_matches(const uint8_t *irk, const char *address)
 {
     unsigned int b[6];

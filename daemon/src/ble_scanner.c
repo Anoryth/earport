@@ -42,18 +42,17 @@ static char *address_from_path(const char *path)
     return address;
 }
 
-static bool address_matches(BleScanner *scanner, const char *address)
+/* Cached decision for an address: -1 when it was not seen yet */
+static int cached_match(BleScanner *scanner, const char *address)
 {
     gpointer cached;
     if (g_hash_table_lookup_extended(scanner->matches, address, NULL, &cached))
         return GPOINTER_TO_INT(cached);
-
-    bool match = scanner->filter(address, scanner->user_data);
-    g_hash_table_insert(scanner->matches, g_strdup(address), GINT_TO_POINTER(match));
-    return match;
+    return -1;
 }
 
-/* Report the Apple entry of a ManufacturerData (a{qv}) value */
+/* Report the Apple entry of a ManufacturerData (a{qv}) value, if the
+ * address is one to report */
 static void report_manufacturer_data(BleScanner *scanner, const char *address, GVariant *data)
 {
     GVariantIter iter;
@@ -64,7 +63,13 @@ static void report_manufacturer_data(BleScanner *scanner, const char *address, G
         if (company == APPLE_COMPANY_ID && g_variant_is_of_type(value, G_VARIANT_TYPE_BYTESTRING)) {
             gsize len;
             const guint8 *bytes = g_variant_get_fixed_array(value, &len, 1);
-            scanner->callback(address, bytes, len, scanner->user_data);
+            int match = cached_match(scanner, address);
+            if (match < 0) {
+                match = scanner->filter(address, bytes, len, scanner->user_data);
+                g_hash_table_insert(scanner->matches, g_strdup(address), GINT_TO_POINTER(match));
+            }
+            if (match)
+                scanner->callback(address, bytes, len, scanner->user_data);
         }
         g_variant_unref(value);
     }
@@ -116,7 +121,7 @@ static void on_interfaces_added(GDBusConnection *bus G_GNUC_UNUSED,
     GVariant *device = g_variant_lookup_value(interfaces, DEVICE_INTERFACE, NULL);
     char *address = address_from_path(path);
 
-    if (device != NULL && address != NULL && address_matches(scanner, address)) {
+    if (device != NULL && address != NULL) {
         GVariant *data = g_variant_lookup_value(device, "ManufacturerData", NULL);
         if (data != NULL) {
             report_manufacturer_data(scanner, address, data);
@@ -144,7 +149,7 @@ static void on_properties_changed(GDBusConnection *bus,
         return;
 
     char *address = address_from_path(object_path);
-    if (address == NULL || !address_matches(scanner, address)) {
+    if (address == NULL || cached_match(scanner, address) == 0) {
         g_free(address);
         return;
     }
@@ -156,7 +161,8 @@ static void on_properties_changed(GDBusConnection *bus,
         report_manufacturer_data(scanner, address, data);
         g_variant_unref(data);
         g_free(address);
-    } else if (g_variant_lookup(changed, "RSSI", "n", NULL)) {
+    } else if (cached_match(scanner, address) > 0 &&
+               g_variant_lookup(changed, "RSSI", "n", NULL)) {
         /* Same advert again (only the RSSI changed): its data is still
          * current, fetch it so that each advert gives a fresh state */
         DataRequest *request = g_new0(DataRequest, 1);

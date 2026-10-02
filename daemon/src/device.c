@@ -153,10 +153,11 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
                                    pkt->data.battery.case_level,
                                    pkt->data.battery.case_status);
 
+        bool case_charging;
         dbus_service_emit_battery_changed(dev->dbus,
                                            pkt->data.battery.left_level,
                                            pkt->data.battery.right_level,
-                                           pkt->data.battery.case_level);
+                                           airpods_state_case_level(dev->state, &case_charging));
         dbus_service_emit_properties_changed(dev->dbus, "BatteryLeft");
         dbus_service_emit_properties_changed(dev->dbus, "BatteryRight");
         dbus_service_emit_properties_changed(dev->dbus, "BatteryCase");

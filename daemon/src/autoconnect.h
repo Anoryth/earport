@@ -23,10 +23,14 @@ typedef struct AutoConnect AutoConnect;
 typedef void (*AutoConnectNearbyCallback)(const ProximityBattery *battery,
                                           uint8_t connection_state, void *user_data);
 
+/* Battery of their charging case, from its own adverts, connected here or
+ * not; level -1 when not seen for a while */
+typedef void (*AutoConnectCaseCallback)(int level, bool charging, void *user_data);
+
 /* Loads the keys of the AirPods used last. Watching also reports their
- * battery when they are nearby but not connected here. */
+ * battery when they are nearby but not connected here, and their case's. */
 AutoConnect *autoconnect_new(bool enabled, AutoConnectNearbyCallback nearby_callback,
-                             void *user_data);
+                             AutoConnectCaseCallback case_callback, void *user_data);
 void autoconnect_free(AutoConnect *ac);
 
 /* Start watching, once we know whether the AirPods are already connected */

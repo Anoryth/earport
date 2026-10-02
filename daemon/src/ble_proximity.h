@@ -59,6 +59,12 @@ bool proximity_address_matches(const uint8_t *irk, const char *address);
 bool proximity_decrypt_battery(const uint8_t *enc_key, const uint8_t *data, size_t len,
                                const ProximityInfo *info, ProximityBattery *battery);
 
+/* The charging case has its own advert, under another address: recognized
+ * by decrypting it with the same ENC key. Level -1 if unknown. False if the
+ * advert is not from the case of these AirPods. */
+bool proximity_decrypt_case(const uint8_t *enc_key, const uint8_t *data, size_t len,
+                            int *level, bool *charging);
+
 typedef enum {
     AUTOCONNECT_TRIGGER_EARS,       /* Pods just put in the ears */
     AUTOCONNECT_TRIGGER_PLAYBACK,   /* Playback started on this computer */

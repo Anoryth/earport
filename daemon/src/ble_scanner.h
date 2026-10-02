@@ -13,9 +13,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Whether an address is worth reporting (e.g. resolves with our IRK).
- * Called once per address and cached. */
-typedef bool (*BleAddressFilter)(const char *address, void *user_data);
+/* Whether an address is worth reporting (e.g. resolves with our IRK), given
+ * its first Apple manufacturer data. Called once per address and cached. */
+typedef bool (*BleAddressFilter)(const char *address, const uint8_t *data,
+                                 size_t len, void *user_data);
 
 /* Apple manufacturer data (company 0x004C) seen for a matching address */
 typedef void (*BleAdvertCallback)(const char *address, const uint8_t *data,

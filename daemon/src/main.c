@@ -104,6 +104,23 @@ static void on_nearby_battery(const ProximityBattery *battery, uint8_t connectio
     dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
 }
 
+static void on_case_battery(int level, bool charging, void *user_data)
+{
+    (void)user_data;
+    AirPodsState *s = &app.state;
+
+    if (s->case_advert_level == level && s->case_advert_charging == charging)
+        return;
+    s->case_advert_level = level;
+    s->case_advert_charging = charging;
+    g_message("Case: %d%%%s", level, charging ? " (charging)" : "");
+
+    dbus_service_emit_properties_changed(app.dbus_service, "BatteryCase");
+    dbus_service_emit_properties_changed(app.dbus_service, "ChargingCase");
+    if (s->nearby_valid)
+        dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
+}
+
 static void on_playback_started(void *user_data)
 {
     (void)user_data;
@@ -342,7 +359,8 @@ int main(int argc, char *argv[])
     }
 
     device_init(&app.device, &app.state, app.dbus_service, app.media_control);
-    app.autoconnect = autoconnect_new(app.config.auto_connect, on_nearby_battery, NULL);
+    app.autoconnect = autoconnect_new(app.config.auto_connect, on_nearby_battery,
+                                     on_case_battery, NULL);
     app.battery_provider = battery_provider_new();
 
     static const AapLinkCallbacks link_callbacks = {
