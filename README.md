@@ -10,10 +10,14 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 ## Features
 
 - **Battery monitoring** - Real-time battery levels for left pod, right pod, and charging case
+- **Battery in GNOME** - The AirPods' battery also shows in Settings › Power and wherever GNOME lists Bluetooth device batteries
+- **Battery while on another device** - When your AirPods are used by your iPhone or sit idle nearby, the menu still shows their battery, with their name
+- **Case battery with the AirPods out** - On models whose case reports it (see below), the case's level and charging state stay up to date while you wear the AirPods
 - **Noise control modes** - Switch between Off, ANC, Transparency, and Adaptive modes
 - **Long press customization** - Configure which noise control modes cycle on stem long press
 - **AirPods settings** - Change the settings stored on the AirPods (noise cancellation with one AirPod, personalized volume, press speed, press and hold duration, volume swipe); only the settings your model reports are shown
-- **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone, to the level you choose
+- **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone, to the level you choose, with a smooth fade
+- **Quiet conversations** - Notification banners and their sounds wait until you stop speaking (can be turned off)
 - **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
@@ -27,18 +31,27 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 ### Supported Models
 
-| Model | Battery | ANC | Transparency | Adaptive |
-|-------|---------|-----|--------------|----------|
-| AirPods 1st/2nd Gen | ✓ | - | - | - |
-| AirPods 3rd Gen | ✓ | - | - | - |
-| AirPods 4th Gen | ✓ | - | - | - |
-| AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ |
-| AirPods 5 | ✓ | ✓ | ✓ | ✓ |
-| AirPods Pro | ✓ | ✓ | ✓ | - |
-| AirPods Pro 2 | ✓ | ✓ | ✓ | ✓ |
-| AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ |
-| AirPods Max | ✓ | ✓ | ✓ | - |
-| AirPods Max 2 | ✓ | ✓ | ✓ | - |
+| Model | Battery | ANC | Transparency | Adaptive | Case battery, AirPods out |
+|-------|---------|-----|--------------|----------|---------------------------|
+| AirPods 1st/2nd Gen | ✓ | - | - | - | - |
+| AirPods 3rd Gen | ✓ | - | - | - | - |
+| AirPods 4th Gen | ✓ | - | - | - | - |
+| AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AirPods 5 | ✓ | ✓ | ✓ | ✓ | - |
+| AirPods 5 (Wireless Charging Case) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AirPods Pro | ✓ | ✓ | ✓ | - | - |
+| AirPods Pro 2 (Lightning and USB-C) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ | ✓ |
+| AirPods Max | ✓ | ✓ | ✓ | - | - |
+| AirPods Max 2 | ✓ | ✓ | ✓ | - | - |
+
+The case battery with the AirPods out was tested on AirPods Pro 2 (USB-C); reports for the other models are welcome.
+
+The battery while on another device and the case battery with the AirPods out
+come from the AirPods' Bluetooth LE broadcasts: they work once the AirPods have
+connected to this computer at least once, and need Bluetooth LE scanning (a few
+seconds every half minute while the AirPods are away, about once a minute for
+the case).
 
 ## Architecture
 
@@ -149,6 +162,13 @@ to remove it (the only step asking for sudo).
 ### Ear Detection & Media Control
 
 By default, media will automatically pause when you remove one or both AirPods from your ears, and resume when you put them back in.
+
+### Battery Elsewhere
+
+When the AirPods are not connected to the computer, the Quick Settings menu
+still shows their battery if they are nearby, with "Other device" when your
+iPhone (or another device) is using them. Inside a closed case, AirPods stay
+silent: open the lid to refresh their levels.
 
 ## Uninstallation
 
