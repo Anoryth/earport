@@ -342,8 +342,11 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._copyInstallItem.visible = missing;
         this._settingsItem.visible = !missing;
         this._updateServiceVersion();
-        if (missing)
+        if (missing) {
+            /* Gone mid-conversation: no SpeakingChanged(false) will come */
+            this._onSpeakingChanged(null, null, [false]);
             this._updateDisconnectedState();
+        }
     }
 
     _updateServiceVersion() {
