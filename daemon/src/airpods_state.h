@@ -25,6 +25,7 @@ typedef enum {
     AIRPODS_MODEL_PRO_3 = 0x2027,
     AIRPODS_MODEL_MAX = 0x0A20,
     AIRPODS_MODEL_MAX_USBC = 0x1F20,
+    AIRPODS_MODEL_5_WIRELESS_CHARGING = 0x3020,
     /* BLE IDs not known yet: placeholder values, detection uses the model number */
     AIRPODS_MODEL_5 = 0xFF01,
     AIRPODS_MODEL_MAX_2 = 0xFF02,

@@ -394,7 +394,7 @@ static void test_model_from_number(void)
     g_assert_cmpint(airpods_model_from_number("A3047"), ==, AIRPODS_MODEL_PRO_2_USBC);
     g_assert_cmpint(airpods_model_from_number("A3048"), ==, AIRPODS_MODEL_PRO_2_USBC);
     g_assert_cmpint(airpods_model_from_number("A3531"), ==, AIRPODS_MODEL_5);
-    g_assert_cmpint(airpods_model_from_number("A3439"), ==, AIRPODS_MODEL_5);
+    g_assert_cmpint(airpods_model_from_number("A3439"), ==, AIRPODS_MODEL_5_WIRELESS_CHARGING);
     g_assert_cmpint(airpods_model_from_number("A3454"), ==, AIRPODS_MODEL_MAX_2);
     g_assert_cmpint(airpods_model_from_number("A9999"), ==, AIRPODS_MODEL_UNKNOWN);
     g_assert_cmpint(airpods_model_from_number(""), ==, AIRPODS_MODEL_UNKNOWN);
@@ -403,6 +403,8 @@ static void test_model_from_number(void)
     g_assert_true(airpods_model_is_headphones(AIRPODS_MODEL_MAX_2));
     g_assert_false(airpods_model_is_headphones(AIRPODS_MODEL_5));
     g_assert_true(airpods_model_supports_adaptive(AIRPODS_MODEL_5));
+    g_assert_true(airpods_model_supports_adaptive(AIRPODS_MODEL_5_WIRELESS_CHARGING));
+    g_assert_true(airpods_model_supports_anc(AIRPODS_MODEL_5_WIRELESS_CHARGING));
     g_assert_false(airpods_model_supports_adaptive(AIRPODS_MODEL_MAX_2));
     g_assert_false(airpods_model_supports_anc(AIRPODS_MODEL_4));
 }
