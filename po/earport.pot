@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: earport 0.4.0\n"
+"Project-Id-Version: earport 0.5.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-02 21:39+0200\n"
+"POT-Creation-Date: 2026-10-02 23:10+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,8 +29,8 @@ msgstr ""
 msgid "charging"
 msgstr ""
 
-#: extension/earportToggle.js:40 extension/earportToggle.js:367
-#: extension/earportToggle.js:384 extension/prefs.js:513
+#: extension/earportToggle.js:40 extension/earportToggle.js:370
+#: extension/earportToggle.js:387 extension/prefs.js:513
 msgid "Disconnected"
 msgstr ""
 
@@ -100,25 +100,25 @@ msgstr ""
 msgid "Update the EarPort Service"
 msgstr ""
 
-#: extension/earportToggle.js:367
+#: extension/earportToggle.js:370
 msgid "Service not running"
 msgstr ""
 
-#: extension/earportToggle.js:408
+#: extension/earportToggle.js:411
 msgid "Other device"
 msgstr ""
 
-#: extension/earportToggle.js:435
+#: extension/earportToggle.js:449
 msgid "Less than 5 min of listening left"
 msgstr ""
 
-#: extension/earportToggle.js:437
+#: extension/earportToggle.js:451
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr ""
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:442
+#: extension/earportToggle.js:456
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr ""
