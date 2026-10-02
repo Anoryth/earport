@@ -506,7 +506,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     destroy() {
-        this._conversationVolume.restore();
+        this._conversationVolume.destroy();
 
         if (this._proxy) {
             if (this._propertiesChangedId > 0) {
