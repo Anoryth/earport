@@ -314,6 +314,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
             g_variant_builder_add(&builder, "{sv}", "CaseCharging",
                                   g_variant_new_boolean(case_charging));
             g_variant_builder_add(&builder, "{sv}", "Host", g_variant_new_string(state->nearby_host));
+            g_variant_builder_add(&builder, "{sv}", "Name",
+                                  g_variant_new_string(state->nearby_name ? state->nearby_name : "AirPods"));
             g_variant_builder_add(&builder, "{sv}", "Headphones",
                                   g_variant_new_boolean(state->nearby_headphones));
         }

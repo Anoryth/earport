@@ -47,6 +47,9 @@ void autoconnect_set_airpods_connected(AutoConnect *ac, bool connected,
  * they changed */
 void autoconnect_set_irk(AutoConnect *ac, const char *address, const uint8_t *irk);
 
+/* Address of the AirPods watched, NULL if none */
+const char *autoconnect_get_address(AutoConnect *ac);
+
 /* A player started on this computer */
 void autoconnect_on_playback_started(AutoConnect *ac);
 

@@ -40,6 +40,7 @@ void airpods_state_cleanup(AirPodsState *state)
     g_free(state->device_name);
     g_free(state->device_address);
     g_free(state->display_name);
+    g_clear_pointer(&state->nearby_name, g_free);
     state->device_name = NULL;
     state->device_address = NULL;
     state->display_name = NULL;

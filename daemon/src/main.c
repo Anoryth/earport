@@ -5,7 +5,7 @@
  * EarPort Daemon - AirPods integration for Linux
  */
 
-#include <glib.h>
+#include <gio/gio.h>
 #include <glib-unix.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,6 +72,46 @@ static const char *nearby_host(uint8_t connection_state)
     }
 }
 
+/* Name to show for the AirPods while they are not connected here: the
+ * one given in the preferences, else their Bluetooth name */
+static char *nearby_name(const char *address, uint16_t model)
+{
+    DeviceProfile profile;
+    if (address == NULL)
+        return g_strdup("AirPods");
+    if (config_load_device_profile(address, &profile) && profile.display_name[0] != '\0')
+        return g_strdup(profile.display_name);
+
+    char *name = NULL;
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    if (bus != NULL) {
+        char *device = g_strdup(address);
+        g_strdelimit(device, ":", '_');
+        char *path = g_strdup_printf("%s/dev_%s",
+                                     app.adapter_path ? app.adapter_path : "/org/bluez/hci0", device);
+        GVariant *result = g_dbus_connection_call_sync(
+            bus, "org.bluez", path, "org.freedesktop.DBus.Properties", "Get",
+            g_variant_new("(ss)", "org.bluez.Device1", "Alias"), G_VARIANT_TYPE("(v)"),
+            G_DBUS_CALL_FLAGS_NONE, 1000, NULL, NULL);
+        if (result != NULL) {
+            GVariant *value;
+            g_variant_get(result, "(v)", &value);
+            if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING))
+                name = g_variant_dup_string(value, NULL);
+            g_variant_unref(value);
+            g_variant_unref(result);
+        }
+        g_free(path);
+        g_free(device);
+        g_object_unref(bus);
+    }
+    if (name == NULL || name[0] == '\0') {
+        g_free(name);
+        name = g_strdup(model != 0 ? airpods_model_to_string((AirPodsModel)model) : "AirPods");
+    }
+    return name;
+}
+
 static void on_nearby_battery(const ProximityBattery *battery, const ProximityInfo *info,
                               void *user_data)
 {
@@ -95,6 +135,11 @@ static void on_nearby_battery(const ProximityBattery *battery, const ProximityIn
         s->nearby_right_charging = battery->right_charging;
         s->nearby_case_charging = battery->case_charging;
         s->nearby_headphones = airpods_model_is_headphones(info->model);
+        /* Once per appearance: the name may have changed in between */
+        if (!was_valid) {
+            g_free(s->nearby_name);
+            s->nearby_name = nearby_name(autoconnect_get_address(app.autoconnect), info->model);
+        }
         s->nearby_host = nearby_host(info->connection_state);
         if (!changed)
             return;

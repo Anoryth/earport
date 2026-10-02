@@ -115,6 +115,7 @@ typedef struct {
     bool nearby_left_charging, nearby_right_charging, nearby_case_charging;
     const char *nearby_host;     /* "none", "idle", "music", "call" */
     bool nearby_headphones;      /* AirPods Max: one battery */
+    char *nearby_name;           /* Custom or Bluetooth name */
 
     /* Battery of the charging case from its own adverts, connected here
      * or not */

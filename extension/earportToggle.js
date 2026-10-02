@@ -403,6 +403,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
 
         if (nearby.Host !== 'none')
             this.subtitle = _('Other device');
+        if (nearby.Name)
+            this.menu.setHeader('audio-headphones-symbolic', nearby.Name);
         this._batteryBox.opacity = 255;
 
         /* AirPods Max: a single battery, in whichever slot it comes */

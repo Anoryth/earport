@@ -409,6 +409,11 @@ void autoconnect_set_irk(AutoConnect *ac, const char *address, const uint8_t *ir
     g_message("Stored the keys to recognize the AirPods nearby");
 }
 
+const char *autoconnect_get_address(AutoConnect *ac)
+{
+    return ac->has_irk ? ac->irk_address : NULL;
+}
+
 void autoconnect_set_model(AutoConnect *ac, uint16_t model)
 {
     if (model == ac->model)
