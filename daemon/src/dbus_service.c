@@ -630,8 +630,12 @@ static void emit_signal(DbusService *service,
                          const char *signal_name,
                          GVariant *parameters)
 {
-    if (service->connection == NULL)
+    if (service->connection == NULL) {
+        /* Nobody to send it to: drop the floating reference */
+        if (parameters != NULL)
+            g_variant_unref(g_variant_ref_sink(parameters));
         return;
+    }
 
     GError *error = NULL;
     g_dbus_connection_emit_signal(
