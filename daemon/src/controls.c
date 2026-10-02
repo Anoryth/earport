@@ -212,6 +212,8 @@ static bool on_set_setting(const AirPodsSettingDef *def, uint8_t byte, void *use
      * No need to save it in the profile, the AirPods remember it. */
     if (airpods_state_set_setting(c->device->state, def->id, byte))
         dbus_service_emit_properties_changed(c->device->dbus, "Settings");
+    if (c->setting_sent != NULL)
+        c->setting_sent(def->id, byte, c->user_data);
 
     return true;
 }

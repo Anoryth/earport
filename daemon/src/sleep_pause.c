@@ -45,6 +45,10 @@ static gboolean cool_off_done_cb(gpointer user_data)
     SleepPause *sp = user_data;
     sp->cool_off_id = 0;
 
+    /* Turned off meanwhile */
+    if (!sp->callbacks.is_enabled(sp->user_data))
+        return G_SOURCE_REMOVE;
+
     /* Used the computer meanwhile: awake after all. Tell the AirPods, and
      * arm the detection again. */
     int64_t idle = sp->callbacks.idle_ms(sp->user_data);

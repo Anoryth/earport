@@ -227,6 +227,14 @@ static const AirPodsSettingDef *sleep_setting(void)
     return airpods_setting_by_key("SleepDetection");
 }
 
+/* Changed from the preferences: the AirPods won't announce it */
+static void on_setting_sent(uint8_t id, uint8_t value, void *user_data)
+{
+    (void)user_data;
+    if (id == sleep_setting()->id)
+        sleep_pause_setting_changed(app.sleep_pause, value == 0x01);
+}
+
 static void sleep_send(const uint8_t *data, size_t len, void *user_data)
 {
     (void)user_data;
@@ -525,6 +533,7 @@ int main(int argc, char *argv[])
     };
     app.link = aap_link_new(&link_callbacks, NULL);
     controls_init(&app.controls, &app.device, app.link, app.dbus_service);
+    app.controls.setting_sent = on_setting_sent;
 
     static const SleepPauseCallbacks sleep_callbacks = {
         .send = sleep_send,

@@ -20,6 +20,9 @@ typedef struct {
     Device *device;
     AapLink *link;
     guint saved_settings_id;     /* Pending send of the long-press modes */
+    /* A setting was sent to the AirPods (they don't echo it), optional */
+    void (*setting_sent)(uint8_t id, uint8_t value, void *user_data);
+    void *user_data;
 } Controls;
 
 /* Handle the D-Bus methods that change the AirPods */
