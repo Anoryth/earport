@@ -72,7 +72,7 @@ static const char *nearby_host(uint8_t connection_state)
     }
 }
 
-static void on_nearby_battery(const ProximityBattery *battery, uint8_t connection_state,
+static void on_nearby_battery(const ProximityBattery *battery, const ProximityInfo *info,
                               void *user_data)
 {
     (void)user_data;
@@ -86,14 +86,16 @@ static void on_nearby_battery(const ProximityBattery *battery, uint8_t connectio
                        s->nearby_left_charging != battery->left_charging ||
                        s->nearby_right_charging != battery->right_charging ||
                        s->nearby_case_charging != battery->case_charging ||
-                       g_strcmp0(s->nearby_host, nearby_host(connection_state)) != 0;
+                       s->nearby_headphones != airpods_model_is_headphones(info->model) ||
+                       g_strcmp0(s->nearby_host, nearby_host(info->connection_state)) != 0;
         s->nearby_left = battery->left;
         s->nearby_right = battery->right;
         s->nearby_case = battery->case_level;
         s->nearby_left_charging = battery->left_charging;
         s->nearby_right_charging = battery->right_charging;
         s->nearby_case_charging = battery->case_charging;
-        s->nearby_host = nearby_host(connection_state);
+        s->nearby_headphones = airpods_model_is_headphones(info->model);
+        s->nearby_host = nearby_host(info->connection_state);
         if (!changed)
             return;
         g_message("Nearby AirPods: L=%d%% R=%d%% Case=%d%% (%s)",
@@ -159,6 +161,8 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 
     if (pkt->type == AAP_PKT_TYPE_BATTERY)
         publish_battery();
+    else if (pkt->type == AAP_PKT_TYPE_METADATA)
+        autoconnect_set_model(app.autoconnect, app.state.model);
 }
 
 static void on_link_disconnected(void *user_data)

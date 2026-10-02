@@ -5,6 +5,7 @@
 
 #include "autoconnect.h"
 #include "aap_protocol.h"
+#include "airpods_state.h"
 #include "ble_proximity.h"
 #include "ble_scanner.h"
 #include "config.h"
@@ -45,6 +46,7 @@ struct AutoConnect {
     bool has_irk;
     uint8_t enc[AAP_PROXIMITY_KEY_SIZE];   /* Decrypts the battery */
     bool has_enc;
+    uint16_t model;              /* AirPodsModel, 0 until known */
 
     AutoConnectNearbyCallback nearby_callback;
     void *nearby_user_data;
@@ -105,6 +107,11 @@ static void try_connect(AutoConnect *ac, const char *reason)
     g_object_unref(bus);
 }
 
+static bool case_wanted(AutoConnect *ac)
+{
+    return ac->has_enc && airpods_model_has_ble_case((AirPodsModel)ac->model);
+}
+
 static bool ble_address_is_ours(const char *address, const uint8_t *data, size_t len,
                                 void *user_data)
 {
@@ -112,7 +119,7 @@ static bool ble_address_is_ours(const char *address, const uint8_t *data, size_t
     int level;
     bool charging;
     return (ac->has_irk && proximity_address_matches(ac->irk, address)) ||
-           (ac->has_enc && proximity_decrypt_case(ac->enc, data, len, &level, &charging));
+           (case_wanted(ac) && proximity_decrypt_case(ac->enc, data, len, &level, &charging));
 }
 
 static bool case_fresh(AutoConnect *ac)
@@ -182,20 +189,22 @@ static void on_ble_advert(const char *address, const uint8_t *data, size_t len, 
     int case_level;
     bool case_charging;
 
-    if (ac->has_enc && proximity_decrypt_case(ac->enc, data, len, &case_level, &case_charging)) {
+    if (case_wanted(ac) && proximity_decrypt_case(ac->enc, data, len, &case_level, &case_charging)) {
         on_case_advert(ac, case_level, case_charging);
         return;
     }
 
     if (!proximity_parse(data, len, &info) || ac->airpods_connected)
         return;
+    if (info.model != ac->model)
+        autoconnect_set_model(ac, info.model);
 
     /* Battery of AirPods used by another device (or idle in their case) */
     ProximityBattery battery;
     if (ac->has_enc && proximity_decrypt_battery(ac->enc, data, len, &info, &battery)) {
         ac->nearby_seen_us = g_get_monotonic_time();
         if (ac->nearby_callback != NULL)
-            ac->nearby_callback(&battery, info.connection_state, ac->nearby_user_data);
+            ac->nearby_callback(&battery, &info, ac->nearby_user_data);
     }
 
     /* React to the pods being put in, not to them being in: after a manual
@@ -273,7 +282,7 @@ static gboolean scan_cycle_cb(gpointer user_data)
 
     /* Not more than one long scan per refresh period */
     gint64 retry_sec = ac->case_missed ? CASE_ABSENT_RETRY_SEC : CASE_REFRESH_SEC;
-    bool case_burst = ac->has_enc && !case_fresh(ac) &&
+    bool case_burst = case_wanted(ac) && !case_fresh(ac) &&
                       (ac->case_burst_us == 0 ||
                        now - ac->case_burst_us >= retry_sec * G_USEC_PER_SEC);
 
@@ -298,7 +307,7 @@ static gboolean scan_cycle_cb(gpointer user_data)
 static void update(AutoConnect *ac)
 {
     bool watching_pods = ac->has_irk && !ac->airpods_connected;
-    bool wanted = watching_pods || ac->has_enc;
+    bool wanted = watching_pods || case_wanted(ac);
 
     if (wanted && ac->ble_scanner == NULL)
         ac->ble_scanner = ble_scanner_new(ac->adapter_path, ble_address_is_ours, on_ble_advert, ac);
@@ -322,7 +331,7 @@ static void update(AutoConnect *ac)
         ac->prev_in_ear_known = false;
         nearby_gone(ac);
     }
-    if (!wanted)
+    if (!case_wanted(ac))
         case_gone(ac);
 }
 
@@ -398,6 +407,16 @@ void autoconnect_set_irk(AutoConnect *ac, const char *address, const uint8_t *ir
     config_save_proximity_irk(address, irk);
     ble_scanner_reset_filter(ac->ble_scanner);
     g_message("Stored the keys to recognize the AirPods nearby");
+}
+
+void autoconnect_set_model(AutoConnect *ac, uint16_t model)
+{
+    if (model == ac->model)
+        return;
+    ac->model = model;
+    /* A case address may have been rejected for the previous model */
+    ble_scanner_reset_filter(ac->ble_scanner);
+    update(ac);
 }
 
 void autoconnect_set_enc(AutoConnect *ac, const char *address, const uint8_t *enc)

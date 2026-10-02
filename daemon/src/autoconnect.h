@@ -18,10 +18,10 @@
 typedef struct AutoConnect AutoConnect;
 
 /* Battery of the AirPods while they are not connected to this computer
- * (on another device, or idle), with what they do with their current
- * host (ProximityConnectionState); NULL when not seen for a while */
+ * (on another device, or idle), with their model and what they do with
+ * their current host; NULL when not seen for a while */
 typedef void (*AutoConnectNearbyCallback)(const ProximityBattery *battery,
-                                          uint8_t connection_state, void *user_data);
+                                          const ProximityInfo *info, void *user_data);
 
 /* Battery of their charging case, from its own adverts, connected here or
  * not; level -1 when not seen for a while */
@@ -49,6 +49,10 @@ void autoconnect_set_irk(AutoConnect *ac, const char *address, const uint8_t *ir
 
 /* A player started on this computer */
 void autoconnect_on_playback_started(AutoConnect *ac);
+
+/* Model of the connected AirPods (AirPodsModel), also learned from their
+ * adverts: the case is only looked for when it advertises */
+void autoconnect_set_model(AutoConnect *ac, uint16_t model);
 
 /* Key decrypting the battery in their adverts; stored when it changed */
 void autoconnect_set_enc(AutoConnect *ac, const char *address, const uint8_t *enc);

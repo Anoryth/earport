@@ -404,7 +404,16 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         if (nearby.Host !== 'none')
             this.subtitle = _('Other device');
         this._batteryBox.opacity = 255;
-        this._leftBattery.setLevel(nearby.Left, nearby.LeftCharging);
+
+        /* AirPods Max: a single battery, in whichever slot it comes */
+        const headphones = nearby.Headphones ?? false;
+        this._leftBattery.setHeadphonesMode(headphones);
+        this._rightBattery.setHeadphonesMode(headphones);
+        this._caseBattery.setHeadphonesMode(headphones);
+        if (headphones && nearby.Left < 0)
+            this._leftBattery.setLevel(nearby.Right, nearby.RightCharging);
+        else
+            this._leftBattery.setLevel(nearby.Left, nearby.LeftCharging);
         this._rightBattery.setLevel(nearby.Right, nearby.RightCharging);
         this._caseBattery.setLevel(nearby.Case, nearby.CaseCharging);
         this._updateBatteryAccessibleName();

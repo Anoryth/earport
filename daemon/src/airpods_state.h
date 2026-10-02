@@ -114,6 +114,7 @@ typedef struct {
     int nearby_left, nearby_right, nearby_case;   /* -1 if unknown */
     bool nearby_left_charging, nearby_right_charging, nearby_case_charging;
     const char *nearby_host;     /* "none", "idle", "music", "call" */
+    bool nearby_headphones;      /* AirPods Max: one battery */
 
     /* Battery of the charging case from its own adverts, connected here
      * or not */
@@ -207,6 +208,9 @@ bool airpods_model_supports_adaptive(AirPodsModel model);
 
 /* Check if model is headphones (AirPods Max) vs earbuds */
 bool airpods_model_is_headphones(AirPodsModel model);
+
+/* Whether the charging case advertises its own battery */
+bool airpods_model_has_ble_case(AirPodsModel model);
 
 /* Get model enum from model number string (e.g., "A2699" -> AIRPODS_MODEL_PRO_2) */
 AirPodsModel airpods_model_from_number(const char *model_number);
