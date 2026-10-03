@@ -1,4 +1,4 @@
-<img src="logo.svg" width="96" alt="EarPort logo" align="right">
+<img src="logo.svg" width="80" alt="EarPort logo">
 
 # EarPort
 
