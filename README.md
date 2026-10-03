@@ -1,3 +1,5 @@
+<img src="logo.svg" width="96" alt="EarPort logo" align="right">
+
 # EarPort
 
 AirPods integration for GNOME Shell on Linux. This project provides full support for Apple AirPods features including battery status, noise control modes, and automatic media pause on ear detection.
@@ -5,7 +7,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 ![GNOME 46+](https://img.shields.io/badge/GNOME-46%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL--3.0-green)
 
-![EarPort Extension](extension.png)
+<img src="extension.png" width="384" alt="The EarPort menu in GNOME Shell Quick Settings: AirPods Pro at 85 % and 82 %, case charging at 64 %, about 4:30 of listening left, noise cancellation on">
 
 ## Features
 

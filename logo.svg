@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- EarPort logo: an earbud and sound waves, drawing a P, on a GNOME-style tile -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c061cb"/>
+      <stop offset="1" stop-color="#813d9c"/>
+    </linearGradient>
+    <linearGradient id="bud" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#deddda"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="16" width="112" height="104" rx="18" fill="#613583"/>
+  <rect x="8" y="8" width="112" height="104" rx="18" fill="url(#tile)"/>
+  <g fill="url(#bud)">
+    <circle cx="50" cy="48" r="18"/>
+    <rect x="28" y="46" width="14" height="52" rx="7"/>
+  </g>
+  <circle cx="52" cy="46" r="6" fill="#813d9c" opacity=".35"/>
+  <g fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round">
+    <path d="M80 34 a18 18 0 0 1 0 28" opacity=".95"/>
+    <path d="M90 24 a32 32 0 0 1 0 48" opacity=".7"/>
+  </g>
+</svg>
