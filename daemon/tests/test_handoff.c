@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Handoff decisions, with the delays shortened in meson.build (keep:
- * 100 ms, restart after playback: 20 ms)
+ * 100 ms, restart after playback: 20 ms, settle: 30 ms, check: 80 ms)
  */
 
 #include <glib.h>
@@ -13,6 +13,7 @@
 typedef struct {
     int paused;
     int restarted;
+    int tried_again;
 } Calls;
 
 static void pause_players(void *user_data)
@@ -20,9 +21,13 @@ static void pause_players(void *user_data)
     ((Calls *)user_data)->paused++;
 }
 
-static void restart_audio(void *user_data)
+static void restart_audio(bool again, void *user_data)
 {
-    ((Calls *)user_data)->restarted++;
+    Calls *calls = user_data;
+    if (again)
+        calls->tried_again++;
+    else
+        calls->restarted++;
 }
 
 static const HandoffCallbacks callbacks = {
@@ -55,10 +60,13 @@ static void test_kept(void)
     run_for(50);
     g_assert_cmpint(calls.restarted, ==, 0);
 
-    /* Until playback starts here again */
+    /* Until playback starts here again; back at once, no second try */
     handoff_playback_started(handoff);
     run_for(50);
     g_assert_cmpint(calls.restarted, ==, 1);
+    handoff_source_changed(handoff, "computer");
+    run_for(200);
+    g_assert_cmpint(calls.tried_again, ==, 0);
     handoff_free(handoff);
 }
 
@@ -73,8 +81,13 @@ static void test_moment(void)
     handoff_source_changed(handoff, "other");
     run_for(30);
     handoff_source_changed(handoff, "none");
-    run_for(200);
+    run_for(60);
     g_assert_cmpint(calls.paused, ==, 0);
+    g_assert_cmpint(calls.restarted, ==, 1);
+
+    /* Not back: one more try, then no more */
+    run_for(300);
+    g_assert_cmpint(calls.tried_again, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
 }

@@ -173,7 +173,8 @@ test('sleep-pause', test_sleep_pause)
 test_handoff = executable('test-handoff',
     files('tests/test_handoff.c', 'src/handoff.c'),
     include_directories: include_directories('src'),
-    c_args: ['-DHANDOFF_KEEP_MS=100', '-DHANDOFF_PLAY_DELAY_MS=20'],
+    c_args: ['-DHANDOFF_KEEP_MS=100', '-DHANDOFF_PLAY_DELAY_MS=20',
+             '-DHANDOFF_SETTLE_MS=30', '-DHANDOFF_CHECK_MS=80'],
     dependencies: [glib_dep],
 )
 test('handoff', test_handoff)

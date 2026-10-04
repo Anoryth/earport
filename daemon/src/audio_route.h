@@ -17,8 +17,12 @@
 #ifndef AUDIO_ROUTE_H
 #define AUDIO_ROUTE_H
 
+#include <stdbool.h>
+
 /* Restart the streams playing to the AirPods with this address, if any
- * (asynchronous, at most one at a time) */
-void audio_route_restart(const char *airpods_address);
+ * (asynchronous, at most one at a time). Another try suspends and resumes
+ * the AirPods output instead: after an early restart, PipeWire may take it
+ * for playing while the AirPods still play from elsewhere. */
+void audio_route_restart(const char *airpods_address, bool again);
 
 #endif /* AUDIO_ROUTE_H */

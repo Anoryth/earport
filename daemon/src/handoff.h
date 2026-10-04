@@ -20,8 +20,9 @@
 typedef struct {
     /* Pause the players playing here */
     void (*pause_players)(void *user_data);
-    /* Restart what plays here to the AirPods, so that they switch back */
-    void (*restart_audio)(void *user_data);
+    /* Restart what plays here to the AirPods, so that they switch back;
+     * again: a second try, the first one didn't bring them back */
+    void (*restart_audio)(bool again, void *user_data);
 } HandoffCallbacks;
 
 typedef struct Handoff Handoff;

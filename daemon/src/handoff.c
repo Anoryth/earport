@@ -17,14 +17,28 @@
 #define HANDOFF_PLAY_DELAY_MS 500
 #endif
 
+/* Leaves the other device time to let the AirPods go: restarting too early
+ * leaves PipeWire's output stuck */
+#ifndef HANDOFF_SETTLE_MS
+#define HANDOFF_SETTLE_MS 1000
+#endif
+
+/* The AirPods should be back by then, otherwise try once more */
+#ifndef HANDOFF_CHECK_MS
+#define HANDOFF_CHECK_MS 2500
+#endif
+
 struct Handoff {
     HandoffCallbacks callbacks;
     void *user_data;
     bool enabled;
 
     bool taken;                 /* Another device had them since this one */
+    bool here;                  /* They play from this computer */
     guint keep_id;              /* Another device has them: kept? */
-    guint restart_id;           /* Playback started: sound back shortly */
+    guint restart_id;           /* Sound back shortly */
+    guint check_id;             /* Back after the restart? */
+    bool tried_again;
 };
 
 static void cancel(guint *id)
@@ -44,12 +58,42 @@ static gboolean keep_done_cb(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
+static gboolean check_cb(gpointer user_data)
+{
+    Handoff *handoff = user_data;
+    handoff->check_id = 0;
+    if (handoff->here || handoff->tried_again)
+        return G_SOURCE_REMOVE;
+
+    g_message("Handoff: the AirPods didn't come back, trying again");
+    handoff->tried_again = true;
+    handoff->callbacks.restart_audio(true, handoff->user_data);
+    handoff->check_id = g_timeout_add(HANDOFF_CHECK_MS, check_cb, handoff);
+    return G_SOURCE_REMOVE;
+}
+
 static gboolean restart_cb(gpointer user_data)
 {
     Handoff *handoff = user_data;
     handoff->restart_id = 0;
-    handoff->callbacks.restart_audio(handoff->user_data);
+    handoff->tried_again = false;
+    handoff->callbacks.restart_audio(false, handoff->user_data);
+    cancel(&handoff->check_id);
+    handoff->check_id = g_timeout_add(HANDOFF_CHECK_MS, check_cb, handoff);
     return G_SOURCE_REMOVE;
+}
+
+static void restart_in(Handoff *handoff, guint ms)
+{
+    cancel(&handoff->restart_id);
+    handoff->restart_id = g_timeout_add(ms, restart_cb, handoff);
+}
+
+static void cancel_all(Handoff *handoff)
+{
+    cancel(&handoff->keep_id);
+    cancel(&handoff->restart_id);
+    cancel(&handoff->check_id);
 }
 
 Handoff *handoff_new(const HandoffCallbacks *callbacks, void *user_data)
@@ -64,8 +108,7 @@ void handoff_free(Handoff *handoff)
 {
     if (handoff == NULL)
         return;
-    cancel(&handoff->keep_id);
-    cancel(&handoff->restart_id);
+    cancel_all(handoff);
     g_free(handoff);
 }
 
@@ -73,14 +116,14 @@ void handoff_set_enabled(Handoff *handoff, bool enabled)
 {
     handoff->enabled = enabled;
     if (!enabled) {
-        cancel(&handoff->keep_id);
-        cancel(&handoff->restart_id);
+        cancel_all(handoff);
         handoff->taken = false;
     }
 }
 
 void handoff_source_changed(Handoff *handoff, const char *source)
 {
+    handoff->here = g_strcmp0(source, "computer") == 0;
     if (!handoff->enabled)
         return;
 
@@ -93,12 +136,11 @@ void handoff_source_changed(Handoff *handoff, const char *source)
         if (handoff->keep_id > 0) {
             cancel(&handoff->keep_id);
             g_message("Handoff: another device only had the AirPods for a moment");
-            handoff->callbacks.restart_audio(handoff->user_data);
+            restart_in(handoff, HANDOFF_SETTLE_MS);
         }
     } else {
         /* Back here, or disconnected */
-        cancel(&handoff->keep_id);
-        cancel(&handoff->restart_id);
+        cancel_all(handoff);
         handoff->taken = false;
     }
 }
@@ -109,6 +151,5 @@ void handoff_playback_started(Handoff *handoff)
         return;
 
     g_message("Handoff: playback started here, getting the AirPods back");
-    cancel(&handoff->restart_id);
-    handoff->restart_id = g_timeout_add(HANDOFF_PLAY_DELAY_MS, restart_cb, handoff);
+    restart_in(handoff, HANDOFF_PLAY_DELAY_MS);
 }

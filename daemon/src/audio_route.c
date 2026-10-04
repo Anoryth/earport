@@ -8,13 +8,17 @@
 #include <gio/gio.h>
 #include <stdbool.h>
 
-/* $1: the address as in PipeWire's sink names ("AC_07_75_F0_31_02").
- * Exit status: 0 restarted, 2 no AirPods output, 3 nothing playing to it,
- * 4 no muted output. The streams move to the muted output, so nothing
- * plays on the speakers meanwhile. */
+/* $1: the address as in PipeWire's sink names ("AC_07_75_F0_31_02"),
+ * $2: "move" or "suspend". Exit status: 0 restarted, 2 no AirPods output,
+ * 3 nothing playing to it, 4 no muted output. The streams move to the muted
+ * output, so nothing plays on the speakers meanwhile. */
 static const char RESTART_SCRIPT[] =
     "sink=$(pactl list sinks short | awk -v p=\"bluez_output.$1.\" 'index($2, p) == 1 { print $1; exit }')\n"
     "[ -n \"$sink\" ] || exit 2\n"
+    "if [ \"$2\" = suspend ]; then\n"
+    "  pactl suspend-sink \"$sink\" 1 && sleep 0.5 && pactl suspend-sink \"$sink\" 0 || exit 4\n"
+    "  exit 0\n"
+    "fi\n"
     "inputs=$(pactl list sink-inputs | awk -v s=\"$sink\" '"
     "/^Sink Input #/ { id = substr($3, 2) } "
     "/^\\tSink: / { on = ($2 == s) } "
@@ -58,7 +62,7 @@ static void on_restart_done(GObject *source, GAsyncResult *res, gpointer user_da
     }
 }
 
-void audio_route_restart(const char *airpods_address)
+void audio_route_restart(const char *airpods_address, bool again)
 {
     if (running || airpods_address == NULL)
         return;
@@ -72,7 +76,8 @@ void audio_route_restart(const char *airpods_address)
     /* pactl output is parsed: untranslated */
     g_subprocess_launcher_setenv(launcher, "LC_ALL", "C", TRUE);
     GSubprocess *proc = g_subprocess_launcher_spawn(launcher, &error, "sh", "-c", RESTART_SCRIPT,
-                                                    "earport-audio-route", name, NULL);
+                                                    "earport-audio-route", name,
+                                                    again ? "suspend" : "move", NULL);
     g_object_unref(launcher);
     g_free(name);
 

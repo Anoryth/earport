@@ -458,10 +458,10 @@ static void handoff_pause_players(void *user_data)
     media_control_pause_for_handoff(app.media_control);
 }
 
-static void handoff_restart_audio(void *user_data)
+static void handoff_restart_audio(bool again, void *user_data)
 {
     (void)user_data;
-    audio_route_restart(app.state.device_address);
+    audio_route_restart(app.state.device_address, again);
 }
 
 static void on_set_apple_handoff(bool enabled, void *user_data)
