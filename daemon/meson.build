@@ -49,6 +49,7 @@ sources = files(
     'src/aap_protocol.c',
     'src/aes128.c',
     'src/apple_identity.c',
+    'src/audio_route.c',
     'src/autoconnect.c',
     'src/battery_estimator.c',
     'src/battery_provider.c',
@@ -60,6 +61,7 @@ sources = files(
     'src/controls.c',
     'src/device.c',
     'src/dbus_service.c',
+    'src/handoff.c',
     'src/media_control.c',
     'src/research.c',
     'src/sleep_pause.c',
@@ -167,6 +169,14 @@ test_sleep_pause = executable('test-sleep-pause',
     dependencies: [glib_dep],
 )
 test('sleep-pause', test_sleep_pause)
+
+test_handoff = executable('test-handoff',
+    files('tests/test_handoff.c', 'src/handoff.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DHANDOFF_KEEP_MS=100', '-DHANDOFF_PLAY_DELAY_MS=20'],
+    dependencies: [glib_dep],
+)
+test('handoff', test_handoff)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

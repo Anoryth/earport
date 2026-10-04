@@ -69,6 +69,7 @@ export const AirPodsInterface = `
     <method name="SetAutoConnect">
       <arg type="b" name="enabled" direction="in"/>
     </method>
+    <method name="ClaimAudio"/>
     <method name="SetAppleHandoff">
       <arg type="b" name="enabled" direction="in"/>
     </method>

@@ -14,6 +14,7 @@
 
 #include "airpods_state.h"
 #include "apple_identity.h"
+#include "audio_route.h"
 #include "aap_link.h"
 #include "aap_protocol.h"
 #include "autoconnect.h"
@@ -22,6 +23,7 @@
 #include "config.h"
 #include "controls.h"
 #include "dbus_service.h"
+#include "handoff.h"
 #include "device.h"
 #include "media_control.h"
 #include "research.h"
@@ -41,6 +43,7 @@ typedef struct {
     AutoConnect *autoconnect;
     BatteryProvider *battery_provider;
     AppleIdentity *apple_identity;
+    Handoff *handoff;
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
 } AppContext;
@@ -197,6 +200,7 @@ static void on_playback_started(void *user_data)
 {
     (void)user_data;
     autoconnect_on_playback_started(app.autoconnect);
+    handoff_playback_started(app.handoff);
 }
 
 /* ============================================================================
@@ -317,6 +321,8 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         publish_battery();
     else if (pkt->type == AAP_PKT_TYPE_METADATA && app.state.model != AIRPODS_MODEL_UNKNOWN)
         autoconnect_set_model(app.autoconnect, app.state.model);
+    else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE)
+        handoff_source_changed(app.handoff, app.state.audio_source);
 }
 
 static void on_link_disconnected(void *user_data)
@@ -324,6 +330,7 @@ static void on_link_disconnected(void *user_data)
     (void)user_data;
     battery_provider_update(app.battery_provider, NULL, NULL, -1);
     sleep_pause_session_ended(app.sleep_pause);
+    handoff_source_changed(app.handoff, NULL);
     device_session_ended(&app.device);
 }
 
@@ -431,9 +438,36 @@ static void on_set_auto_connect(bool enabled, void *user_data)
     autoconnect_set_enabled(app.autoconnect, enabled);
 }
 
+/* Like a Mac starting to play: have the AirPods switch to this computer */
+static bool claim_audio(void *user_data)
+{
+    (void)user_data;
+    if (!aap_link_is_connected(app.link))
+        return false;
+
+    const uint8_t claim = 0x01;
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    aap_build_control_cmd(AAP_CTRL_OWNS_CONNECTION, &claim, 1, packet);
+    g_message("Asking the AirPods to play from this computer");
+    return aap_link_send(app.link, packet, sizeof(packet));
+}
+
+static void handoff_pause_players(void *user_data)
+{
+    (void)user_data;
+    media_control_pause_for_handoff(app.media_control);
+}
+
+static void handoff_restart_audio(void *user_data)
+{
+    (void)user_data;
+    audio_route_restart(app.state.device_address);
+}
+
 static void on_set_apple_handoff(bool enabled, void *user_data)
 {
     (void)user_data;
+    handoff_set_enabled(app.handoff, enabled);
 
     app.config.apple_handoff = enabled;
     config_save(&app.config);
@@ -472,6 +506,8 @@ static void cleanup(void)
     battery_provider_free(app.battery_provider);
     apple_identity_free(app.apple_identity);
     app.apple_identity = NULL;
+    handoff_free(app.handoff);
+    app.handoff = NULL;
     app.battery_provider = NULL;
     g_free(app.adapter_path);
     sleep_pause_free(app.sleep_pause);
@@ -549,6 +585,7 @@ int main(int argc, char *argv[])
     dbus_service_set_auto_connect_callback(app.dbus_service, on_set_auto_connect, NULL);
     dbus_service_set_auto_connect(app.dbus_service, app.config.auto_connect);
     dbus_service_set_apple_handoff_callback(app.dbus_service, on_set_apple_handoff, NULL);
+    dbus_service_set_claim_audio_callback(app.dbus_service, claim_audio, NULL);
     dbus_service_set_apple_handoff(app.dbus_service, app.config.apple_handoff);
 
     if (!dbus_service_start(app.dbus_service)) {
@@ -576,6 +613,12 @@ int main(int argc, char *argv[])
     app.battery_provider = battery_provider_new();
     app.apple_identity = apple_identity_new();
     apple_identity_set_enabled(app.apple_identity, app.config.apple_handoff);
+    static const HandoffCallbacks handoff_callbacks = {
+        .pause_players = handoff_pause_players,
+        .restart_audio = handoff_restart_audio,
+    };
+    app.handoff = handoff_new(&handoff_callbacks, NULL);
+    handoff_set_enabled(app.handoff, app.config.apple_handoff);
     /* Known before the first audio source arrives; refreshed on connection */
     read_adapter_address("/org/bluez/hci0");
 

@@ -63,6 +63,7 @@ static const gchar introspection_xml[] =
     "      <arg type='s' name='key' direction='in'/>"
     "      <arg type='v' name='value' direction='in'/>"
     "    </method>"
+    "    <method name='ClaimAudio'/>"
     "    <method name='SetAppleHandoff'>"
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
@@ -131,6 +132,8 @@ struct DbusService {
     DbusAutoConnectCallback auto_connect_callback;
     void *auto_connect_user_data;
     bool auto_connect;
+    DbusActionCallback claim_audio_callback;
+    void *claim_audio_user_data;
     DbusAutoConnectCallback apple_handoff_callback;
     void *apple_handoff_user_data;
     bool apple_handoff;
@@ -433,6 +436,15 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             service->auto_connect_callback(enabled, service->auto_connect_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
+    } else if (g_strcmp0(method_name, "ClaimAudio") == 0) {
+        g_message("D-Bus: ClaimAudio()");
+        if (service->claim_audio_callback &&
+            service->claim_audio_callback(service->claim_audio_user_data))
+            g_dbus_method_invocation_return_value(invocation, NULL);
+        else
+            g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+                                                  "AirPods not connected");
+
     } else if (g_strcmp0(method_name, "SetAppleHandoff") == 0) {
         gboolean enabled = FALSE;
         g_variant_get(parameters, "(b)", &enabled);
@@ -653,6 +665,14 @@ void dbus_service_set_apple_handoff_callback(DbusService *service,
 {
     service->apple_handoff_callback = callback;
     service->apple_handoff_user_data = user_data;
+}
+
+void dbus_service_set_claim_audio_callback(DbusService *service,
+                                           DbusActionCallback callback,
+                                           void *user_data)
+{
+    service->claim_audio_callback = callback;
+    service->claim_audio_user_data = user_data;
 }
 
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled)

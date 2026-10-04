@@ -195,6 +195,10 @@ typedef struct {
     AapAudioSourceType type;
 } AapAudioSource;
 
+/* Control setting asking the AirPods to play from this host (1) or to let
+ * the others have them (0), when they switch between hosts */
+#define AAP_CTRL_OWNS_CONNECTION 0x06
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;

@@ -62,6 +62,10 @@ void media_control_set_paused_for_sleep_callback(MediaControl *mc,
                                                  MediaPausedForSleepCallback callback,
                                                  void *user_data);
 
+/* Pause the players playing because another device took the AirPods: not
+ * resumed when the AirPods go back in */
+void media_control_pause_for_handoff(MediaControl *mc);
+
 /* Resume media players that were paused by us */
 void media_control_resume(MediaControl *mc);
 

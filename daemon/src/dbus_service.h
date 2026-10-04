@@ -37,6 +37,8 @@ typedef bool (*DbusListeningModesCallback)(bool off, bool transparency, bool anc
 
 /* Callback for display name change request */
 typedef void (*DbusDisplayNameCallback)(const char *name, void *user_data);
+/* An action on the AirPods; false if they are not connected */
+typedef bool (*DbusActionCallback)(void *user_data);
 
 /* D-Bus service context */
 /* Callback for generic settings: byte is the validated value to send.
@@ -128,6 +130,11 @@ void dbus_service_set_apple_handoff_callback(DbusService *service,
                                              DbusAutoConnectCallback callback,
                                              void *user_data);
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled);
+
+/* ClaimAudio: have the AirPods play from this computer */
+void dbus_service_set_claim_audio_callback(DbusService *service,
+                                           DbusActionCallback callback,
+                                           void *user_data);
 
 /**
  * Set callback for display name change requests
