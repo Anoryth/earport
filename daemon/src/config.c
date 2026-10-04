@@ -104,6 +104,7 @@ void config_get_defaults(EarPortConfig *config)
 {
     config->ear_pause_mode = 1;  /* EAR_PAUSE_ONE_OUT */
     config->auto_connect = false;
+    config->apple_handoff = false;
     config->research_log = false;
 }
 
@@ -146,11 +147,14 @@ bool config_load(EarPortConfig *config)
     if (g_key_file_has_key(keyfile, CONFIG_GROUP, "auto_connect", NULL))
         config->auto_connect = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "auto_connect", NULL);
 
+    if (g_key_file_has_key(keyfile, CONFIG_GROUP, "apple_handoff", NULL))
+        config->apple_handoff = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "apple_handoff", NULL);
+
     if (g_key_file_has_key(keyfile, CONFIG_GROUP, "research_log", NULL))
         config->research_log = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "research_log", NULL);
 
-    g_message("Config loaded: ear_pause_mode=%d auto_connect=%d",
-              config->ear_pause_mode, config->auto_connect);
+    g_message("Config loaded: ear_pause_mode=%d auto_connect=%d apple_handoff=%d",
+              config->ear_pause_mode, config->auto_connect, config->apple_handoff);
 
     g_key_file_free(keyfile);
     g_free(config_path);
@@ -168,6 +172,7 @@ bool config_save(const EarPortConfig *config)
     /* Write settings */
     g_key_file_set_integer(keyfile, CONFIG_GROUP, "ear_pause_mode", config->ear_pause_mode);
     g_key_file_set_boolean(keyfile, CONFIG_GROUP, "auto_connect", config->auto_connect);
+    g_key_file_set_boolean(keyfile, CONFIG_GROUP, "apple_handoff", config->apple_handoff);
     /* Hidden option: only kept when set */
     if (config->research_log)
         g_key_file_set_boolean(keyfile, CONFIG_GROUP, "research_log", true);
@@ -176,7 +181,9 @@ bool config_save(const EarPortConfig *config)
     g_key_file_set_comment(keyfile, CONFIG_GROUP, NULL,
                            "EarPort daemon configuration\n"
                            "ear_pause_mode: 0=disabled, 1=pause when one removed, 2=pause when both removed\n"
-                           "auto_connect: connect when the AirPods are put in or playback starts",
+                           "auto_connect: connect when the AirPods are put in or playback starts\n"
+                           "apple_handoff: present this computer as an Apple device, so that the\n"
+                           "  AirPods switch between it and your Apple devices",
                            NULL);
 
     gchar *config_path = get_config_path();

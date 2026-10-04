@@ -29,6 +29,7 @@
 #define AAP_OPCODE_BATTERY       0x04
 #define AAP_OPCODE_EAR_DETECTION 0x06
 #define AAP_OPCODE_CONTROL       0x09
+#define AAP_OPCODE_AUDIO_SOURCE  0x0E
 #define AAP_OPCODE_NOTIFICATIONS 0x0F
 #define AAP_OPCODE_HEAD_TRACKING 0x17
 #define AAP_OPCODE_METADATA      0x1D
@@ -111,6 +112,7 @@ typedef enum {
     AAP_PKT_TYPE_CONTROL_SETTING,
     AAP_PKT_TYPE_PROXIMITY_KEYS,
     AAP_PKT_TYPE_SLEEP_DETECTION,
+    AAP_PKT_TYPE_AUDIO_SOURCE,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -179,6 +181,20 @@ typedef struct {
 
 #define AAP_SLEEP_MSG_SIZE 10   /* Header, opcode, length, type, value */
 
+/* Device the AirPods currently play from, among the hosts they are
+ * connected to: several only when they take this computer for an Apple
+ * device */
+typedef enum {
+    AAP_AUDIO_SOURCE_NONE = 0x00,
+    AAP_AUDIO_SOURCE_CALL = 0x01,
+    AAP_AUDIO_SOURCE_MEDIA = 0x02,
+} AapAudioSourceType;
+
+typedef struct {
+    char address[18];          /* "AA:BB:CC:DD:EE:FF", empty when none */
+    AapAudioSourceType type;
+} AapAudioSource;
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;
@@ -194,6 +210,7 @@ typedef struct {
         AapControlSetting control_setting;
         AapProximityKeys proximity_keys;
         AapSleepDetection sleep_detection;
+        AapAudioSource audio_source;
     } data;
 } AapParsedPacket;
 

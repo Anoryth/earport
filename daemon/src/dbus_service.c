@@ -39,6 +39,8 @@ static const gchar introspection_xml[] =
     "    <property name='Settings' type='a{sv}' access='read'/>"
     "    <property name='NearbyBattery' type='a{sv}' access='read'/>"
     "    <property name='AutoConnect' type='b' access='read'/>"
+    "    <property name='AppleHandoff' type='b' access='read'/>"
+    "    <property name='AudioSource' type='s' access='read'/>"
     "    <method name='SetNoiseControlMode'>"
     "      <arg type='s' name='mode' direction='in'/>"
     "    </method>"
@@ -60,6 +62,9 @@ static const gchar introspection_xml[] =
     "    <method name='SetSetting'>"
     "      <arg type='s' name='key' direction='in'/>"
     "      <arg type='v' name='value' direction='in'/>"
+    "    </method>"
+    "    <method name='SetAppleHandoff'>"
+    "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
     "    <method name='SetAutoConnect'>"
     "      <arg type='b' name='enabled' direction='in'/>"
@@ -126,6 +131,9 @@ struct DbusService {
     DbusAutoConnectCallback auto_connect_callback;
     void *auto_connect_user_data;
     bool auto_connect;
+    DbusAutoConnectCallback apple_handoff_callback;
+    void *apple_handoff_user_data;
+    bool apple_handoff;
 };
 
 /* Settings announced by the AirPods, as {key: b|i} */
@@ -298,6 +306,10 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(state->listening_modes.adaptive_enabled);
     } else if (g_strcmp0(property_name, "AutoConnect") == 0) {
         result = g_variant_new_boolean(service->auto_connect);
+    } else if (g_strcmp0(property_name, "AppleHandoff") == 0) {
+        result = g_variant_new_boolean(service->apple_handoff);
+    } else if (g_strcmp0(property_name, "AudioSource") == 0) {
+        result = g_variant_new_string(state->audio_source ? state->audio_source : "");
     } else if (g_strcmp0(property_name, "NearbyBattery") == 0) {
         /* Empty unless the AirPods are seen nearby but not connected here */
         GVariantBuilder builder;
@@ -419,6 +431,15 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         if (service->auto_connect_callback)
             service->auto_connect_callback(enabled, service->auto_connect_user_data);
+        g_dbus_method_invocation_return_value(invocation, NULL);
+
+    } else if (g_strcmp0(method_name, "SetAppleHandoff") == 0) {
+        gboolean enabled = FALSE;
+        g_variant_get(parameters, "(b)", &enabled);
+        g_message("D-Bus: SetAppleHandoff(%s)", enabled ? "true" : "false");
+
+        if (service->apple_handoff_callback)
+            service->apple_handoff_callback(enabled, service->apple_handoff_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
     } else if (g_strcmp0(method_name, "SetSetting") == 0) {
@@ -624,6 +645,20 @@ void dbus_service_set_auto_connect(DbusService *service, bool enabled)
 {
     service->auto_connect = enabled;
     dbus_service_emit_properties_changed(service, "AutoConnect");
+}
+
+void dbus_service_set_apple_handoff_callback(DbusService *service,
+                                             DbusAutoConnectCallback callback,
+                                             void *user_data)
+{
+    service->apple_handoff_callback = callback;
+    service->apple_handoff_user_data = user_data;
+}
+
+void dbus_service_set_apple_handoff(DbusService *service, bool enabled)
+{
+    service->apple_handoff = enabled;
+    dbus_service_emit_properties_changed(service, "AppleHandoff");
 }
 
 static void emit_signal(DbusService *service,

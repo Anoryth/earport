@@ -120,6 +120,12 @@ typedef struct {
     bool nearby_headphones;      /* AirPods Max: one battery */
     char *nearby_name;           /* Custom or Bluetooth name */
 
+    /* Device the AirPods play from: "" unknown, "none", "computer" (this
+     * one), "other" (an Apple device, when they take this computer for one
+     * too) */
+    const char *audio_source;
+    char host_address[18];       /* This computer's Bluetooth address */
+
     /* Battery of the charging case from its own adverts, connected here
      * or not */
     int case_advert_level;       /* -1 if unknown */

@@ -42,6 +42,8 @@ export const AirPodsInterface = `
     <property name="Settings" type="a{sv}" access="read"/>
     <property name="NearbyBattery" type="a{sv}" access="read"/>
     <property name="AutoConnect" type="b" access="read"/>
+    <property name="AppleHandoff" type="b" access="read"/>
+    <property name="AudioSource" type="s" access="read"/>
     <method name="SetNoiseControlMode">
       <arg type="s" name="mode" direction="in"/>
     </method>
@@ -65,6 +67,9 @@ export const AirPodsInterface = `
       <arg type="v" name="value" direction="in"/>
     </method>
     <method name="SetAutoConnect">
+      <arg type="b" name="enabled" direction="in"/>
+    </method>
+    <method name="SetAppleHandoff">
       <arg type="b" name="enabled" direction="in"/>
     </method>
     <method name="SetDisplayName">

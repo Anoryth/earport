@@ -126,6 +126,7 @@ void device_session_ended(Device *dev)
 
     airpods_state_reset(dev->state);
     dbus_service_emit_properties_changed(dev->dbus, "Connected");
+    dbus_service_emit_properties_changed(dev->dbus, "AudioSource");
     dbus_service_emit_properties_changed(dev->dbus, "Settings");
 }
 
@@ -275,6 +276,20 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
 
         if (airpods_state_set_setting(dev->state, def->id, value))
             dbus_service_emit_properties_changed(dev->dbus, "Settings");
+        break;
+    }
+
+    case AAP_PKT_TYPE_AUDIO_SOURCE: {
+        const AapAudioSource *source = &pkt->data.audio_source;
+        const char *value = "none";
+        if (source->type != AAP_AUDIO_SOURCE_NONE)
+            value = g_ascii_strcasecmp(source->address, dev->state->host_address) == 0
+                        ? "computer" : "other";
+        if (g_strcmp0(value, dev->state->audio_source) != 0) {
+            dev->state->audio_source = value;
+            g_message("Audio source: %s", value);
+            dbus_service_emit_properties_changed(dev->dbus, "AudioSource");
+        }
         break;
     }
 

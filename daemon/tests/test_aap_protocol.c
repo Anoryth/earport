@@ -370,6 +370,30 @@ static void test_metadata(void)
  * Non-AAP and unhandled packets
  * ========================================================================== */
 
+/* Audio source (made-up addresses): address least significant byte first */
+static void test_audio_source(void)
+{
+    AapParsedPacket pkt;
+    const uint8_t media[] = { 0x04, 0x00, 0x04, 0x00, 0x0E, 0x00,
+                              0x55, 0x44, 0x33, 0x22, 0x11, 0x00, 0x02 };
+    const uint8_t none[] = { 0x04, 0x00, 0x04, 0x00, 0x0E, 0x00,
+                             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    const uint8_t bad_type[] = { 0x04, 0x00, 0x04, 0x00, 0x0E, 0x00,
+                                 0x55, 0x44, 0x33, 0x22, 0x11, 0x00, 0x07 };
+
+    g_assert_cmpint(aap_parse_packet(media, sizeof(media), &pkt), ==, AAP_PARSE_OK);
+    g_assert_cmpint(pkt.type, ==, AAP_PKT_TYPE_AUDIO_SOURCE);
+    g_assert_cmpint(pkt.data.audio_source.type, ==, AAP_AUDIO_SOURCE_MEDIA);
+    g_assert_cmpstr(pkt.data.audio_source.address, ==, "00:11:22:33:44:55");
+
+    g_assert_cmpint(aap_parse_packet(none, sizeof(none), &pkt), ==, AAP_PARSE_OK);
+    g_assert_cmpint(pkt.data.audio_source.type, ==, AAP_AUDIO_SOURCE_NONE);
+    g_assert_cmpstr(pkt.data.audio_source.address, ==, "");
+
+    g_assert_cmpint(aap_parse_packet(bad_type, sizeof(bad_type), &pkt), ==, AAP_PARSE_MALFORMED);
+    g_assert_cmpint(aap_parse_packet(media, 10, &pkt), ==, AAP_PARSE_INCOMPLETE);
+}
+
 static void test_unhandled_packets(void)
 {
     /* Handshake acknowledgement uses a different header */
@@ -472,6 +496,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/conversation-events", test_conversation_events);
     g_test_add_func("/aap/proximity-keys", test_proximity_keys);
     g_test_add_func("/aap/metadata", test_metadata);
+    g_test_add_func("/aap/audio-source", test_audio_source);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
     g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);

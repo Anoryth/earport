@@ -56,6 +56,7 @@ void airpods_state_reset(AirPodsState *state)
     state->device_address = NULL;
     state->display_name = NULL;
     state->model = AIRPODS_MODEL_UNKNOWN;
+    state->audio_source = NULL;
 
     state->battery.left.level = -1;
     state->battery.left.status = BATTERY_STATUS_UNKNOWN;

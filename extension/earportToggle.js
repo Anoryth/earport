@@ -300,7 +300,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             const deviceModel = this._proxy.DeviceModel || null;
             const displayName = this._proxy.DisplayName || this._proxy.DeviceModel || 'AirPods';
 
-            this.subtitle = displayName;
+            /* Connected here too, but playing from an Apple device */
+            this.subtitle = this._proxy.AudioSource === 'other' ? _('Other device') : displayName;
             this.checked = true;
             this._batteryBox.opacity = 255;
             this._ncBox.opacity = 255;

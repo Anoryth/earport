@@ -194,6 +194,31 @@ static void test_disconnection(Fixture *f, gconstpointer data)
     g_assert_false(f->state.listening_modes.adaptive_enabled);
 }
 
+/* Which device the AirPods play from, as they report it once they take
+ * this computer for an Apple device (made-up addresses, sent least
+ * significant byte first) */
+static void test_audio_source(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    replay_connection(f);
+    g_strlcpy(f->state.host_address, "00:11:22:33:44:55", sizeof(f->state.host_address));
+
+    /* This computer plays */
+    REPLAY(f, 0x04, 0x00, 0x04, 0x00, 0x0E, 0x00, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00, 0x02);
+    g_assert_cmpstr(f->state.audio_source, ==, "computer");
+
+    /* Nothing, then another device */
+    REPLAY(f, 0x04, 0x00, 0x04, 0x00, 0x0E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    g_assert_cmpstr(f->state.audio_source, ==, "none");
+    REPLAY(f, 0x04, 0x00, 0x04, 0x00, 0x0E, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x02);
+    g_assert_cmpstr(f->state.audio_source, ==, "other");
+
+    /* Unknown again once disconnected */
+    device_session_ended(&f->device);
+    g_assert_null(f->state.audio_source);
+}
+
 int main(int argc, char *argv[])
 {
     /* The device profile and learned discharge rate go to a temporary
@@ -209,6 +234,7 @@ int main(int argc, char *argv[])
     ADD("/device/ear-sides", test_ear_sides);
     ADD("/device/conversation", test_conversation);
     ADD("/device/disconnection", test_disconnection);
+    ADD("/device/audio-source", test_audio_source);
 
     return g_test_run();
 }

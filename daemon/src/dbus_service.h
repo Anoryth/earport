@@ -123,6 +123,12 @@ void dbus_service_set_auto_connect_callback(DbusService *service,
                                             void *user_data);
 void dbus_service_set_auto_connect(DbusService *service, bool enabled);
 
+/* "Switch with your Apple devices" option (same callback shape) */
+void dbus_service_set_apple_handoff_callback(DbusService *service,
+                                             DbusAutoConnectCallback callback,
+                                             void *user_data);
+void dbus_service_set_apple_handoff(DbusService *service, bool enabled);
+
 /**
  * Set callback for display name change requests
  */

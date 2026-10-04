@@ -48,6 +48,7 @@ sources = files(
     'src/aap_link.c',
     'src/aap_protocol.c',
     'src/aes128.c',
+    'src/apple_identity.c',
     'src/autoconnect.c',
     'src/battery_estimator.c',
     'src/battery_provider.c',

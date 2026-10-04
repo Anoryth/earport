@@ -5,6 +5,7 @@
 
 #include "aap_protocol.h"
 #include <glib.h>
+#include <stdio.h>
 #include <string.h>
 
 /* Pre-built packets */
@@ -302,6 +303,24 @@ static AapParseResult aap_parse_sleep_detection(const uint8_t *data, size_t len,
     return AAP_PARSE_OK;
 }
 
+/* 04 00 04 00 0E 00 [address, least significant byte first] [type]; all
+ * zero when nothing plays */
+static AapParseResult aap_parse_audio_source(const uint8_t *data, size_t len,
+                                             AapAudioSource *source)
+{
+    if (len < 13)
+        return AAP_PARSE_INCOMPLETE;
+
+    memset(source, 0, sizeof(*source));
+    if (data[12] > AAP_AUDIO_SOURCE_MEDIA)
+        return AAP_PARSE_MALFORMED;
+    source->type = (AapAudioSourceType)data[12];
+    if (source->type != AAP_AUDIO_SOURCE_NONE)
+        snprintf(source->address, sizeof(source->address), "%02X:%02X:%02X:%02X:%02X:%02X",
+                 data[11], data[10], data[9], data[8], data[7], data[6]);
+    return AAP_PARSE_OK;
+}
+
 static AapParseResult parse_control_packet(const uint8_t *data, size_t len, AapParsedPacket *result)
 {
     if (len < 8)
@@ -382,6 +401,10 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
     case AAP_OPCODE_PROXIMITY_KEYS_RSP:
         result->type = AAP_PKT_TYPE_PROXIMITY_KEYS;
         return aap_parse_proximity_keys(data, len, &result->data.proximity_keys);
+
+    case AAP_OPCODE_AUDIO_SOURCE:
+        result->type = AAP_PKT_TYPE_AUDIO_SOURCE;
+        return aap_parse_audio_source(data, len, &result->data.audio_source);
 
     case AAP_OPCODE_SLEEP_DETECTION:
         result->type = AAP_PKT_TYPE_SLEEP_DETECTION;

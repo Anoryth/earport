@@ -13,6 +13,7 @@
 #include <signal.h>
 
 #include "airpods_state.h"
+#include "apple_identity.h"
 #include "aap_link.h"
 #include "aap_protocol.h"
 #include "autoconnect.h"
@@ -39,6 +40,7 @@ typedef struct {
     Controls controls;
     AutoConnect *autoconnect;
     BatteryProvider *battery_provider;
+    AppleIdentity *apple_identity;
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
 } AppContext;
@@ -339,6 +341,38 @@ static void on_link_connected(const char *address, const char *name, void *user_
  * BlueZ callbacks
  * ========================================================================== */
 
+/* This computer's address, to tell its own audio source from another
+ * device's */
+static void on_adapter_address_ready(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    (void)user_data;
+    GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
+    if (result == NULL)
+        return;
+
+    GVariant *value;
+    g_variant_get(result, "(v)", &value);
+    if (g_variant_is_of_type(value, G_VARIANT_TYPE_STRING))
+        g_strlcpy(app.state.host_address, g_variant_get_string(value, NULL),
+                  sizeof(app.state.host_address));
+    g_variant_unref(value);
+    g_variant_unref(result);
+}
+
+static void read_adapter_address(const char *adapter_path)
+{
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    if (bus == NULL || adapter_path == NULL) {
+        g_clear_object(&bus);
+        return;
+    }
+    g_dbus_connection_call(bus, "org.bluez", adapter_path, "org.freedesktop.DBus.Properties", "Get",
+                           g_variant_new("(ss)", "org.bluez.Adapter1", "Address"),
+                           G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE, 5000, NULL,
+                           on_adapter_address_ready, NULL);
+    g_object_unref(bus);
+}
+
 static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_data)
 {
     (void)user_data;
@@ -348,6 +382,7 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
     autoconnect_set_airpods_connected(app.autoconnect, true, adapter_path);
     g_free(app.adapter_path);
     app.adapter_path = adapter_path;
+    read_adapter_address(adapter_path);
 
     aap_link_device_connected(app.link, device->address, device->name);
 }
@@ -396,6 +431,16 @@ static void on_set_auto_connect(bool enabled, void *user_data)
     autoconnect_set_enabled(app.autoconnect, enabled);
 }
 
+static void on_set_apple_handoff(bool enabled, void *user_data)
+{
+    (void)user_data;
+
+    app.config.apple_handoff = enabled;
+    config_save(&app.config);
+    dbus_service_set_apple_handoff(app.dbus_service, enabled);
+    apple_identity_set_enabled(app.apple_identity, enabled);
+}
+
 /* ============================================================================
  * Signal handlers
  * ========================================================================== */
@@ -425,6 +470,8 @@ static void cleanup(void)
     g_message("Cleaning up...");
 
     battery_provider_free(app.battery_provider);
+    apple_identity_free(app.apple_identity);
+    app.apple_identity = NULL;
     app.battery_provider = NULL;
     g_free(app.adapter_path);
     sleep_pause_free(app.sleep_pause);
@@ -501,6 +548,8 @@ int main(int argc, char *argv[])
     dbus_service_set_ear_pause_mode_callback(app.dbus_service, on_set_ear_pause_mode, NULL);
     dbus_service_set_auto_connect_callback(app.dbus_service, on_set_auto_connect, NULL);
     dbus_service_set_auto_connect(app.dbus_service, app.config.auto_connect);
+    dbus_service_set_apple_handoff_callback(app.dbus_service, on_set_apple_handoff, NULL);
+    dbus_service_set_apple_handoff(app.dbus_service, app.config.apple_handoff);
 
     if (!dbus_service_start(app.dbus_service)) {
         g_error("Failed to start D-Bus service");
@@ -525,6 +574,10 @@ int main(int argc, char *argv[])
     app.autoconnect = autoconnect_new(app.config.auto_connect, on_nearby_battery,
                                      on_case_battery, NULL);
     app.battery_provider = battery_provider_new();
+    app.apple_identity = apple_identity_new();
+    apple_identity_set_enabled(app.apple_identity, app.config.apple_handoff);
+    /* Known before the first audio source arrives; refreshed on connection */
+    read_adapter_address("/org/bluez/hci0");
 
     static const AapLinkCallbacks link_callbacks = {
         .connected = on_link_connected,

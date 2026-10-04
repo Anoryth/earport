@@ -231,6 +231,12 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         connectionGroup.add(this._autoConnectRow);
 
+        this._appleHandoffRow = new Adw.SwitchRow({
+            title: _('Switch With Your Apple Devices'),
+            subtitle: _('The AirPods move between this computer and your iPhone, iPad or Mac on their own, as between Apple devices. This computer then presents itself as an Apple device to Apple accessories. Takes effect the next time the AirPods connect.'),
+        });
+        connectionGroup.add(this._appleHandoffRow);
+
         /* Notifications group */
         const notificationsGroup = new Adw.PreferencesGroup({
             title: _('Notifications'),
@@ -363,6 +369,12 @@ export default class EarPortPreferences extends ExtensionPreferences {
             if (this._updatingFromProxy)
                 return;
             this._proxy?.SetAutoConnectRemote(this._autoConnectRow.active, () => {});
+        });
+
+        this._appleHandoffRow.connect('notify::active', () => {
+            if (this._updatingFromProxy)
+                return;
+            this._proxy?.SetAppleHandoffRemote(this._appleHandoffRow.active, () => {});
         });
 
         this._earPauseRow.connect('notify::selected', () => {
@@ -645,6 +657,11 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._autoConnectRow.visible = typeof enabled === 'boolean';
         if (this._autoConnectRow.visible)
             this._autoConnectRow.active = enabled;
+
+        const handoff = this._proxy?.AppleHandoff;
+        this._appleHandoffRow.visible = typeof handoff === 'boolean';
+        if (this._appleHandoffRow.visible)
+            this._appleHandoffRow.active = handoff;
     }
 
     _setSensitive(sensitive) {
