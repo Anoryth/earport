@@ -18,9 +18,10 @@
 #endif
 
 /* Leaves the other device time to let the AirPods go: restarting too early
- * leaves PipeWire's output stuck */
+ * leaves PipeWire's output stuck, and an iPhone starting to play lets them
+ * go for a second before taking them again */
 #ifndef HANDOFF_SETTLE_MS
-#define HANDOFF_SETTLE_MS 1000
+#define HANDOFF_SETTLE_MS 1500
 #endif
 
 /* Another device letting the AirPods go within this time only borrowed them
@@ -146,6 +147,9 @@ void handoff_source_changed(Handoff *handoff, const char *source)
         return;
 
     if (g_strcmp0(source, "other") == 0) {
+        /* Taken (again): getting the sound back here would take them from it */
+        cancel(&handoff->restart_id);
+        cancel(&handoff->check_id);
         handoff->taken = true;
         handoff->taken_us = g_get_monotonic_time();
         handoff->paused = false;

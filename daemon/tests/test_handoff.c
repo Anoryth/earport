@@ -123,6 +123,28 @@ static void test_moment(void)
     handoff_free(handoff);
 }
 
+/* An iPhone starting to play lets the AirPods go for a second: the restart
+ * planned meanwhile must not take them back from it */
+static void test_starting_elsewhere(void)
+{
+    Calls calls = { 0 };
+    Handoff *handoff = handoff_new(&callbacks, &calls);
+    handoff_set_enabled(handoff, true);
+
+    handoff_source_changed(handoff, "computer");
+    handoff_source_changed(handoff, "other");
+    run_for(30);
+    handoff_source_changed(handoff, "none");
+    run_for(10);
+    handoff_source_changed(handoff, "other");
+    run_for(300);
+    g_assert_cmpint(calls.restarted, ==, 0);
+    g_assert_cmpint(calls.tried_again, ==, 0);
+    /* Kept from then on */
+    g_assert_cmpint(calls.paused, ==, 1);
+    handoff_free(handoff);
+}
+
 /* Back here, playback starting needs nothing; and nothing at all when off */
 static void test_back_and_disabled(void)
 {
@@ -159,6 +181,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/handoff/kept", test_kept);
     g_test_add_func("/handoff/borrowed", test_borrowed);
     g_test_add_func("/handoff/moment", test_moment);
+    g_test_add_func("/handoff/starting-elsewhere", test_starting_elsewhere);
     g_test_add_func("/handoff/back-and-disabled", test_back_and_disabled);
 
     return g_test_run();
