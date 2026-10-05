@@ -23,6 +23,12 @@
 #define HANDOFF_SETTLE_MS 1000
 #endif
 
+/* Another device letting the AirPods go within this time only borrowed them
+ * (a notification read aloud): what was paused here plays again */
+#ifndef HANDOFF_RESUME_WINDOW_MS
+#define HANDOFF_RESUME_WINDOW_MS 20000
+#endif
+
 /* The AirPods should be back by then, otherwise try once more */
 #ifndef HANDOFF_CHECK_MS
 #define HANDOFF_CHECK_MS 2500
@@ -36,6 +42,8 @@ struct Handoff {
     bool taken;                 /* Another device had them since this one */
     bool here;                  /* They play from this computer */
     const char *source;         /* Last one reported */
+    gint64 taken_us;            /* When another device took them */
+    bool paused;                /* Players paused since */
     guint keep_id;              /* Another device has them: kept? */
     guint restart_id;           /* Sound back shortly */
     guint check_id;             /* Back after the restart? */
@@ -55,6 +63,7 @@ static gboolean keep_done_cb(gpointer user_data)
     Handoff *handoff = user_data;
     handoff->keep_id = 0;
     g_message("Handoff: another device kept the AirPods, pausing here");
+    handoff->paused = true;
     handoff->callbacks.pause_players(handoff->user_data);
     return G_SOURCE_REMOVE;
 }
@@ -122,6 +131,7 @@ void handoff_set_enabled(Handoff *handoff, bool enabled)
     if (!enabled) {
         cancel_all(handoff);
         handoff->taken = false;
+        handoff->paused = false;
     }
 }
 
@@ -137,6 +147,8 @@ void handoff_source_changed(Handoff *handoff, const char *source)
 
     if (g_strcmp0(source, "other") == 0) {
         handoff->taken = true;
+        handoff->taken_us = g_get_monotonic_time();
+        handoff->paused = false;
         if (handoff->keep_id == 0)
             handoff->keep_id = g_timeout_add(HANDOFF_KEEP_MS, keep_done_cb, handoff);
     } else if (g_strcmp0(source, "none") == 0) {
@@ -145,11 +157,19 @@ void handoff_source_changed(Handoff *handoff, const char *source)
             cancel(&handoff->keep_id);
             g_message("Handoff: another device only had the AirPods for a moment");
             restart_in(handoff, HANDOFF_SETTLE_MS);
+        } else if (handoff->paused &&
+                   g_get_monotonic_time() - handoff->taken_us < HANDOFF_RESUME_WINDOW_MS * 1000) {
+            /* Borrowed: resuming starts playback, which gets the sound back */
+            handoff->paused = false;
+            g_message("Handoff: another device only borrowed the AirPods, resuming here");
+            handoff->callbacks.resume_players(handoff->user_data);
+            restart_in(handoff, HANDOFF_SETTLE_MS);
         }
     } else {
         /* Back here, or disconnected */
         cancel_all(handoff);
         handoff->taken = false;
+        handoff->paused = false;
     }
 }
 

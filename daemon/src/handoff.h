@@ -5,6 +5,8 @@
  * What this computer does when the AirPods switch between it and an Apple
  * device (once they take it for one, see apple_identity.h), like a Mac:
  * - another device keeps them: pause the players here, the user moved on;
+ *   if it lets them go soon after (an iPhone announcing a notification),
+ *   resume them;
  * - another device only had them for a moment (an iPhone sound, say): get
  *   the sound playing here back;
  * - playback starts here after another device had them: get the sound back
@@ -20,6 +22,8 @@
 typedef struct {
     /* Pause the players playing here */
     void (*pause_players)(void *user_data);
+    /* Resume the ones pause_players paused */
+    void (*resume_players)(void *user_data);
     /* Restart what plays here to the AirPods, so that they switch back;
      * again: a second try, the first one didn't bring them back */
     void (*restart_audio)(bool again, void *user_data);

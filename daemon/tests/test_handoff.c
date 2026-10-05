@@ -3,7 +3,8 @@
  * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Handoff decisions, with the delays shortened in meson.build (keep:
- * 100 ms, restart after playback: 20 ms, settle: 30 ms, check: 80 ms)
+ * 100 ms, restart after playback: 20 ms, settle: 30 ms, check: 80 ms,
+ * resume window: 150 ms)
  */
 
 #include <glib.h>
@@ -12,6 +13,7 @@
 
 typedef struct {
     int paused;
+    int resumed;
     int restarted;
     int tried_again;
 } Calls;
@@ -19,6 +21,11 @@ typedef struct {
 static void pause_players(void *user_data)
 {
     ((Calls *)user_data)->paused++;
+}
+
+static void resume_players(void *user_data)
+{
+    ((Calls *)user_data)->resumed++;
 }
 
 static void restart_audio(bool again, void *user_data)
@@ -32,6 +39,7 @@ static void restart_audio(bool again, void *user_data)
 
 static const HandoffCallbacks callbacks = {
     .pause_players = pause_players,
+    .resume_players = resume_players,
     .restart_audio = restart_audio,
 };
 
@@ -58,9 +66,10 @@ static void test_kept(void)
     /* The AirPods repeat it: still kept, not a new "moment" */
     handoff_source_changed(handoff, "other");
 
-    /* Paused by the user there: nothing more here */
+    /* Paused by the user there, after a while: nothing more here */
     handoff_source_changed(handoff, "none");
     run_for(50);
+    g_assert_cmpint(calls.resumed, ==, 0);
     g_assert_cmpint(calls.restarted, ==, 0);
 
     /* Until playback starts here again; back at once, no second try */
@@ -70,6 +79,25 @@ static void test_kept(void)
     handoff_source_changed(handoff, "computer");
     run_for(200);
     g_assert_cmpint(calls.tried_again, ==, 0);
+    handoff_free(handoff);
+}
+
+/* Borrowed for a few seconds (a notification read aloud): paused, then
+ * resumed here */
+static void test_borrowed(void)
+{
+    Calls calls = { 0 };
+    Handoff *handoff = handoff_new(&callbacks, &calls);
+    handoff_set_enabled(handoff, true);
+
+    handoff_source_changed(handoff, "computer");
+    handoff_source_changed(handoff, "other");
+    run_for(120);
+    g_assert_cmpint(calls.paused, ==, 1);
+    handoff_source_changed(handoff, "none");
+    run_for(60);
+    g_assert_cmpint(calls.resumed, ==, 1);
+    g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
 }
 
@@ -129,6 +157,7 @@ int main(int argc, char *argv[])
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/handoff/kept", test_kept);
+    g_test_add_func("/handoff/borrowed", test_borrowed);
     g_test_add_func("/handoff/moment", test_moment);
     g_test_add_func("/handoff/back-and-disabled", test_back_and_disabled);
 

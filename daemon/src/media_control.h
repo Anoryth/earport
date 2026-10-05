@@ -66,6 +66,9 @@ void media_control_set_paused_for_sleep_callback(MediaControl *mc,
  * resumed when the AirPods go back in */
 void media_control_pause_for_handoff(MediaControl *mc);
 
+/* Resume the players paused by media_control_pause_for_handoff */
+void media_control_resume_handoff(MediaControl *mc);
+
 /* Resume media players that were paused by us */
 void media_control_resume(MediaControl *mc);
 

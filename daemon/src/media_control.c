@@ -24,6 +24,7 @@ struct MediaControl {
 
     /* Track which players we paused */
     GList *paused_players;     /* List of player names (strings) that we paused */
+    GList *handoff_players;    /* Paused because another device took the AirPods */
     guint resume_count;        /* Resumes so far, to spot pauses that land after one */
     GCancellable *cancellable; /* Pending player calls, cancelled on free */
 
@@ -154,6 +155,8 @@ static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data
     g_message("Paused media player: %s", op->player);
 
     if (op->for_handoff) {
+        if (g_list_find_custom(mc->handoff_players, op->player, (GCompareFunc)g_strcmp0) == NULL)
+            mc->handoff_players = g_list_append(mc->handoff_players, g_strdup(op->player));
         pause_op_free(op);
         return;
     }
@@ -320,6 +323,7 @@ void media_control_free(MediaControl *mc)
 
     /* Free paused players list */
     g_list_free_full(mc->paused_players, g_free);
+    g_list_free_full(mc->handoff_players, g_free);
 
     if (mc->connection) {
         if (mc->playback_subscription_id > 0)
@@ -455,6 +459,10 @@ void media_control_pause_for_handoff(MediaControl *mc)
     if (mc == NULL || mc->connection == NULL)
         return;
 
+    /* A new handoff: the players to resume are the ones paused now */
+    g_list_free_full(mc->handoff_players, g_free);
+    mc->handoff_players = NULL;
+
     PauseRequest *request = g_new0(PauseRequest, 1);
     request->mc = mc;
     request->for_handoff = true;
@@ -462,6 +470,19 @@ void media_control_pause_for_handoff(MediaControl *mc)
                            "org.freedesktop.DBus", "ListNames", NULL, G_VARIANT_TYPE("(as)"),
                            G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS, mc->cancellable,
                            on_list_names_done, request);
+}
+
+void media_control_resume_handoff(MediaControl *mc)
+{
+    if (mc == NULL || mc->connection == NULL)
+        return;
+
+    for (GList *l = mc->handoff_players; l != NULL; l = l->next) {
+        g_message("Resuming media player: %s", (const char *)l->data);
+        player_play(mc, l->data);
+    }
+    g_list_free_full(mc->handoff_players, g_free);
+    mc->handoff_players = NULL;
 }
 
 void media_control_pause_for_sleep(MediaControl *mc, int rewind_seconds)

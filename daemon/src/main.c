@@ -458,6 +458,12 @@ static void handoff_pause_players(void *user_data)
     media_control_pause_for_handoff(app.media_control);
 }
 
+static void handoff_resume_players(void *user_data)
+{
+    (void)user_data;
+    media_control_resume_handoff(app.media_control);
+}
+
 static void handoff_restart_audio(bool again, void *user_data)
 {
     (void)user_data;
@@ -615,6 +621,7 @@ int main(int argc, char *argv[])
     apple_identity_set_enabled(app.apple_identity, app.config.apple_handoff);
     static const HandoffCallbacks handoff_callbacks = {
         .pause_players = handoff_pause_players,
+        .resume_players = handoff_resume_players,
         .restart_audio = handoff_restart_audio,
     };
     app.handoff = handoff_new(&handoff_callbacks, NULL);
