@@ -35,6 +35,7 @@ struct Handoff {
 
     bool taken;                 /* Another device had them since this one */
     bool here;                  /* They play from this computer */
+    const char *source;         /* Last one reported */
     guint keep_id;              /* Another device has them: kept? */
     guint restart_id;           /* Sound back shortly */
     guint check_id;             /* Back after the restart? */
@@ -83,9 +84,12 @@ static gboolean restart_cb(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
+/* A new restart replaces the pending one and its check: a check firing
+ * meanwhile would cut the AirPods coming back */
 static void restart_in(Handoff *handoff, guint ms)
 {
     cancel(&handoff->restart_id);
+    cancel(&handoff->check_id);
     handoff->restart_id = g_timeout_add(ms, restart_cb, handoff);
 }
 
@@ -123,6 +127,10 @@ void handoff_set_enabled(Handoff *handoff, bool enabled)
 
 void handoff_source_changed(Handoff *handoff, const char *source)
 {
+    /* The AirPods repeat the same source: only changes count */
+    if (g_strcmp0(source, handoff->source) == 0)
+        return;
+    handoff->source = source;
     handoff->here = g_strcmp0(source, "computer") == 0;
     if (!handoff->enabled)
         return;

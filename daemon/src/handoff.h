@@ -33,7 +33,7 @@ void handoff_free(Handoff *handoff);
 void handoff_set_enabled(Handoff *handoff, bool enabled);
 
 /* The device the AirPods play from: "computer", "other", "none", or NULL
- * once disconnected */
+ * once disconnected (a static string: compared, not copied) */
 void handoff_source_changed(Handoff *handoff, const char *source);
 
 /* A player started playing here */

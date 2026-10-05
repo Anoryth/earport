@@ -55,6 +55,9 @@ static void test_kept(void)
     g_assert_cmpint(calls.paused, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 0);
 
+    /* The AirPods repeat it: still kept, not a new "moment" */
+    handoff_source_changed(handoff, "other");
+
     /* Paused by the user there: nothing more here */
     handoff_source_changed(handoff, "none");
     run_for(50);
