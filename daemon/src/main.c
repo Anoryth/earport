@@ -322,7 +322,8 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
     else if (pkt->type == AAP_PKT_TYPE_METADATA && app.state.model != AIRPODS_MODEL_UNKNOWN)
         autoconnect_set_model(app.autoconnect, app.state.model);
     else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE)
-        handoff_source_changed(app.handoff, app.state.audio_source);
+        handoff_source_changed(app.handoff, app.state.audio_source,
+                               pkt->data.audio_source.type == AAP_AUDIO_SOURCE_CALL);
 }
 
 static void on_link_disconnected(void *user_data)
@@ -330,7 +331,7 @@ static void on_link_disconnected(void *user_data)
     (void)user_data;
     battery_provider_update(app.battery_provider, NULL, NULL, -1);
     sleep_pause_session_ended(app.sleep_pause);
-    handoff_source_changed(app.handoff, NULL);
+    handoff_source_changed(app.handoff, NULL, false);
     device_session_ended(&app.device);
 }
 
@@ -449,7 +450,11 @@ static bool claim_audio(void *user_data)
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_control_cmd(AAP_CTRL_OWNS_CONNECTION, &claim, 1, packet);
     g_message("Asking the AirPods to play from this computer");
-    return aap_link_send(app.link, packet, sizeof(packet));
+    if (!aap_link_send(app.link, packet, sizeof(packet)))
+        return false;
+    /* The request alone doesn't move them: playing here does */
+    handoff_use_here(app.handoff);
+    return true;
 }
 
 static void handoff_pause_players(void *user_data)

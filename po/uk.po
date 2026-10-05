@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-04 21:54+0200\n"
+"POT-Creation-Date: 2026-10-05 21:11+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -27,8 +27,8 @@ msgstr "недоступно"
 msgid "charging"
 msgstr "заряджається"
 
-#: extension/earportToggle.js:40 extension/earportToggle.js:371
-#: extension/earportToggle.js:388 extension/prefs.js:525
+#: extension/earportToggle.js:40 extension/earportToggle.js:384
+#: extension/earportToggle.js:402 extension/prefs.js:525
 msgid "Disconnected"
 msgstr "Відключено"
 
@@ -83,40 +83,44 @@ msgid "Auto"
 msgstr "Авто"
 
 #: extension/earportToggle.js:169
+msgid "Use on This Computer"
+msgstr "Використовувати на цьому комп’ютері"
+
+#: extension/earportToggle.js:180
 msgid "Advanced Settings"
 msgstr "Додаткові налаштування"
 
-#: extension/earportToggle.js:178
+#: extension/earportToggle.js:189
 msgid "How to Install the EarPort Service"
 msgstr "Як установити службу EarPort"
 
-#: extension/earportToggle.js:191
+#: extension/earportToggle.js:202
 msgid "Copy the Installation Command"
 msgstr "Скопіювати команду встановлення"
 
-#: extension/earportToggle.js:201
+#: extension/earportToggle.js:212
 msgid "Update the EarPort Service"
 msgstr "Оновити службу EarPort"
 
-#: extension/earportToggle.js:304 extension/earportToggle.js:412
+#: extension/earportToggle.js:316 extension/earportToggle.js:426
 msgid "Other device"
 msgstr "Інший пристрій"
 
-#: extension/earportToggle.js:371
+#: extension/earportToggle.js:384
 msgid "Service not running"
 msgstr "Службу не запущено"
 
-#: extension/earportToggle.js:450
+#: extension/earportToggle.js:464
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/earportToggle.js:452
+#: extension/earportToggle.js:466
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:457
+#: extension/earportToggle.js:471
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"
@@ -325,7 +329,10 @@ msgid ""
 "own, as between Apple devices. This computer then presents itself as an "
 "Apple device to Apple accessories. Takes effect the next time the AirPods "
 "connect."
-msgstr "AirPods самі переходять між цим комп’ютером і вашим iPhone, iPad або Mac, як між пристроями Apple. Цей комп’ютер тоді представляється аксесуарам Apple як пристрій Apple. Діє з наступного підключення AirPods."
+msgstr ""
+"AirPods самі переходять між цим комп’ютером і вашим iPhone, iPad або Mac, як "
+"між пристроями Apple. Цей комп’ютер тоді представляється аксесуарам Apple як "
+"пристрій Apple. Діє з наступного підключення AirPods."
 
 #: extension/prefs.js:242
 msgid "Notifications"

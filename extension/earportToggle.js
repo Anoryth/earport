@@ -164,6 +164,17 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         /* Separator */
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
+        /* While an Apple device has them (Apple device switching) */
+        this._useHereItem = new PopupMenu.PopupImageMenuItem(
+            _('Use on This Computer'),
+            'computer-symbolic'
+        );
+        this._useHereItem.connect('activate', () => {
+            this._proxy?.ClaimAudioRemote(() => {});
+        });
+        this._useHereItem.visible = false;
+        this.menu.addMenuItem(this._useHereItem);
+
         /* Settings button */
         this._settingsItem = new PopupMenu.PopupImageMenuItem(
             _('Advanced Settings'),
@@ -301,7 +312,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             const displayName = this._proxy.DisplayName || this._proxy.DeviceModel || 'AirPods';
 
             /* Connected here too, but playing from an Apple device */
-            this.subtitle = this._proxy.AudioSource === 'other' ? _('Other device') : displayName;
+            const elsewhere = this._proxy.AudioSource === 'other';
+            this.subtitle = elsewhere ? _('Other device') : displayName;
+            this._useHereItem.visible = elsewhere;
             this.checked = true;
             this._batteryBox.opacity = 255;
             this._ncBox.opacity = 255;
@@ -370,6 +383,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     _updateDisconnectedState() {
         this.subtitle = this._serviceMissing ? _('Service not running') : _('Disconnected');
         this.checked = false;
+        this._useHereItem.visible = false;
         this._batteryBox.opacity = 128;
         this._ncBox.opacity = 128;
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-04 21:54+0200\n"
+"POT-Creation-Date: 2026-10-05 21:11+0200\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Dutch\n"
@@ -30,8 +30,8 @@ msgstr "niet beschikbaar"
 msgid "charging"
 msgstr "wordt opgeladen"
 
-#: extension/earportToggle.js:40 extension/earportToggle.js:371
-#: extension/earportToggle.js:388 extension/prefs.js:525
+#: extension/earportToggle.js:40 extension/earportToggle.js:384
+#: extension/earportToggle.js:402 extension/prefs.js:525
 msgid "Disconnected"
 msgstr "Niet verbonden"
 
@@ -86,40 +86,44 @@ msgid "Auto"
 msgstr "Auto"
 
 #: extension/earportToggle.js:169
+msgid "Use on This Computer"
+msgstr "Gebruiken op deze computer"
+
+#: extension/earportToggle.js:180
 msgid "Advanced Settings"
 msgstr "Geavanceerde instellingen"
 
-#: extension/earportToggle.js:178
+#: extension/earportToggle.js:189
 msgid "How to Install the EarPort Service"
 msgstr "De EarPort-dienst installeren"
 
-#: extension/earportToggle.js:191
+#: extension/earportToggle.js:202
 msgid "Copy the Installation Command"
 msgstr "Installatieopdracht kopiëren"
 
-#: extension/earportToggle.js:201
+#: extension/earportToggle.js:212
 msgid "Update the EarPort Service"
 msgstr "EarPort-dienst bijwerken"
 
-#: extension/earportToggle.js:304 extension/earportToggle.js:412
+#: extension/earportToggle.js:316 extension/earportToggle.js:426
 msgid "Other device"
 msgstr "Ander apparaat"
 
-#: extension/earportToggle.js:371
+#: extension/earportToggle.js:384
 msgid "Service not running"
 msgstr "Dienst is niet actief"
 
-#: extension/earportToggle.js:450
+#: extension/earportToggle.js:464
 msgid "Less than 5 min of listening left"
 msgstr "Minder dan 5 min luistertijd over"
 
-#: extension/earportToggle.js:452
+#: extension/earportToggle.js:466
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Nog ongeveer %d min luistertijd"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:457
+#: extension/earportToggle.js:471
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Nog ongeveer %d∶%02d luistertijd"
@@ -327,7 +331,11 @@ msgid ""
 "own, as between Apple devices. This computer then presents itself as an "
 "Apple device to Apple accessories. Takes effect the next time the AirPods "
 "connect."
-msgstr "De AirPods wisselen zelf tussen deze computer en je iPhone, iPad of Mac, zoals tussen Apple-apparaten. Deze computer stelt zich dan voor als een Apple-apparaat aan Apple-accessoires. Werkt vanaf de volgende keer dat de AirPods verbinden."
+msgstr ""
+"De AirPods wisselen zelf tussen deze computer en je iPhone, iPad of Mac, "
+"zoals tussen Apple-apparaten. Deze computer stelt zich dan voor als een "
+"Apple-apparaat aan Apple-accessoires. Werkt vanaf de volgende keer dat de "
+"AirPods verbinden."
 
 #: extension/prefs.js:242
 msgid "Notifications"

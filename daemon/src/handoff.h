@@ -6,7 +6,7 @@
  * device (once they take it for one, see apple_identity.h), like a Mac:
  * - another device keeps them: pause the players here, the user moved on;
  *   if it lets them go soon after (an iPhone announcing a notification),
- *   resume them;
+ *   or after a call however long, resume them;
  * - another device only had them for a moment (an iPhone sound, say): get
  *   the sound playing here back;
  * - playback starts here after another device had them: get the sound back
@@ -37,10 +37,15 @@ void handoff_free(Handoff *handoff);
 void handoff_set_enabled(Handoff *handoff, bool enabled);
 
 /* The device the AirPods play from: "computer", "other", "none", or NULL
- * once disconnected (a static string: compared, not copied) */
-void handoff_source_changed(Handoff *handoff, const char *source);
+ * once disconnected (a static string: compared, not copied); call: it
+ * plays a call */
+void handoff_source_changed(Handoff *handoff, const char *source, bool call);
 
 /* A player started playing here */
 void handoff_playback_started(Handoff *handoff);
+
+/* The user asks for the AirPods here: resume what was paused for another
+ * device and get the sound back */
+void handoff_use_here(Handoff *handoff);
 
 #endif /* HANDOFF_H */
