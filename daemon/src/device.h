@@ -26,6 +26,7 @@ typedef struct {
     MediaControl *media;         /* May be NULL */
 
     bool ca_speaking;            /* Conversation awareness lowered the volume */
+    AapAudioSourceType audio_source_type;  /* Last reported */
 
     /* Remaining listening time, learned per device */
     BatteryEstimator battery_estimator;

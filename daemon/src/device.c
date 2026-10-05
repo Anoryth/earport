@@ -285,6 +285,10 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         if (source->type != AAP_AUDIO_SOURCE_NONE)
             value = g_ascii_strcasecmp(source->address, dev->state->host_address) == 0
                         ? "computer" : "other";
+        if (source->type != dev->audio_source_type)
+            g_message("Audio source type: %s", source->type == AAP_AUDIO_SOURCE_CALL ? "call"
+                      : source->type == AAP_AUDIO_SOURCE_MEDIA ? "media" : "none");
+        dev->audio_source_type = source->type;
         if (g_strcmp0(value, dev->state->audio_source) != 0) {
             dev->state->audio_source = value;
             g_message("Audio source: %s", value);
