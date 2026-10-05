@@ -28,10 +28,10 @@ static void resume_players(void *user_data)
     ((Calls *)user_data)->resumed++;
 }
 
-static void restart_audio(bool again, void *user_data)
+static void restart_audio(HandoffRestart how, void *user_data)
 {
     Calls *calls = user_data;
-    if (again)
+    if (how == HANDOFF_RESTART_OUTPUT)
         calls->tried_again++;
     else
         calls->restarted++;
@@ -95,9 +95,31 @@ static void test_borrowed(void)
     run_for(120);
     g_assert_cmpint(calls.paused, ==, 1);
     handoff_source_changed(handoff, "none", false);
-    run_for(60);
+    run_for(100);
     g_assert_cmpint(calls.resumed, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
+    handoff_free(handoff);
+}
+
+/* Let go for a moment after the pause, then taken again (an iPhone starting
+ * to play): stays paused here, and still knows what to resume */
+static void test_borrowed_flap(void)
+{
+    Calls calls = { 0 };
+    Handoff *handoff = handoff_new(&callbacks, &calls);
+    handoff_set_enabled(handoff, true);
+
+    handoff_source_changed(handoff, "computer", false);
+    handoff_source_changed(handoff, "other", false);
+    run_for(120);
+    g_assert_cmpint(calls.paused, ==, 1);
+    handoff_source_changed(handoff, "none", false);
+    run_for(10);
+    handoff_source_changed(handoff, "other", false);
+    run_for(200);
+    g_assert_cmpint(calls.resumed, ==, 0);
+    g_assert_cmpint(calls.restarted, ==, 0);
+    g_assert_cmpint(calls.paused, ==, 1);
     handoff_free(handoff);
 }
 
@@ -114,7 +136,7 @@ static void test_call(void)
     run_for(300);                       /* Longer than the resume window */
     g_assert_cmpint(calls.paused, ==, 1);
     handoff_source_changed(handoff, "none", false);
-    run_for(60);
+    run_for(100);
     g_assert_cmpint(calls.resumed, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
@@ -216,6 +238,7 @@ int main(int argc, char *argv[])
 
     g_test_add_func("/handoff/kept", test_kept);
     g_test_add_func("/handoff/borrowed", test_borrowed);
+    g_test_add_func("/handoff/borrowed-flap", test_borrowed_flap);
     g_test_add_func("/handoff/call", test_call);
     g_test_add_func("/handoff/use-here", test_use_here);
     g_test_add_func("/handoff/moment", test_moment);

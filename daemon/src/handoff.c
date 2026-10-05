@@ -48,8 +48,10 @@ struct Handoff {
     bool paused;                /* Players paused since */
     guint keep_id;              /* Another device has them: kept? */
     guint restart_id;           /* Sound back shortly */
+    guint resume_id;            /* Players paused here resume shortly */
     guint check_id;             /* Back after the restart? */
     bool tried_again;
+    HandoffRestart how;         /* For the pending restart */
 };
 
 static void cancel(guint *id)
@@ -64,6 +66,10 @@ static gboolean keep_done_cb(gpointer user_data)
 {
     Handoff *handoff = user_data;
     handoff->keep_id = 0;
+    /* Already paused for this taking: pausing again would forget what to
+     * resume */
+    if (handoff->paused)
+        return G_SOURCE_REMOVE;
     g_message("Handoff: another device kept the AirPods, pausing here");
     handoff->paused = true;
     handoff->callbacks.pause_players(handoff->user_data);
@@ -79,7 +85,7 @@ static gboolean check_cb(gpointer user_data)
 
     g_message("Handoff: the AirPods didn't come back, trying again");
     handoff->tried_again = true;
-    handoff->callbacks.restart_audio(true, handoff->user_data);
+    handoff->callbacks.restart_audio(HANDOFF_RESTART_OUTPUT, handoff->user_data);
     handoff->check_id = g_timeout_add(HANDOFF_CHECK_MS, check_cb, handoff);
     return G_SOURCE_REMOVE;
 }
@@ -89,7 +95,7 @@ static gboolean restart_cb(gpointer user_data)
     Handoff *handoff = user_data;
     handoff->restart_id = 0;
     handoff->tried_again = false;
-    handoff->callbacks.restart_audio(false, handoff->user_data);
+    handoff->callbacks.restart_audio(handoff->how, handoff->user_data);
     cancel(&handoff->check_id);
     handoff->check_id = g_timeout_add(HANDOFF_CHECK_MS, check_cb, handoff);
     return G_SOURCE_REMOVE;
@@ -101,13 +107,27 @@ static void restart_in(Handoff *handoff, guint ms)
 {
     cancel(&handoff->restart_id);
     cancel(&handoff->check_id);
+    handoff->how = HANDOFF_RESTART_STREAMS;
     handoff->restart_id = g_timeout_add(ms, restart_cb, handoff);
+}
+
+static gboolean resume_cb(gpointer user_data)
+{
+    Handoff *handoff = user_data;
+    handoff->resume_id = 0;
+    handoff->paused = false;
+    g_message(handoff->call ? "Handoff: the call is over, resuming here"
+                            : "Handoff: another device only borrowed the AirPods, resuming here");
+    handoff->callbacks.resume_players(handoff->user_data);
+    restart_in(handoff, HANDOFF_PLAY_DELAY_MS);
+    return G_SOURCE_REMOVE;
 }
 
 static void cancel_all(Handoff *handoff)
 {
     cancel(&handoff->keep_id);
     cancel(&handoff->restart_id);
+    cancel(&handoff->resume_id);
     cancel(&handoff->check_id);
 }
 
@@ -157,11 +177,16 @@ void handoff_source_changed(Handoff *handoff, const char *source, bool call)
     if (g_strcmp0(source, "other") == 0) {
         /* Taken (again): getting the sound back here would take them from it */
         cancel(&handoff->restart_id);
+        cancel(&handoff->resume_id);
         cancel(&handoff->check_id);
         handoff->taken = true;
-        handoff->taken_us = g_get_monotonic_time();
-        handoff->call = call;
-        handoff->paused = false;
+        /* Taken again within the wait: the same taking, players still paused */
+        if (handoff->paused)
+            handoff->call = handoff->call || call;
+        else {
+            handoff->taken_us = g_get_monotonic_time();
+            handoff->call = call;
+        }
         if (handoff->keep_id == 0)
             handoff->keep_id = g_timeout_add(HANDOFF_KEEP_MS, keep_done_cb, handoff);
     } else if (g_strcmp0(source, "none") == 0) {
@@ -173,12 +198,10 @@ void handoff_source_changed(Handoff *handoff, const char *source, bool call)
         } else if (handoff->paused &&
                    (handoff->call ||
                     g_get_monotonic_time() - handoff->taken_us < HANDOFF_RESUME_WINDOW_MS * 1000)) {
-            /* Borrowed: resuming starts playback, which gets the sound back */
-            handoff->paused = false;
-            g_message(handoff->call ? "Handoff: the call is over, resuming here"
-                                    : "Handoff: another device only borrowed the AirPods, resuming here");
-            handoff->callbacks.resume_players(handoff->user_data);
-            restart_in(handoff, HANDOFF_SETTLE_MS);
+            /* Borrowed, unless the other device takes them again at once
+             * (an iPhone starting to play lets them go for a moment) */
+            cancel(&handoff->resume_id);
+            handoff->resume_id = g_timeout_add(HANDOFF_SETTLE_MS, resume_cb, handoff);
         }
     } else {
         /* Back here, or disconnected */
@@ -192,11 +215,14 @@ void handoff_source_changed(Handoff *handoff, const char *source, bool call)
 void handoff_use_here(Handoff *handoff)
 {
     g_message("Handoff: the AirPods are wanted here");
+    cancel(&handoff->resume_id);
     if (handoff->paused) {
         handoff->paused = false;
         handoff->callbacks.resume_players(handoff->user_data);
     }
+    /* Even with nothing playing here: the user wants them here */
     restart_in(handoff, HANDOFF_PLAY_DELAY_MS);
+    handoff->how = HANDOFF_RESTART_ANY;
 }
 
 void handoff_playback_started(Handoff *handoff)

@@ -19,10 +19,11 @@
 
 #include <stdbool.h>
 
-/* Restart the streams playing to the AirPods with this address, if any
- * (asynchronous, at most one at a time). Another try suspends and resumes
- * the AirPods output instead: after an early restart, PipeWire may take it
- * for playing while the AirPods still play from elsewhere. */
-void audio_route_restart(const char *airpods_address, bool again);
+/* Restart the sound to the AirPods with this address (asynchronous, at most
+ * one at a time). mode: "streams" restarts the streams playing to them, if
+ * any; "output" suspends and resumes their output (after an early restart,
+ * PipeWire may take it for playing while the AirPods still play from
+ * elsewhere); "any": the streams, or the output when nothing plays */
+void audio_route_restart(const char *airpods_address, const char *mode);
 
 #endif /* AUDIO_ROUTE_H */

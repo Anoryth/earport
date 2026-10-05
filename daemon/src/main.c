@@ -469,10 +469,15 @@ static void handoff_resume_players(void *user_data)
     media_control_resume_handoff(app.media_control);
 }
 
-static void handoff_restart_audio(bool again, void *user_data)
+static void handoff_restart_audio(HandoffRestart how, void *user_data)
 {
     (void)user_data;
-    audio_route_restart(app.state.device_address, again);
+    static const char *const modes[] = {
+        [HANDOFF_RESTART_STREAMS] = "streams",
+        [HANDOFF_RESTART_OUTPUT] = "output",
+        [HANDOFF_RESTART_ANY] = "any",
+    };
+    audio_route_restart(app.state.device_address, modes[how]);
 }
 
 static void on_set_apple_handoff(bool enabled, void *user_data)

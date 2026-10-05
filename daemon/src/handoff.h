@@ -19,14 +19,20 @@
 
 #include <stdbool.h>
 
+/* How to restart the sound playing to the AirPods */
+typedef enum {
+    HANDOFF_RESTART_STREAMS,    /* Restart what plays to them */
+    HANDOFF_RESTART_OUTPUT,     /* Restart their output (second try) */
+    HANDOFF_RESTART_ANY,        /* The streams, or the output if none plays */
+} HandoffRestart;
+
 typedef struct {
     /* Pause the players playing here */
     void (*pause_players)(void *user_data);
     /* Resume the ones pause_players paused */
     void (*resume_players)(void *user_data);
-    /* Restart what plays here to the AirPods, so that they switch back;
-     * again: a second try, the first one didn't bring them back */
-    void (*restart_audio)(bool again, void *user_data);
+    /* Restart what plays here to the AirPods, so that they switch back */
+    void (*restart_audio)(HandoffRestart how, void *user_data);
 } HandoffCallbacks;
 
 typedef struct Handoff Handoff;
