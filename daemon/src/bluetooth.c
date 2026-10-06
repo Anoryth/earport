@@ -198,6 +198,12 @@ bool bt_connection_connect(BluetoothConnection *conn, const char *address)
         setsockopt(conn->socket_fd, SOL_L2CAP, L2CAP_OPTIONS, &opts, sizeof(opts));
     }
 
+    /* Wait for an encrypted link: some AirPods (seen with Pro 3) refuse the
+     * channel on a link not encrypted yet ("Permission denied") */
+    struct bt_security security = { .level = BT_SECURITY_MEDIUM };
+    if (setsockopt(conn->socket_fd, SOL_BLUETOOTH, BT_SECURITY, &security, sizeof(security)) < 0)
+        g_debug("Could not ask for an encrypted link: %s", strerror(errno));
+
     /* Prepare destination address */
     struct sockaddr_l2 addr;
     memset(&addr, 0, sizeof(addr));
