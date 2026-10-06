@@ -169,14 +169,32 @@ void airpods_state_set_noise_control(AirPodsState *state, NoiseControlMode mode)
     state->noise_control_mode = mode;
 }
 
-void airpods_state_set_ear_detection(AirPodsState *state,
-                                      bool left_in_ear,
-                                      bool right_in_ear,
-                                      bool primary_left)
+static void update_left_right(EarDetectionState *ears)
 {
-    state->ear_detection.left_in_ear = left_in_ear;
-    state->ear_detection.right_in_ear = right_in_ear;
+    ears->left_in_ear = ears->primary_left ? ears->primary_in_ear : ears->secondary_in_ear;
+    ears->right_in_ear = ears->primary_left ? ears->secondary_in_ear : ears->primary_in_ear;
+}
+
+void airpods_state_set_ear_detection(AirPodsState *state,
+                                      bool primary_in_ear,
+                                      bool secondary_in_ear)
+{
+    state->ear_detection.primary_in_ear = primary_in_ear;
+    state->ear_detection.secondary_in_ear = secondary_in_ear;
+    update_left_right(&state->ear_detection);
+}
+
+bool airpods_state_set_primary_left(AirPodsState *state, bool primary_left)
+{
+    if (state->ear_detection.primary_left == primary_left)
+        return false;
+
+    bool left = state->ear_detection.left_in_ear;
+    bool right = state->ear_detection.right_in_ear;
+    g_message("Primary pod: %s", primary_left ? "left" : "right");
     state->ear_detection.primary_left = primary_left;
+    update_left_right(&state->ear_detection);
+    return left != state->ear_detection.left_in_ear || right != state->ear_detection.right_in_ear;
 }
 
 void airpods_state_set_conversational_awareness(AirPodsState *state, bool enabled)

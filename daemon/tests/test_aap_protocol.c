@@ -37,6 +37,10 @@ static void test_battery_in_ears(void)
     /* A disconnected case must be unavailable, not 0% */
     g_assert_cmpint(p.data.battery.case_level, ==, -1);
     g_assert_cmpint(p.data.battery.case_status, ==, BATTERY_STATUS_DISCONNECTED);
+
+    /* The right pod is listed first: it is the primary one */
+    g_assert_true(p.data.battery.primary_known);
+    g_assert_false(p.data.battery.primary_left);
 }
 
 static void test_battery_in_case(void)
@@ -57,6 +61,7 @@ static void test_battery_in_case(void)
     g_assert_cmpint(p.data.battery.left_status, ==, BATTERY_STATUS_CHARGING);
     g_assert_cmpint(p.data.battery.right_status, ==, BATTERY_STATUS_CHARGING);
     g_assert_cmpint(p.data.battery.case_status, ==, BATTERY_STATUS_DISCHARGING);
+    g_assert_true(p.data.battery.primary_left);
 }
 
 static void test_battery_unknown_level(void)

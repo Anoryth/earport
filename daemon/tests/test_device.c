@@ -135,6 +135,30 @@ static void test_ear_removal(Fixture *f, gconstpointer data)
     g_assert_true(f->state.ear_detection.right_in_ear);
 }
 
+/* Ear detection reports the primary and the secondary pod; which side is
+ * primary comes from the battery reports (listed first) and changes */
+static void test_ear_sides(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    replay_connection(f);
+    /* Right pod primary */
+    REPLAY(f, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x02,
+           0x02, 0x01, 0x50, 0x02, 0x01,
+           0x04, 0x01, 0x50, 0x02, 0x01);
+    REPLAY(f, 0x04, 0x00, 0x04, 0x00, 0x06, 0x00, 0x01, 0x00);  /* Primary out */
+    g_assert_false(f->state.ear_detection.right_in_ear);
+    g_assert_true(f->state.ear_detection.left_in_ear);
+
+    /* The left one becomes primary: the same report now means the left
+     * pod is out */
+    REPLAY(f, 0x04, 0x00, 0x04, 0x00, 0x04, 0x00, 0x02,
+           0x04, 0x01, 0x50, 0x02, 0x01,
+           0x02, 0x01, 0x50, 0x02, 0x01);
+    g_assert_false(f->state.ear_detection.left_in_ear);
+    g_assert_true(f->state.ear_detection.right_in_ear);
+}
+
 static void test_conversation(Fixture *f, gconstpointer data)
 {
     (void)data;
@@ -182,6 +206,7 @@ int main(int argc, char *argv[])
     ADD("/device/connection", test_connection);
     ADD("/device/battery-update", test_battery_update);
     ADD("/device/ear-removal", test_ear_removal);
+    ADD("/device/ear-sides", test_ear_sides);
     ADD("/device/conversation", test_conversation);
     ADD("/device/disconnection", test_disconnection);
 

@@ -93,6 +93,8 @@ AapParseResult aap_parse_battery(const uint8_t *data, size_t len, AapBatteryData
     battery->left_status = BATTERY_STATUS_UNKNOWN;
     battery->right_status = BATTERY_STATUS_UNKNOWN;
     battery->case_status = BATTERY_STATUS_UNKNOWN;
+    battery->primary_known = false;
+    battery->primary_left = true;
 
     /* Parse each component (5 bytes: component, spacer, level, status, end_marker) */
     for (uint8_t i = 0; i < count; i++) {
@@ -121,6 +123,13 @@ AapParseResult aap_parse_battery(const uint8_t *data, size_t len, AapBatteryData
          * reports level 0: treat it as unavailable rather than empty. */
         if (bat_status == BATTERY_STATUS_DISCONNECTED)
             level = 0xFF;
+
+        /* The primary pod is listed first */
+        if (!battery->primary_known &&
+            (component == AAP_BATTERY_LEFT || component == AAP_BATTERY_RIGHT)) {
+            battery->primary_known = true;
+            battery->primary_left = component == AAP_BATTERY_LEFT;
+        }
 
         switch (component) {
         case AAP_BATTERY_SINGLE:
@@ -160,7 +169,6 @@ AapParseResult aap_parse_ear_detection(const uint8_t *data, size_t len, AapEarDe
 
     ear->primary_in_ear = (primary_status == AAP_EAR_IN_EAR);
     ear->secondary_in_ear = (secondary_status == AAP_EAR_IN_EAR);
-    ear->primary_left = true;  /* Default, may need to track from battery order */
 
     return AAP_PARSE_OK;
 }

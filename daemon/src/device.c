@@ -166,6 +166,13 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         dbus_service_emit_properties_changed(dev->dbus, "ChargingCase");
 
         update_listening_time(dev, &pkt->data.battery);
+
+        /* Left and right of the ear detection follow the primary pod */
+        if (pkt->data.battery.primary_known &&
+            airpods_state_set_primary_left(dev->state, pkt->data.battery.primary_left)) {
+            dbus_service_emit_properties_changed(dev->dbus, "LeftInEar");
+            dbus_service_emit_properties_changed(dev->dbus, "RightInEar");
+        }
         break;
 
     case AAP_PKT_TYPE_EAR_DETECTION: {
@@ -182,10 +189,7 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         if (airpods_model_is_headphones(dev->state->model))
             secondary_in_ear = primary_in_ear;
 
-        airpods_state_set_ear_detection(dev->state,
-                                         primary_in_ear,
-                                         secondary_in_ear,
-                                         pkt->data.ear_detection.primary_left);
+        airpods_state_set_ear_detection(dev->state, primary_in_ear, secondary_in_ear);
 
         dbus_service_emit_ear_detection_changed(dev->dbus,
                                                  dev->state->ear_detection.left_in_ear,

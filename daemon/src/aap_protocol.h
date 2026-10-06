@@ -121,13 +121,15 @@ typedef struct {
     BatteryStatus left_status;
     BatteryStatus right_status;
     BatteryStatus case_status;
+    bool primary_known;     /* A pod is listed: the first one is the primary */
+    bool primary_left;
 } AapBatteryData;
 
 /* Parsed ear detection data */
+/* Parsed ear detection data: by role, see AapBatteryData for the sides */
 typedef struct {
     bool primary_in_ear;
     bool secondary_in_ear;
-    bool primary_left;
 } AapEarDetectionData;
 
 /* Parsed metadata */

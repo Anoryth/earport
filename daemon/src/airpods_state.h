@@ -65,7 +65,9 @@ typedef struct {
 typedef struct {
     bool left_in_ear;
     bool right_in_ear;
-    bool primary_left;      /* Which pod is primary (for mic) */
+    bool primary_in_ear;    /* As the AirPods report it */
+    bool secondary_in_ear;
+    bool primary_left;      /* Which pod is primary: listed first in battery reports */
 } EarDetectionState;
 
 /* Long-press listening modes configuration */
@@ -167,11 +169,14 @@ bool airpods_state_set_listening_minutes(AirPodsState *state, int minutes);
 /* Update noise control mode */
 void airpods_state_set_noise_control(AirPodsState *state, NoiseControlMode mode);
 
-/* Update ear detection */
+/* Update ear detection, as reported for the primary and secondary pods */
 void airpods_state_set_ear_detection(AirPodsState *state,
-                                      bool left_in_ear,
-                                      bool right_in_ear,
-                                      bool primary_left);
+                                      bool primary_in_ear,
+                                      bool secondary_in_ear);
+
+/* Which pod is primary (it changes, e.g. when it goes in the case); true
+ * if left and right changed with it */
+bool airpods_state_set_primary_left(AirPodsState *state, bool primary_left);
 
 /* Update conversational awareness */
 void airpods_state_set_conversational_awareness(AirPodsState *state, bool enabled);
