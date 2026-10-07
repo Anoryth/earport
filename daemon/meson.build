@@ -62,6 +62,7 @@ sources = files(
     'src/device.c',
     'src/dbus_service.c',
     'src/handoff.c',
+    'src/link_trace.c',
     'src/media_control.c',
     'src/research.c',
     'src/sleep_pause.c',

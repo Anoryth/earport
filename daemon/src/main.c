@@ -24,6 +24,7 @@
 #include "controls.h"
 #include "dbus_service.h"
 #include "handoff.h"
+#include "link_trace.h"
 #include "device.h"
 #include "media_control.h"
 #include "research.h"
@@ -44,6 +45,7 @@ typedef struct {
     BatteryProvider *battery_provider;
     AppleIdentity *apple_identity;
     Handoff *handoff;
+    LinkTrace *link_trace;
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
 } AppContext;
@@ -391,6 +393,7 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
     g_free(app.adapter_path);
     app.adapter_path = adapter_path;
     read_adapter_address(adapter_path);
+    link_trace_set_device(app.link_trace, device->object_path);
 
     aap_link_device_connected(app.link, device->address, device->name);
 }
@@ -524,6 +527,8 @@ static void cleanup(void)
     app.apple_identity = NULL;
     handoff_free(app.handoff);
     app.handoff = NULL;
+    link_trace_free(app.link_trace);
+    app.link_trace = NULL;
     app.battery_provider = NULL;
     g_free(app.adapter_path);
     sleep_pause_free(app.sleep_pause);
@@ -635,6 +640,7 @@ int main(int argc, char *argv[])
         .restart_audio = handoff_restart_audio,
     };
     app.handoff = handoff_new(&handoff_callbacks, NULL);
+    app.link_trace = link_trace_new();
     handoff_set_enabled(app.handoff, app.config.apple_handoff);
     /* Known before the first audio source arrives; refreshed on connection */
     read_adapter_address("/org/bluez/hci0");

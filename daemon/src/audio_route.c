@@ -59,7 +59,7 @@ static void on_restart_done(GObject *source, GAsyncResult *res, gpointer user_da
         break;
     case 2:
     case 3:
-        g_debug("Nothing playing to the AirPods to restart");
+        g_message("Nothing playing to the AirPods to restart");
         break;
     default:
         g_message("Could not restart the AirPods audio (pactl missing or failing)");
@@ -92,6 +92,7 @@ void audio_route_restart(const char *airpods_address, const char *mode)
     }
 
     running = true;
+    g_message("Restarting the sound to the AirPods (%s)", mode);
     g_subprocess_wait_async(proc, NULL, on_restart_done, NULL);
     g_object_unref(proc);
 }
