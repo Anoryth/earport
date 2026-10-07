@@ -514,6 +514,28 @@ void aap_build_sleep_detection_msg(uint8_t msg_type, uint8_t value, uint8_t *buf
     memcpy(buffer, msg, sizeof(msg));
 }
 
+/* 04 00 04 00 44 00 04 00 02 00 03 [score] */
+void aap_build_smart_routing_score(uint8_t score, uint8_t *buffer)
+{
+    const uint8_t msg[AAP_SMART_ROUTING_SCORE_SIZE] = {
+        0x04, 0x00, 0x04, 0x00, AAP_OPCODE_SMART_ROUTING, 0x00, 0x04, 0x00,
+        0x02, 0x00, 0x03, score,
+    };
+    memcpy(buffer, msg, sizeof(msg));
+}
+
+/* 04 00 04 00 44 00 0E 00 03 00 [state] 01 00 00 [time, LE] 00 00 00 00 */
+void aap_build_smart_routing_state(uint8_t state, uint32_t unix_time, uint8_t *buffer)
+{
+    const uint8_t msg[AAP_SMART_ROUTING_STATE_SIZE] = {
+        0x04, 0x00, 0x04, 0x00, AAP_OPCODE_SMART_ROUTING, 0x00, 0x0E, 0x00,
+        0x03, 0x00, state, 0x01, 0x00, 0x00,
+        unix_time & 0xFF, (unix_time >> 8) & 0xFF, (unix_time >> 16) & 0xFF, unix_time >> 24,
+        0x00, 0x00, 0x00, 0x00,
+    };
+    memcpy(buffer, msg, sizeof(msg));
+}
+
 void aap_build_conv_awareness_cmd(bool enable, uint8_t *buffer)
 {
     memcpy(buffer, enable ? AAP_PKT_CA_ENABLE : AAP_PKT_CA_DISABLE, AAP_CONTROL_CMD_SIZE);

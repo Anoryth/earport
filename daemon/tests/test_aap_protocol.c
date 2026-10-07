@@ -394,6 +394,25 @@ static void test_audio_source(void)
     g_assert_cmpint(aap_parse_packet(media, 10, &pkt), ==, AAP_PARSE_INCOMPLETE);
 }
 
+/* What a Mac sends on connection (seen in its logs, the time apart) */
+static void test_smart_routing(void)
+{
+    uint8_t score[AAP_SMART_ROUTING_SCORE_SIZE];
+    uint8_t state[AAP_SMART_ROUTING_STATE_SIZE];
+    const uint8_t expected_score[] = {
+        0x04, 0x00, 0x04, 0x00, 0x44, 0x00, 0x04, 0x00, 0x02, 0x00, 0x03, 0x07,
+    };
+    const uint8_t expected_state[] = {
+        0x04, 0x00, 0x04, 0x00, 0x44, 0x00, 0x0E, 0x00,
+        0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x23, 0xB1, 0xC6, 0x6A, 0x00, 0x00, 0x00, 0x00,
+    };
+
+    aap_build_smart_routing_score(0x07, score);
+    g_assert_cmpmem(score, sizeof(score), expected_score, sizeof(expected_score));
+    aap_build_smart_routing_state(0x00, 0x6AC6B123, state);
+    g_assert_cmpmem(state, sizeof(state), expected_state, sizeof(expected_state));
+}
+
 static void test_unhandled_packets(void)
 {
     /* Handshake acknowledgement uses a different header */
@@ -497,6 +516,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/proximity-keys", test_proximity_keys);
     g_test_add_func("/aap/metadata", test_metadata);
     g_test_add_func("/aap/audio-source", test_audio_source);
+    g_test_add_func("/aap/smart-routing", test_smart_routing);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
     g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);

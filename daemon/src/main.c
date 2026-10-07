@@ -299,6 +299,21 @@ static void on_paused_for_sleep(const char *player, void *user_data)
     }
 }
 
+/* What a Mac tells the AirPods on connection, so that they treat this
+ * computer as one of the user's Apple devices and keep it */
+static void send_smart_routing_info(void)
+{
+    if (!app.config.apple_handoff || !aap_link_is_connected(app.link))
+        return;
+
+    uint8_t score[AAP_SMART_ROUTING_SCORE_SIZE];
+    uint8_t state[AAP_SMART_ROUTING_STATE_SIZE];
+    aap_build_smart_routing_score(0x07, score);
+    aap_build_smart_routing_state(0x00, (uint32_t)(g_get_real_time() / G_USEC_PER_SEC), state);
+    aap_link_send(app.link, score, sizeof(score));
+    aap_link_send(app.link, state, sizeof(state));
+}
+
 static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 {
     (void)user_data;
@@ -321,8 +336,12 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 
     if (pkt->type == AAP_PKT_TYPE_BATTERY)
         publish_battery();
-    else if (pkt->type == AAP_PKT_TYPE_METADATA && app.state.model != AIRPODS_MODEL_UNKNOWN)
-        autoconnect_set_model(app.autoconnect, app.state.model);
+    else if (pkt->type == AAP_PKT_TYPE_METADATA) {
+        if (app.state.model != AIRPODS_MODEL_UNKNOWN)
+            autoconnect_set_model(app.autoconnect, app.state.model);
+        /* The AirPods answered: tell them about this computer, as a Mac */
+        send_smart_routing_info();
+    }
     else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE)
         handoff_source_changed(app.handoff, app.state.audio_source,
                                pkt->data.audio_source.type == AAP_AUDIO_SOURCE_CALL);
@@ -446,8 +465,11 @@ static void on_set_auto_connect(bool enabled, void *user_data)
 static bool research_send(const uint8_t *data, size_t len, void *user_data)
 {
     (void)user_data;
-    if (!app.config.research_log || len == 0 || !aap_link_is_connected(app.link))
+    if (!app.config.research_log || len == 0 || !aap_link_is_connected(app.link)) {
+        g_message("Research: not sending (research mode %d, %zu bytes, connected %d)",
+                  app.config.research_log, len, aap_link_is_connected(app.link));
         return false;
+    }
 
     GString *hex = g_string_new(NULL);
     for (size_t i = 0; i < len; i++)
@@ -507,6 +529,7 @@ static void on_set_apple_handoff(bool enabled, void *user_data)
     config_save(&app.config);
     dbus_service_set_apple_handoff(app.dbus_service, enabled);
     apple_identity_set_enabled(app.apple_identity, enabled);
+    send_smart_routing_info();
 }
 
 /* ============================================================================

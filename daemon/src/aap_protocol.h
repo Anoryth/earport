@@ -31,6 +31,7 @@
 #define AAP_OPCODE_CONTROL       0x09
 #define AAP_OPCODE_AUDIO_SOURCE  0x0E
 #define AAP_OPCODE_HOSTS         0x2E
+#define AAP_OPCODE_SMART_ROUTING 0x44
 #define AAP_OPCODE_NOTIFICATIONS 0x0F
 #define AAP_OPCODE_HEAD_TRACKING 0x17
 #define AAP_OPCODE_METADATA      0x1D
@@ -316,6 +317,15 @@ void aap_build_adaptive_level_cmd(int level, uint8_t *buffer);
  * @param buffer Must be at least AAP_SLEEP_MSG_SIZE bytes
  */
 void aap_build_sleep_detection_msg(uint8_t msg_type, uint8_t value, uint8_t *buffer);
+
+/* Smart Routing information, what Apple hosts tell the AirPods about
+ * themselves: without it, AirPods taking this computer for an Apple device
+ * drop it (e.g. when the primary pod goes in the case). Sent like a Mac on
+ * connection: the audio score, then the state with the current time. */
+#define AAP_SMART_ROUTING_SCORE_SIZE 12
+#define AAP_SMART_ROUTING_STATE_SIZE 22
+void aap_build_smart_routing_score(uint8_t score, uint8_t *buffer);
+void aap_build_smart_routing_state(uint8_t state, uint32_t unix_time, uint8_t *buffer);
 
 /**
  * Build conversational awareness command
