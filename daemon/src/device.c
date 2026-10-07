@@ -279,6 +279,20 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         break;
     }
 
+    case AAP_PKT_TYPE_HOSTS: {
+        /* Logged to understand how the AirPods see each host */
+        GString *line = g_string_new(NULL);
+        for (uint8_t i = 0; i < pkt->data.hosts.count; i++) {
+            const AapHost *host = &pkt->data.hosts.hosts[i];
+            bool me = g_ascii_strcasecmp(host->address, dev->state->host_address) == 0;
+            g_string_append_printf(line, "%s%s status %u flags 0x%02x", i ? ", " : "",
+                                   me ? "this computer" : "other device", host->status, host->flags);
+        }
+        g_message("AirPods hosts (state %u): %s", pkt->data.hosts.state, line->str);
+        g_string_free(line, TRUE);
+        break;
+    }
+
     case AAP_PKT_TYPE_AUDIO_SOURCE: {
         const AapAudioSource *source = &pkt->data.audio_source;
         const char *value = "none";

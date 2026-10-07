@@ -321,6 +321,30 @@ static AapParseResult aap_parse_audio_source(const uint8_t *data, size_t len,
     return AAP_PARSE_OK;
 }
 
+/* 04 00 04 00 2E 00 01 [state] [count] ([address] [status] [flags])... */
+static AapParseResult aap_parse_hosts(const uint8_t *data, size_t len, AapHosts *hosts)
+{
+    if (len < 9)
+        return AAP_PARSE_INCOMPLETE;
+
+    memset(hosts, 0, sizeof(*hosts));
+    hosts->state = data[7];
+    uint8_t count = data[8];
+    if (len < 9 + (size_t)count * 8)
+        return AAP_PARSE_INCOMPLETE;
+
+    for (uint8_t i = 0; i < count && i < AAP_MAX_HOSTS; i++) {
+        const uint8_t *entry = data + 9 + i * 8;
+        snprintf(hosts->hosts[i].address, sizeof(hosts->hosts[i].address),
+                 "%02X:%02X:%02X:%02X:%02X:%02X",
+                 entry[0], entry[1], entry[2], entry[3], entry[4], entry[5]);
+        hosts->hosts[i].status = entry[6];
+        hosts->hosts[i].flags = entry[7];
+        hosts->count++;
+    }
+    return AAP_PARSE_OK;
+}
+
 static AapParseResult parse_control_packet(const uint8_t *data, size_t len, AapParsedPacket *result)
 {
     if (len < 8)
@@ -401,6 +425,10 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
     case AAP_OPCODE_PROXIMITY_KEYS_RSP:
         result->type = AAP_PKT_TYPE_PROXIMITY_KEYS;
         return aap_parse_proximity_keys(data, len, &result->data.proximity_keys);
+
+    case AAP_OPCODE_HOSTS:
+        result->type = AAP_PKT_TYPE_HOSTS;
+        return aap_parse_hosts(data, len, &result->data.hosts);
 
     case AAP_OPCODE_AUDIO_SOURCE:
         result->type = AAP_PKT_TYPE_AUDIO_SOURCE;

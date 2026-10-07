@@ -70,6 +70,9 @@ export const AirPodsInterface = `
       <arg type="b" name="enabled" direction="in"/>
     </method>
     <method name="ClaimAudio"/>
+    <method name="ResearchSend">
+      <arg type="ay" name="packet" direction="in"/>
+    </method>
     <method name="SetAppleHandoff">
       <arg type="b" name="enabled" direction="in"/>
     </method>

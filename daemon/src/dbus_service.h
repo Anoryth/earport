@@ -131,6 +131,13 @@ void dbus_service_set_apple_handoff_callback(DbusService *service,
                                              void *user_data);
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled);
 
+/* ResearchSend: a raw packet to the AirPods, only in research mode
+ * (research_log=true); false if refused or not connected */
+typedef bool (*DbusRawCallback)(const uint8_t *data, size_t len, void *user_data);
+void dbus_service_set_research_send_callback(DbusService *service,
+                                             DbusRawCallback callback,
+                                             void *user_data);
+
 /* ClaimAudio: have the AirPods play from this computer */
 void dbus_service_set_claim_audio_callback(DbusService *service,
                                            DbusActionCallback callback,

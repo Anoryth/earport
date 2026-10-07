@@ -64,6 +64,9 @@ static const gchar introspection_xml[] =
     "      <arg type='v' name='value' direction='in'/>"
     "    </method>"
     "    <method name='ClaimAudio'/>"
+    "    <method name='ResearchSend'>"
+    "      <arg type='ay' name='packet' direction='in'/>"
+    "    </method>"
     "    <method name='SetAppleHandoff'>"
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
@@ -132,6 +135,8 @@ struct DbusService {
     DbusAutoConnectCallback auto_connect_callback;
     void *auto_connect_user_data;
     bool auto_connect;
+    DbusRawCallback research_send_callback;
+    void *research_send_user_data;
     DbusActionCallback claim_audio_callback;
     void *claim_audio_user_data;
     DbusAutoConnectCallback apple_handoff_callback;
@@ -436,6 +441,18 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             service->auto_connect_callback(enabled, service->auto_connect_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
+    } else if (g_strcmp0(method_name, "ResearchSend") == 0) {
+        gsize len = 0;
+        GVariant *bytes = g_variant_get_child_value(parameters, 0);
+        const guint8 *data = g_variant_get_fixed_array(bytes, &len, 1);
+        if (service->research_send_callback &&
+            service->research_send_callback(data, len, service->research_send_user_data))
+            g_dbus_method_invocation_return_value(invocation, NULL);
+        else
+            g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+                                                  "Research mode off or AirPods not connected");
+        g_variant_unref(bytes);
+
     } else if (g_strcmp0(method_name, "ClaimAudio") == 0) {
         g_message("D-Bus: ClaimAudio()");
         if (service->claim_audio_callback &&
@@ -665,6 +682,14 @@ void dbus_service_set_apple_handoff_callback(DbusService *service,
 {
     service->apple_handoff_callback = callback;
     service->apple_handoff_user_data = user_data;
+}
+
+void dbus_service_set_research_send_callback(DbusService *service,
+                                             DbusRawCallback callback,
+                                             void *user_data)
+{
+    service->research_send_callback = callback;
+    service->research_send_user_data = user_data;
 }
 
 void dbus_service_set_claim_audio_callback(DbusService *service,

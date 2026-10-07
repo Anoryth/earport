@@ -30,6 +30,7 @@
 #define AAP_OPCODE_EAR_DETECTION 0x06
 #define AAP_OPCODE_CONTROL       0x09
 #define AAP_OPCODE_AUDIO_SOURCE  0x0E
+#define AAP_OPCODE_HOSTS         0x2E
 #define AAP_OPCODE_NOTIFICATIONS 0x0F
 #define AAP_OPCODE_HEAD_TRACKING 0x17
 #define AAP_OPCODE_METADATA      0x1D
@@ -113,6 +114,7 @@ typedef enum {
     AAP_PKT_TYPE_PROXIMITY_KEYS,
     AAP_PKT_TYPE_SLEEP_DETECTION,
     AAP_PKT_TYPE_AUDIO_SOURCE,
+    AAP_PKT_TYPE_HOSTS,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -199,6 +201,22 @@ typedef struct {
  * the others have them (0), when they switch between hosts */
 #define AAP_CTRL_OWNS_CONNECTION 0x06
 
+/* The hosts the AirPods are connected to, with flags (0x02: the one they
+ * play from); Apple calls it the TiPi table */
+#define AAP_MAX_HOSTS 4
+
+typedef struct {
+    char address[18];
+    uint8_t status;
+    uint8_t flags;
+} AapHost;
+
+typedef struct {
+    uint8_t state;
+    uint8_t count;
+    AapHost hosts[AAP_MAX_HOSTS];
+} AapHosts;
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;
@@ -215,6 +233,7 @@ typedef struct {
         AapProximityKeys proximity_keys;
         AapSleepDetection sleep_detection;
         AapAudioSource audio_source;
+        AapHosts hosts;
     } data;
 } AapParsedPacket;
 

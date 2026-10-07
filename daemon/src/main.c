@@ -442,6 +442,21 @@ static void on_set_auto_connect(bool enabled, void *user_data)
     autoconnect_set_enabled(app.autoconnect, enabled);
 }
 
+/* Protocol experiments without stopping the service (research mode only) */
+static bool research_send(const uint8_t *data, size_t len, void *user_data)
+{
+    (void)user_data;
+    if (!app.config.research_log || len == 0 || !aap_link_is_connected(app.link))
+        return false;
+
+    GString *hex = g_string_new(NULL);
+    for (size_t i = 0; i < len; i++)
+        g_string_append_printf(hex, "%s%02X", i ? " " : "", data[i]);
+    g_message("Research: sending %s", hex->str);
+    g_string_free(hex, TRUE);
+    return aap_link_send(app.link, data, len);
+}
+
 /* Like a Mac starting to play: have the AirPods switch to this computer */
 static bool claim_audio(void *user_data)
 {
@@ -607,6 +622,7 @@ int main(int argc, char *argv[])
     dbus_service_set_auto_connect(app.dbus_service, app.config.auto_connect);
     dbus_service_set_apple_handoff_callback(app.dbus_service, on_set_apple_handoff, NULL);
     dbus_service_set_claim_audio_callback(app.dbus_service, claim_audio, NULL);
+    dbus_service_set_research_send_callback(app.dbus_service, research_send, NULL);
     dbus_service_set_apple_handoff(app.dbus_service, app.config.apple_handoff);
 
     if (!dbus_service_start(app.dbus_service)) {
