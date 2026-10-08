@@ -3,8 +3,8 @@
  * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * Reconnects the AirPods on purpose, a few times in a row: they only take
- * this computer for an Apple device (or stop doing so) once they read its
- * new identity, at the second connection after the change. Disconnecting
+ * this computer for an Apple device once they read its new identity, at
+ * the second connection after the change. Disconnecting
  * and connecting are left to the callbacks.
  */
 

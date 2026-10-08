@@ -632,9 +632,10 @@ static void on_set_apple_handoff(bool enabled, void *user_data)
     send_smart_routing_info();
 
     /* The AirPods read the new identity at the second connection after
-     * the change, and forget it at the next one */
-    if (changed && aap_link_is_connected(app.link))
-        relink_start(app.relink, enabled ? 2 : 1);
+     * the change; they keep it once the option is off (reconnecting does
+     * not make them forget it) */
+    if (changed && enabled && aap_link_is_connected(app.link))
+        relink_start(app.relink, 2);
 }
 
 /* ============================================================================
