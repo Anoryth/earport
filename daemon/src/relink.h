@@ -30,6 +30,12 @@ void relink_free(Relink *relink);
 /* Reconnect them this many times, starting shortly (call while connected) */
 void relink_start(Relink *relink, int times);
 
+/* BlueZ answered the disconnect callback's request */
+void relink_disconnect_done(Relink *relink);
+
+/* BlueZ answered the connect callback's request */
+void relink_connect_done(Relink *relink, bool connected);
+
 /* The link to the AirPods opened (once announced) or closed */
 void relink_link_opened(Relink *relink);
 void relink_link_closed(Relink *relink);

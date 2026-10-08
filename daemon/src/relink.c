@@ -18,6 +18,9 @@
 #define RELINK_PAUSE_MS 1000
 #endif
 
+/* Connection attempts per reconnection */
+#define RELINK_CONNECT_TRIES 3
+
 /* No answer from a step by then: give up */
 #ifndef RELINK_STEP_MS
 #define RELINK_STEP_MS 30000
@@ -36,6 +39,7 @@ struct Relink {
     void *user_data;
     RelinkStep step;
     int remaining;
+    int connect_tries;
     guint timer_id;             /* Next step, or giving up */
 };
 
@@ -90,15 +94,24 @@ static gboolean on_paused(gpointer user_data)
 {
     Relink *relink = user_data;
     relink->timer_id = 0;
+    relink->connect_tries++;
     wait_for_step(relink, RELINK_CONNECTING);
     relink->callbacks.connect(relink->user_data);
     return G_SOURCE_REMOVE;
+}
+
+static void pause_then_connect(Relink *relink)
+{
+    cancel_timer(relink);
+    relink->step = RELINK_PAUSING;
+    relink->timer_id = g_timeout_add(RELINK_PAUSE_MS, on_paused, relink);
 }
 
 static void settle(Relink *relink)
 {
     cancel_timer(relink);
     relink->step = RELINK_SETTLING;
+    relink->connect_tries = 0;
     relink->timer_id = g_timeout_add(RELINK_SETTLE_MS, on_settled, relink);
 }
 
@@ -141,13 +154,25 @@ void relink_link_opened(Relink *relink)
         finish(relink, "done");
 }
 
+void relink_disconnect_done(Relink *relink)
+{
+    /* BlueZ answers once the link is down, its signals come earlier */
+    if (relink->step == RELINK_DISCONNECTING)
+        pause_then_connect(relink);
+}
+
+void relink_connect_done(Relink *relink, bool connected)
+{
+    if (relink->step == RELINK_CONNECTING && !connected &&
+        relink->connect_tries < RELINK_CONNECT_TRIES)
+        pause_then_connect(relink);
+}
+
 void relink_link_closed(Relink *relink)
 {
-    /* Also when they went away before being disconnected: connect them
-     * back all the same */
-    if (relink->step != RELINK_DISCONNECTING && relink->step != RELINK_SETTLING)
-        return;
-    cancel_timer(relink);
-    relink->step = RELINK_PAUSING;
-    relink->timer_id = g_timeout_add(RELINK_PAUSE_MS, on_paused, relink);
+    /* Gone before being disconnected, or again while connecting: connect
+     * them back all the same */
+    if (relink->step == RELINK_SETTLING ||
+        (relink->step == RELINK_CONNECTING && relink->connect_tries < RELINK_CONNECT_TRIES))
+        pause_then_connect(relink);
 }

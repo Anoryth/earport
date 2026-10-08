@@ -60,15 +60,21 @@ static void test_twice(void)
     run_for(30);
     g_assert_cmpint(calls.disconnects, ==, 1);
 
+    /* BlueZ signals the disconnection before it is done: wait for its
+     * answer */
     relink_link_closed(relink);
     run_for(20);
+    g_assert_cmpint(calls.connects, ==, 0);
+    relink_disconnect_done(relink);
+    run_for(20);
     g_assert_cmpint(calls.connects, ==, 1);
+    relink_connect_done(relink, true);
     relink_link_opened(relink);
     g_assert_cmpint(calls.finished, ==, 0);
 
     run_for(30);
     g_assert_cmpint(calls.disconnects, ==, 2);
-    relink_link_closed(relink);
+    relink_disconnect_done(relink);
     run_for(20);
     g_assert_cmpint(calls.connects, ==, 2);
     relink_link_opened(relink);
@@ -78,9 +84,38 @@ static void test_twice(void)
     /* Done: the next connections are ordinary ones */
     relink_link_closed(relink);
     relink_link_opened(relink);
+    relink_connect_done(relink, false);
     run_for(50);
     g_assert_cmpint(calls.disconnects, ==, 2);
     g_assert_cmpint(calls.connects, ==, 2);
+    relink_free(relink);
+}
+
+/* Connecting fails, or the link closes again: a few more tries */
+static void test_connect_again(void)
+{
+    Calls calls = { 0 };
+    Relink *relink = relink_new(&callbacks, &calls);
+
+    relink_start(relink, 1);
+    run_for(30);
+    relink_disconnect_done(relink);
+    run_for(20);
+    g_assert_cmpint(calls.connects, ==, 1);
+    relink_connect_done(relink, false);
+    run_for(20);
+    g_assert_cmpint(calls.connects, ==, 2);
+    relink_link_closed(relink);
+    run_for(20);
+    g_assert_cmpint(calls.connects, ==, 3);
+
+    /* No more */
+    relink_connect_done(relink, false);
+    relink_link_closed(relink);
+    run_for(20);
+    g_assert_cmpint(calls.connects, ==, 3);
+    relink_link_opened(relink);
+    g_assert_cmpint(calls.finished, ==, 1);
     relink_free(relink);
 }
 
@@ -124,6 +159,7 @@ int main(int argc, char *argv[])
     g_test_init(&argc, &argv, NULL);
 
     g_test_add_func("/relink/twice", test_twice);
+    g_test_add_func("/relink/connect-again", test_connect_again);
     g_test_add_func("/relink/give-up", test_give_up);
     g_test_add_func("/relink/gone-meanwhile", test_gone_meanwhile);
 

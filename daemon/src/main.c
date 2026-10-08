@@ -527,12 +527,20 @@ static void on_device_call_done(GObject *source, GAsyncResult *res, gpointer use
     const char *method = user_data;
     GError *error = NULL;
     GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
-    if (result != NULL) {
+    bool ok = result != NULL;
+    if (ok) {
         g_variant_unref(result);
     } else {
         g_message("%s the AirPods failed: %s", method, error->message);
         g_error_free(error);
     }
+
+    if (app.relink == NULL)
+        return;
+    if (g_strcmp0(method, "Disconnect") == 0)
+        relink_disconnect_done(app.relink);
+    else
+        relink_connect_done(app.relink, ok);
 }
 
 /* Device1.Connect or Disconnect on the AirPods used last */
