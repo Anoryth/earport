@@ -27,6 +27,7 @@
 #include "link_trace.h"
 #include "device.h"
 #include "media_control.h"
+#include "relink.h"
 #include "research.h"
 #include "sleep_pause.h"
 #include "tipi.h"
@@ -48,6 +49,9 @@ typedef struct {
     Handoff *handoff;
     LinkTrace *link_trace;
     Tipi *tipi;
+    Relink *relink;
+    bool tipi_reconnecting;     /* Each announced as Reconnecting */
+    bool relink_reconnecting;
     char *device_path;          /* AirPods' BlueZ object, kept after they left */
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
@@ -371,6 +375,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
     device_session_started(&app.device, address, name);
     /* Once announced: clients tell a reconnection by it */
     tipi_link_opened(app.tipi);
+    relink_link_opened(app.relink);
     controls_send_saved_settings(&app.controls, address);
     /* Not the case of these AirPods */
     if (!connected_are_watched())
@@ -436,6 +441,7 @@ static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *us
     g_message("BlueZ: AirPods disconnected - %s (%s)", device->name, device->address);
     aap_link_device_disconnected(app.link);
     autoconnect_set_airpods_connected(app.autoconnect, false, NULL);
+    relink_link_closed(app.relink);
 }
 
 /* ============================================================================
@@ -516,37 +522,63 @@ static bool tipi_send(const uint8_t *data, size_t len, void *user_data)
     return aap_link_is_connected(app.link) && aap_link_send(app.link, data, len);
 }
 
-static void on_tipi_connect_done(GObject *source, GAsyncResult *res, gpointer user_data)
+static void on_device_call_done(GObject *source, GAsyncResult *res, gpointer user_data)
 {
-    (void)user_data;
+    const char *method = user_data;
     GError *error = NULL;
     GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
     if (result != NULL) {
         g_variant_unref(result);
     } else {
-        g_message("Connecting the AirPods again failed: %s", error->message);
+        g_message("%s the AirPods failed: %s", method, error->message);
         g_error_free(error);
     }
 }
 
-static void tipi_reconnect(void *user_data)
+/* Device1.Connect or Disconnect on the AirPods used last */
+static void call_airpods(const char *method)
 {
-    (void)user_data;
     GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
     if (bus == NULL || app.device_path == NULL) {
         g_clear_object(&bus);
         return;
     }
-    g_dbus_connection_call(bus, "org.bluez", app.device_path, "org.bluez.Device1", "Connect",
+    g_dbus_connection_call(bus, "org.bluez", app.device_path, "org.bluez.Device1", method,
                            NULL, NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL,
-                           on_tipi_connect_done, NULL);
+                           on_device_call_done, (gpointer)method);
     g_object_unref(bus);
+}
+
+static void connect_airpods(void *user_data)
+{
+    (void)user_data;
+    call_airpods("Connect");
+}
+
+static void disconnect_airpods(void *user_data)
+{
+    (void)user_data;
+    call_airpods("Disconnect");
+}
+
+static void update_reconnecting(void)
+{
+    dbus_service_set_reconnecting(app.dbus_service,
+                                  app.tipi_reconnecting || app.relink_reconnecting);
 }
 
 static void tipi_reconnecting(bool reconnecting, void *user_data)
 {
     (void)user_data;
-    dbus_service_set_reconnecting(app.dbus_service, reconnecting);
+    app.tipi_reconnecting = reconnecting;
+    update_reconnecting();
+}
+
+static void relink_reconnecting(bool reconnecting, void *user_data)
+{
+    (void)user_data;
+    app.relink_reconnecting = reconnecting;
+    update_reconnecting();
 }
 
 static void on_link_closed(bool left, void *user_data)
@@ -581,6 +613,7 @@ static void handoff_restart_audio(HandoffRestart how, void *user_data)
 static void on_set_apple_handoff(bool enabled, void *user_data)
 {
     (void)user_data;
+    bool changed = enabled != app.config.apple_handoff;
     handoff_set_enabled(app.handoff, enabled);
     tipi_set_enabled(app.tipi, enabled);
 
@@ -589,6 +622,11 @@ static void on_set_apple_handoff(bool enabled, void *user_data)
     dbus_service_set_apple_handoff(app.dbus_service, enabled);
     apple_identity_set_enabled(app.apple_identity, enabled);
     send_smart_routing_info();
+
+    /* The AirPods read the new identity at the second connection after
+     * the change, and forget it at the next one */
+    if (changed && aap_link_is_connected(app.link))
+        relink_start(app.relink, enabled ? 2 : 1);
 }
 
 /* ============================================================================
@@ -628,6 +666,8 @@ static void cleanup(void)
     app.link_trace = NULL;
     tipi_free(app.tipi);
     app.tipi = NULL;
+    relink_free(app.relink);
+    app.relink = NULL;
     g_free(app.device_path);
     app.battery_provider = NULL;
     g_free(app.adapter_path);
@@ -744,12 +784,18 @@ int main(int argc, char *argv[])
     app.link_trace = link_trace_new();
     static const TipiCallbacks tipi_callbacks = {
         .send = tipi_send,
-        .reconnect = tipi_reconnect,
+        .reconnect = connect_airpods,
         .reconnecting = tipi_reconnecting,
     };
     app.tipi = tipi_new(&tipi_callbacks, NULL);
     tipi_set_enabled(app.tipi, app.config.apple_handoff);
     link_trace_set_closed_callback(app.link_trace, on_link_closed, NULL);
+    static const RelinkCallbacks relink_callbacks = {
+        .disconnect = disconnect_airpods,
+        .connect = connect_airpods,
+        .reconnecting = relink_reconnecting,
+    };
+    app.relink = relink_new(&relink_callbacks, NULL);
     handoff_set_enabled(app.handoff, app.config.apple_handoff);
     /* Known before the first audio source arrives; refreshed on connection */
     read_adapter_address("/org/bluez/hci0");

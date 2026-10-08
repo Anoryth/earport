@@ -63,6 +63,7 @@ sources = files(
     'src/dbus_service.c',
     'src/handoff.c',
     'src/link_trace.c',
+    'src/relink.c',
     'src/tipi.c',
     'src/media_control.c',
     'src/research.c',
@@ -191,6 +192,14 @@ test_tipi = executable('test-tipi',
     dependencies: [glib_dep],
 )
 test('tipi', test_tipi)
+
+test_relink = executable('test-relink',
+    files('tests/test_relink.c', 'src/relink.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DRELINK_SETTLE_MS=20', '-DRELINK_PAUSE_MS=10', '-DRELINK_STEP_MS=100'],
+    dependencies: [glib_dep],
+)
+test('relink', test_relink)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

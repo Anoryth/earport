@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-10-05 21:11+0200\n"
+"POT-Creation-Date: 2026-10-08 22:23+0200\n"
 "PO-Revision-Date: 2026-07-24 10:17+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Ukrainian <uk@li.org>\n"
@@ -27,100 +27,100 @@ msgstr "недоступно"
 msgid "charging"
 msgstr "заряджається"
 
-#: extension/earportToggle.js:40 extension/earportToggle.js:384
-#: extension/earportToggle.js:402 extension/prefs.js:525
+#: extension/earportToggle.js:40 extension/earportToggle.js:399
+#: extension/earportToggle.js:417 extension/prefs.js:525
 msgid "Disconnected"
 msgstr "Відключено"
 
-#: extension/earportToggle.js:59
+#: extension/earportToggle.js:60
 msgid "Noise Control Off"
 msgstr "Режим слухання вимкнено"
 
-#: extension/earportToggle.js:60 extension/prefs.js:192
+#: extension/earportToggle.js:61 extension/prefs.js:192
 msgid "Noise Cancellation"
 msgstr "Шумогасіння"
 
-#: extension/earportToggle.js:61 extension/prefs.js:186
+#: extension/earportToggle.js:62 extension/prefs.js:186
 msgid "Transparency"
 msgstr "Режим проникності"
 
-#: extension/earportToggle.js:62 extension/prefs.js:198
+#: extension/earportToggle.js:63 extension/prefs.js:198
 msgid "Adaptive"
 msgstr "Адаптивний"
 
-#: extension/earportToggle.js:97 extension/notifications.js:60
+#: extension/earportToggle.js:98 extension/notifications.js:60
 #: extension/prefs.js:499
 msgid "Left"
 msgstr "Лівий"
 
-#: extension/earportToggle.js:98 extension/notifications.js:62
+#: extension/earportToggle.js:99 extension/notifications.js:62
 #: extension/prefs.js:499
 msgid "Right"
 msgstr "Правий"
 
-#: extension/earportToggle.js:99
+#: extension/earportToggle.js:100
 msgid "Case"
 msgstr "Футляр"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/earportToggle.js:142 extension/prefs.js:180
+#: extension/earportToggle.js:143 extension/prefs.js:180
 msgid "Off"
 msgstr "Вимк."
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/earportToggle.js:144
+#: extension/earportToggle.js:145
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/earportToggle.js:146
+#: extension/earportToggle.js:147
 msgid "Hear"
 msgstr "Проникн."
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/earportToggle.js:149
+#: extension/earportToggle.js:150
 msgid "Auto"
 msgstr "Авто"
 
-#: extension/earportToggle.js:169
+#: extension/earportToggle.js:170
 msgid "Use on This Computer"
 msgstr "Використовувати на цьому комп’ютері"
 
-#: extension/earportToggle.js:180
+#: extension/earportToggle.js:181
 msgid "Advanced Settings"
 msgstr "Додаткові налаштування"
 
-#: extension/earportToggle.js:189
+#: extension/earportToggle.js:190
 msgid "How to Install the EarPort Service"
 msgstr "Як установити службу EarPort"
 
-#: extension/earportToggle.js:202
+#: extension/earportToggle.js:203
 msgid "Copy the Installation Command"
 msgstr "Скопіювати команду встановлення"
 
-#: extension/earportToggle.js:212
+#: extension/earportToggle.js:213
 msgid "Update the EarPort Service"
 msgstr "Оновити службу EarPort"
 
-#: extension/earportToggle.js:316 extension/earportToggle.js:426
+#: extension/earportToggle.js:331 extension/earportToggle.js:441
 msgid "Other device"
 msgstr "Інший пристрій"
 
-#: extension/earportToggle.js:384
+#: extension/earportToggle.js:399
 msgid "Service not running"
 msgstr "Службу не запущено"
 
-#: extension/earportToggle.js:464
+#: extension/earportToggle.js:479
 msgid "Less than 5 min of listening left"
 msgstr "Залишилося менше 5 хв прослуховування"
 
-#: extension/earportToggle.js:466
+#: extension/earportToggle.js:481
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Залишилося приблизно %d хв прослуховування"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:471
+#: extension/earportToggle.js:486
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Залишилося приблизно %d∶%02d прослуховування"
@@ -325,14 +325,15 @@ msgstr "Перемикання з вашими пристроями Apple"
 
 #: extension/prefs.js:236
 msgid ""
-"The AirPods move between this computer and your iPhone, iPad or Mac on their "
-"own, as between Apple devices. This computer then presents itself as an "
-"Apple device to Apple accessories. Takes effect the next time the AirPods "
-"connect."
+"Experimental. The AirPods move between this computer and your iPhone, iPad "
+"or Mac on their own, as between Apple devices. This computer then presents "
+"itself as an Apple device to Apple accessories. The AirPods reconnect "
+"briefly when this changes."
 msgstr ""
-"AirPods самі переходять між цим комп’ютером і вашим iPhone, iPad або Mac, як "
-"між пристроями Apple. Цей комп’ютер тоді представляється аксесуарам Apple як "
-"пристрій Apple. Діє з наступного підключення AirPods."
+"Експериментально. AirPods самі переходять між цим комп’ютером і вашим "
+"iPhone, iPad або Mac, як між пристроями Apple. Цей комп’ютер тоді "
+"представляється аксесуарам Apple як пристрій Apple. AirPods ненадовго "
+"перепідключаються, коли ви це змінюєте."
 
 #: extension/prefs.js:242
 msgid "Notifications"

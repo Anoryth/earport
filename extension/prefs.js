@@ -233,7 +233,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
 
         this._appleHandoffRow = new Adw.SwitchRow({
             title: _('Switch With Your Apple Devices'),
-            subtitle: _('The AirPods move between this computer and your iPhone, iPad or Mac on their own, as between Apple devices. This computer then presents itself as an Apple device to Apple accessories. Takes effect the next time the AirPods connect.'),
+            subtitle: _('Experimental. The AirPods move between this computer and your iPhone, iPad or Mac on their own, as between Apple devices. This computer then presents itself as an Apple device to Apple accessories. The AirPods reconnect briefly when this changes.'),
         });
         connectionGroup.add(this._appleHandoffRow);
 
