@@ -186,10 +186,8 @@ Limitations: tested with AirPods Pro 2 and an iPhone so far. With more than two
 devices using them, the AirPods choose which ones they keep. The quiet
 reconnection needs BlueZ 5.73 or later. While the option is on, other Apple
 accessories nearby may also take the computer for an Apple device. Turning it
-off stops EarPort's part (pausing, resuming, reconnecting), but the AirPods
-remember the computer as an Apple device and may keep moving between it and
-your other devices; removing them from the Bluetooth settings and pairing them
-again should undo it.
+off stops EarPort's part (pausing, resuming, reconnecting); the AirPods may
+keep the computer next to your iPhone until they next go back in their case.
 
 ### Battery Elsewhere
 
