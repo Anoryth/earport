@@ -9,6 +9,11 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 <img src="extension.png" width="384" alt="The EarPort menu in GNOME Shell Quick Settings: AirPods Pro at 85 % and 82 %, case charging at 64 %, about 4:30 of listening left, noise cancellation on">
 
+> **New in 0.6: switch with your Apple devices (experimental).** Your AirPods
+> stay connected to the computer and to your iPhone, iPad or Mac at the same
+> time, and follow you from one to the other on their own, as with a Mac.
+> [How it works](#switching-with-your-apple-devices-experimental)
+
 ## Features
 
 - **Battery monitoring** - Real-time battery levels for left pod, right pod, and charging case
@@ -21,7 +26,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone, to the level you choose, with a smooth fade
 - **Quiet conversations** - Notification banners and their sounds wait until you stop speaking (can be turned off)
 - **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
-- **Switch with your Apple devices** (optional, experimental) - The AirPods move between the computer and your iPhone, iPad or Mac on their own, as between Apple devices, and stay connected to both
+- **Switch with your Apple devices** (optional, experimental) - The AirPods move between the computer and your iPhone, iPad or Mac on their own, as between Apple devices, and stay connected to both, even when you take one AirPod out
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
 - **Pause when falling asleep** - When your AirPods notice you fell asleep, playback pauses after a 10-minute grace period, as on an iPhone, unless you use the computer meanwhile; players that allow it go back to where you dozed off (on models offering the setting, turned on in the AirPods settings)
@@ -181,6 +186,15 @@ notice it. From then on, as between a Mac and an iPhone:
 - taking out one AirPod keeps the computer connected while it plays; if the
   other device was playing, the computer reconnects by itself in a few seconds,
   without notifications.
+
+Getting there took a lot of research: the AirPods only share themselves
+between Apple devices, and how they decide which device to keep is not
+documented anywhere. EarPort's behavior was worked out by watching how a Mac
+and an iPhone handle the AirPods, then checked in many live tests (switching
+pods, calls, notifications, a third device), until the computer was treated as
+the Mac is. The idea of presenting the computer as an Apple device comes from
+[LibrePods](https://github.com/kavishdevar/librepods). Reports of how it works
+with your AirPods and devices are very welcome.
 
 Limitations: tested with AirPods Pro 2 and an iPhone so far. With more than two
 devices using them, the AirPods choose which ones they keep. The quiet
