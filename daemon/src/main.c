@@ -29,6 +29,7 @@
 #include "media_control.h"
 #include "research.h"
 #include "sleep_pause.h"
+#include "tipi.h"
 
 /* Global application state */
 typedef struct {
@@ -46,6 +47,8 @@ typedef struct {
     AppleIdentity *apple_identity;
     Handoff *handoff;
     LinkTrace *link_trace;
+    Tipi *tipi;
+    char *device_path;          /* AirPods' BlueZ object, kept after they left */
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
 } AppContext;
@@ -202,6 +205,7 @@ static void on_playback_started(void *user_data)
 {
     (void)user_data;
     autoconnect_on_playback_started(app.autoconnect);
+    tipi_playback_started(app.tipi);
     handoff_playback_started(app.handoff);
 }
 
@@ -342,6 +346,11 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         /* The AirPods answered: tell them about this computer, as a Mac */
         send_smart_routing_info();
     }
+    else if (pkt->type == AAP_PKT_TYPE_HOSTS)
+        tipi_hosts_changed(app.tipi, &pkt->data.hosts, app.state.host_address);
+    else if (pkt->type == AAP_PKT_TYPE_EAR_DETECTION)
+        tipi_ear_changed(app.tipi, app.state.ear_detection.primary_in_ear,
+                         app.state.ear_detection.secondary_in_ear);
     else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE)
         handoff_source_changed(app.handoff, app.state.audio_source,
                                pkt->data.audio_source.type == AAP_AUDIO_SOURCE_CALL);
@@ -360,6 +369,8 @@ static void on_link_connected(const char *address, const char *name, void *user_
 {
     (void)user_data;
     device_session_started(&app.device, address, name);
+    /* Once announced: clients tell a reconnection by it */
+    tipi_link_opened(app.tipi);
     controls_send_saved_settings(&app.controls, address);
     /* Not the case of these AirPods */
     if (!connected_are_watched())
@@ -413,6 +424,8 @@ static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_
     app.adapter_path = adapter_path;
     read_adapter_address(adapter_path);
     link_trace_set_device(app.link_trace, device->object_path);
+    g_free(app.device_path);
+    app.device_path = g_strdup(device->object_path);
 
     aap_link_device_connected(app.link, device->address, device->name);
 }
@@ -497,6 +510,51 @@ static bool claim_audio(void *user_data)
     return true;
 }
 
+static bool tipi_send(const uint8_t *data, size_t len, void *user_data)
+{
+    (void)user_data;
+    return aap_link_is_connected(app.link) && aap_link_send(app.link, data, len);
+}
+
+static void on_tipi_connect_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    (void)user_data;
+    GError *error = NULL;
+    GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+    if (result != NULL) {
+        g_variant_unref(result);
+    } else {
+        g_message("Connecting the AirPods again failed: %s", error->message);
+        g_error_free(error);
+    }
+}
+
+static void tipi_reconnect(void *user_data)
+{
+    (void)user_data;
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    if (bus == NULL || app.device_path == NULL) {
+        g_clear_object(&bus);
+        return;
+    }
+    g_dbus_connection_call(bus, "org.bluez", app.device_path, "org.bluez.Device1", "Connect",
+                           NULL, NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL,
+                           on_tipi_connect_done, NULL);
+    g_object_unref(bus);
+}
+
+static void tipi_reconnecting(bool reconnecting, void *user_data)
+{
+    (void)user_data;
+    dbus_service_set_reconnecting(app.dbus_service, reconnecting);
+}
+
+static void on_link_closed(bool left, void *user_data)
+{
+    (void)user_data;
+    tipi_link_closed(app.tipi, left);
+}
+
 static void handoff_pause_players(void *user_data)
 {
     (void)user_data;
@@ -524,6 +582,7 @@ static void on_set_apple_handoff(bool enabled, void *user_data)
 {
     (void)user_data;
     handoff_set_enabled(app.handoff, enabled);
+    tipi_set_enabled(app.tipi, enabled);
 
     app.config.apple_handoff = enabled;
     config_save(&app.config);
@@ -567,6 +626,9 @@ static void cleanup(void)
     app.handoff = NULL;
     link_trace_free(app.link_trace);
     app.link_trace = NULL;
+    tipi_free(app.tipi);
+    app.tipi = NULL;
+    g_free(app.device_path);
     app.battery_provider = NULL;
     g_free(app.adapter_path);
     sleep_pause_free(app.sleep_pause);
@@ -680,6 +742,14 @@ int main(int argc, char *argv[])
     };
     app.handoff = handoff_new(&handoff_callbacks, NULL);
     app.link_trace = link_trace_new();
+    static const TipiCallbacks tipi_callbacks = {
+        .send = tipi_send,
+        .reconnect = tipi_reconnect,
+        .reconnecting = tipi_reconnecting,
+    };
+    app.tipi = tipi_new(&tipi_callbacks, NULL);
+    tipi_set_enabled(app.tipi, app.config.apple_handoff);
+    link_trace_set_closed_callback(app.link_trace, on_link_closed, NULL);
     handoff_set_enabled(app.handoff, app.config.apple_handoff);
     /* Known before the first audio source arrives; refreshed on connection */
     read_adapter_address("/org/bluez/hci0");

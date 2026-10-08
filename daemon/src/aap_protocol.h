@@ -31,6 +31,7 @@
 #define AAP_OPCODE_CONTROL       0x09
 #define AAP_OPCODE_AUDIO_SOURCE  0x0E
 #define AAP_OPCODE_HOSTS         0x2E
+#define AAP_OPCODE_PRIORITY_LIST 0x14
 #define AAP_OPCODE_SMART_ROUTING 0x44
 #define AAP_OPCODE_NOTIFICATIONS 0x0F
 #define AAP_OPCODE_HEAD_TRACKING 0x17
@@ -326,6 +327,13 @@ void aap_build_sleep_detection_msg(uint8_t msg_type, uint8_t value, uint8_t *buf
 #define AAP_SMART_ROUTING_STATE_SIZE 22
 void aap_build_smart_routing_score(uint8_t score, uint8_t *buffer);
 void aap_build_smart_routing_state(uint8_t state, uint32_t unix_time, uint8_t *buffer);
+
+/* The hosts the AirPods must keep together, the one playing first, as a Mac
+ * tells them when it shares them with an iPhone: without it they drop one
+ * to let the other back in. Returns the size, 0 for a bad address. */
+#define AAP_PRIORITY_LIST_MAX_HOSTS 2
+#define AAP_PRIORITY_LIST_MAX_SIZE (7 + 6 * AAP_PRIORITY_LIST_MAX_HOSTS)
+size_t aap_build_priority_list(const char *const *addresses, size_t count, uint8_t *buffer);
 
 /**
  * Build conversational awareness command

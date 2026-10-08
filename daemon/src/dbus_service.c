@@ -41,6 +41,7 @@ static const gchar introspection_xml[] =
     "    <property name='AutoConnect' type='b' access='read'/>"
     "    <property name='AppleHandoff' type='b' access='read'/>"
     "    <property name='AudioSource' type='s' access='read'/>"
+    "    <property name='Reconnecting' type='b' access='read'/>"
     "    <method name='SetNoiseControlMode'>"
     "      <arg type='s' name='mode' direction='in'/>"
     "    </method>"
@@ -142,6 +143,7 @@ struct DbusService {
     DbusAutoConnectCallback apple_handoff_callback;
     void *apple_handoff_user_data;
     bool apple_handoff;
+    bool reconnecting;
 };
 
 /* Settings announced by the AirPods, as {key: b|i} */
@@ -316,6 +318,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(service->auto_connect);
     } else if (g_strcmp0(property_name, "AppleHandoff") == 0) {
         result = g_variant_new_boolean(service->apple_handoff);
+    } else if (g_strcmp0(property_name, "Reconnecting") == 0) {
+        result = g_variant_new_boolean(service->reconnecting);
     } else if (g_strcmp0(property_name, "AudioSource") == 0) {
         result = g_variant_new_string(state->audio_source ? state->audio_source : "");
     } else if (g_strcmp0(property_name, "NearbyBattery") == 0) {
@@ -698,6 +702,12 @@ void dbus_service_set_claim_audio_callback(DbusService *service,
 {
     service->claim_audio_callback = callback;
     service->claim_audio_user_data = user_data;
+}
+
+void dbus_service_set_reconnecting(DbusService *service, bool reconnecting)
+{
+    service->reconnecting = reconnecting;
+    dbus_service_emit_properties_changed(service, "Reconnecting");
 }
 
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled)

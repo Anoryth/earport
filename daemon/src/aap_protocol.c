@@ -536,6 +536,28 @@ void aap_build_smart_routing_state(uint8_t state, uint32_t unix_time, uint8_t *b
     memcpy(buffer, msg, sizeof(msg));
 }
 
+/* 04 00 04 00 14 00 [count] [address, reversed]... */
+size_t aap_build_priority_list(const char *const *addresses, size_t count, uint8_t *buffer)
+{
+    if (count == 0 || count > AAP_PRIORITY_LIST_MAX_HOSTS)
+        return 0;
+
+    const uint8_t header[] = { 0x04, 0x00, 0x04, 0x00, AAP_OPCODE_PRIORITY_LIST, 0x00 };
+    memcpy(buffer, header, sizeof(header));
+    buffer[6] = (uint8_t)count;
+    for (size_t i = 0; i < count; i++) {
+        unsigned int b[6];
+        char end;
+        if (addresses[i] == NULL ||
+            sscanf(addresses[i], "%2x:%2x:%2x:%2x:%2x:%2x%c",
+                   &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &end) != 6)
+            return 0;
+        for (int j = 0; j < 6; j++)
+            buffer[7 + i * 6 + j] = (uint8_t)b[5 - j];
+    }
+    return 7 + count * 6;
+}
+
 void aap_build_conv_awareness_cmd(bool enable, uint8_t *buffer)
 {
     memcpy(buffer, enable ? AAP_PKT_CA_ENABLE : AAP_PKT_CA_DISABLE, AAP_CONTROL_CMD_SIZE);

@@ -63,6 +63,7 @@ sources = files(
     'src/dbus_service.c',
     'src/handoff.c',
     'src/link_trace.c',
+    'src/tipi.c',
     'src/media_control.c',
     'src/research.c',
     'src/sleep_pause.c',
@@ -180,6 +181,16 @@ test_handoff = executable('test-handoff',
     dependencies: [glib_dep],
 )
 test('handoff', test_handoff)
+
+test_tipi = executable('test-tipi',
+    files('tests/test_tipi.c', 'src/tipi.c', 'src/aap_protocol.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DTIPI_RECONNECT_FIRST_MS=20', '-DTIPI_RECONNECT_NEXT_MS=30',
+             '-DTIPI_RECONNECT_GIVE_UP_MS=150', '-DTIPI_LIST_REPEAT_MS=50',
+             '-DTIPI_SWAP_WINDOW_MS=100'],
+    dependencies: [glib_dep],
+)
+test('tipi', test_tipi)
 
 # Service files point to the installed daemon (/usr/local/bin by default,
 # /usr/bin for distribution packages)

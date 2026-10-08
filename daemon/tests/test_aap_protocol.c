@@ -413,6 +413,27 @@ static void test_smart_routing(void)
     g_assert_cmpmem(state, sizeof(state), expected_state, sizeof(expected_state));
 }
 
+/* The device playing first; addresses sent reversed (made-up ones) */
+static void test_priority_list(void)
+{
+    const char *addresses[] = { "11:22:33:44:55:66", "aa:bb:cc:dd:ee:01" };
+    const uint8_t expected[] = {
+        0x04, 0x00, 0x04, 0x00, 0x14, 0x00, 0x02,
+        0x66, 0x55, 0x44, 0x33, 0x22, 0x11,
+        0x01, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA,
+    };
+    uint8_t packet[AAP_PRIORITY_LIST_MAX_SIZE];
+
+    size_t len = aap_build_priority_list(addresses, 2, packet);
+    g_assert_cmpmem(packet, len, expected, sizeof(expected));
+
+    const char *bad[] = { "11:22:33:44:55", "11:22:33:44:55:66" };
+    g_assert_cmpuint(aap_build_priority_list(bad, 2, packet), ==, 0);
+    const char *trailing[] = { "11:22:33:44:55:66x" };
+    g_assert_cmpuint(aap_build_priority_list(trailing, 1, packet), ==, 0);
+    g_assert_cmpuint(aap_build_priority_list(addresses, 3, packet), ==, 0);
+}
+
 static void test_unhandled_packets(void)
 {
     /* Handshake acknowledgement uses a different header */
@@ -517,6 +538,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/metadata", test_metadata);
     g_test_add_func("/aap/audio-source", test_audio_source);
     g_test_add_func("/aap/smart-routing", test_smart_routing);
+    g_test_add_func("/aap/priority-list", test_priority_list);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
     g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);

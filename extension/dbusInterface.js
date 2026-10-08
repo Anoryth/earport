@@ -44,6 +44,7 @@ export const AirPodsInterface = `
     <property name="AutoConnect" type="b" access="read"/>
     <property name="AppleHandoff" type="b" access="read"/>
     <property name="AudioSource" type="s" access="read"/>
+    <property name="Reconnecting" type="b" access="read"/>
     <method name="SetNoiseControlMode">
       <arg type="s" name="mode" direction="in"/>
     </method>

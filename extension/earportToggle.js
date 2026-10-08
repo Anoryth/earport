@@ -46,6 +46,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._proxy = null;
         this._propertiesChangedId = 0;
         this._signalIds = [];
+        this._quietDisconnect = null;
 
         /* Custom symbolic icons shipped with the extension */
         const iconsDir = `${extensionObject.path}/icons`;
@@ -255,16 +256,30 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _onPropertiesChanged() {
+        /* The daemon gave up getting the AirPods back from an Apple device:
+         * the disconnection kept quiet is real */
+        if (this._quietDisconnect && !this._proxy?.Reconnecting) {
+            this._notifications.disconnected(this._proxy?.DisplayName, this._quietDisconnect.name);
+            this._quietDisconnect = null;
+        }
         this._updateState();
     }
 
     _onDeviceConnected(_proxy, _sender, [_address, name]) {
-        this._notifications.connected(this._proxy?.DisplayName, name, this._proxy?.DeviceModel);
+        if (this._quietDisconnect)
+            this._quietDisconnect = null;
+        else
+            this._notifications.connected(this._proxy?.DisplayName, name, this._proxy?.DeviceModel);
         this._updateState();
     }
 
     _onDeviceDisconnected(_proxy, _sender, [_address, name]) {
-        this._notifications.disconnected(this._proxy?.DisplayName, name);
+        /* Dropped for an Apple device and coming back in a few seconds, as
+         * on a Mac: nothing to tell yet */
+        if (this._proxy?.Reconnecting)
+            this._quietDisconnect = {name};
+        else
+            this._notifications.disconnected(this._proxy?.DisplayName, name);
         this._updateDisconnectedState();
     }
 

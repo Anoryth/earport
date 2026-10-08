@@ -12,6 +12,8 @@ struct LinkTrace {
     char *device_path;
     guint disconnected_id;
     guint transport_id;
+    LinkTraceClosedCallback closed_callback;
+    void *closed_user_data;
 };
 
 /* org.bluez.Device1.Disconnected(name, message), BlueZ 5.73 and later */
@@ -30,6 +32,10 @@ static void on_disconnected(GDBusConnection *bus, const gchar *sender, const gch
     const gchar *name = NULL, *message = NULL;
     g_variant_get(parameters, "(&s&s)", &name, &message);
     g_message("BlueZ: AirPods link closed: %s (%s)", message, name);
+    if (trace->closed_callback != NULL)
+        trace->closed_callback(g_strcmp0(name, "org.bluez.Reason.Remote") == 0 ||
+                                   g_strcmp0(name, "org.bluez.Reason.Timeout") == 0,
+                               trace->closed_user_data);
 }
 
 /* The audio stream to the AirPods, under their path (".../sep2/fd0") */
@@ -89,4 +95,13 @@ void link_trace_set_device(LinkTrace *trace, const char *device_path)
         return;
     g_free(trace->device_path);
     trace->device_path = g_strdup(device_path);
+}
+
+void link_trace_set_closed_callback(LinkTrace *trace, LinkTraceClosedCallback callback,
+                                    void *user_data)
+{
+    if (trace == NULL)
+        return;
+    trace->closed_callback = callback;
+    trace->closed_user_data = user_data;
 }
