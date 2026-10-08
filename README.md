@@ -21,6 +21,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone, to the level you choose, with a smooth fade
 - **Quiet conversations** - Notification banners and their sounds wait until you stop speaking (can be turned off)
 - **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
+- **Switch with your Apple devices** (optional, experimental) - The AirPods move between the computer and your iPhone, iPad or Mac on their own, as between Apple devices, and stay connected to both
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
 - **Pause when falling asleep** - When your AirPods notice you fell asleep, playback pauses after a 10-minute grace period, as on an iPhone, unless you use the computer meanwhile; players that allow it go back to where you dozed off (on models offering the setting, turned on in the AirPods settings)
@@ -165,6 +166,27 @@ to remove it (the only step asking for sudo).
 ### Ear Detection & Media Control
 
 By default, media will automatically pause when you remove one or both AirPods from your ears, and resume when you put them back in.
+
+### Switching With Your Apple Devices (Experimental)
+
+Turn on **Switch With Your Apple Devices** in the preferences. The computer then
+presents itself as an Apple device to the AirPods, which reconnect briefly to
+notice it. From then on, as between a Mac and an iPhone:
+
+- the AirPods stay connected to the computer and to your iPhone (or iPad, or
+  Mac) at the same time;
+- they play from the one you start playing on: when another device takes them,
+  playback pauses here, and resumes after a notification read aloud or a call;
+- **Use on This Computer** in the menu brings them back at once;
+- taking out one AirPod keeps the computer connected while it plays; if the
+  other device was playing, the computer reconnects by itself in a few seconds,
+  without notifications.
+
+Limitations: tested with AirPods Pro 2 and an iPhone so far. With more than two
+devices using them, the AirPods choose which ones they keep. The quiet
+reconnection needs BlueZ 5.73 or later. While the option is on, other Apple
+accessories nearby may also take the computer for an Apple device. Turning it
+off reconnects the AirPods once more, and they treat the computer as before.
 
 ### Battery Elsewhere
 
