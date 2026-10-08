@@ -11,7 +11,8 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 > **New in 0.6: switch with your Apple devices (experimental).** Your AirPods
 > stay connected to the computer and to your iPhone, iPad or Mac at the same
-> time, and follow you from one to the other on their own, as with a Mac.
+> time, and follow you from one to the other on their own, as with a Mac, with
+> no change to your Bluetooth configuration and no pairing again.
 > [How it works](#switching-with-your-apple-devices-experimental)
 
 ## Features
@@ -176,7 +177,10 @@ By default, media will automatically pause when you remove one or both AirPods f
 
 Turn on **Switch With Your Apple Devices** in the preferences. The computer then
 presents itself as an Apple device to the AirPods, which reconnect briefly to
-notice it. From then on, as between a Mac and an iPhone:
+notice it. Nothing to change in the system's Bluetooth configuration: no Apple
+`DeviceID` in `/etc/bluetooth/main.conf`, no root, no pairing again; the service
+does it from your session, only while the option is on. From then on, as
+between a Mac and an iPhone:
 
 - the AirPods stay connected to the computer and to your iPhone (or iPad, or
   Mac) at the same time;
