@@ -84,14 +84,6 @@ extern const uint8_t AAP_PKT_HANDSHAKE[AAP_HANDSHAKE_SIZE];
 extern const uint8_t AAP_PKT_REQUEST_NOTIFICATIONS[AAP_REQUEST_NOTIF_SIZE];
 extern const uint8_t AAP_PKT_SET_FEATURES[AAP_SET_FEATURES_SIZE];
 
-extern const uint8_t AAP_PKT_NC_OFF[AAP_CONTROL_CMD_SIZE];
-extern const uint8_t AAP_PKT_NC_ANC[AAP_CONTROL_CMD_SIZE];
-extern const uint8_t AAP_PKT_NC_TRANSPARENCY[AAP_CONTROL_CMD_SIZE];
-extern const uint8_t AAP_PKT_NC_ADAPTIVE[AAP_CONTROL_CMD_SIZE];
-
-extern const uint8_t AAP_PKT_CA_ENABLE[AAP_CONTROL_CMD_SIZE];
-extern const uint8_t AAP_PKT_CA_DISABLE[AAP_CONTROL_CMD_SIZE];
-
 /* Parsed packet result */
 typedef enum {
     AAP_PARSE_OK,

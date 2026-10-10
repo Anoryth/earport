@@ -23,30 +23,6 @@ const uint8_t AAP_PKT_SET_FEATURES[AAP_SET_FEATURES_SIZE] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-const uint8_t AAP_PKT_NC_OFF[AAP_CONTROL_CMD_SIZE] = {
-    0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x01, 0x00, 0x00, 0x00
-};
-
-const uint8_t AAP_PKT_NC_ANC[AAP_CONTROL_CMD_SIZE] = {
-    0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x02, 0x00, 0x00, 0x00
-};
-
-const uint8_t AAP_PKT_NC_TRANSPARENCY[AAP_CONTROL_CMD_SIZE] = {
-    0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x03, 0x00, 0x00, 0x00
-};
-
-const uint8_t AAP_PKT_NC_ADAPTIVE[AAP_CONTROL_CMD_SIZE] = {
-    0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x04, 0x00, 0x00, 0x00
-};
-
-const uint8_t AAP_PKT_CA_ENABLE[AAP_CONTROL_CMD_SIZE] = {
-    0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x01, 0x00, 0x00, 0x00
-};
-
-const uint8_t AAP_PKT_CA_DISABLE[AAP_CONTROL_CMD_SIZE] = {
-    0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x02, 0x00, 0x00, 0x00
-};
-
 const uint8_t AAP_PKT_REQUEST_PROXIMITY_KEYS[AAP_PROXIMITY_KEYS_REQ_SIZE] = {
     0x04, 0x00, 0x04, 0x00, AAP_OPCODE_PROXIMITY_KEYS_REQ, 0x00, 0x05, 0x00
 };
@@ -449,22 +425,10 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
 
 void aap_build_noise_control_cmd(NoiseControlMode mode, uint8_t *buffer)
 {
-    const uint8_t *src;
-    switch (mode) {
-    case NOISE_CONTROL_ANC:
-        src = AAP_PKT_NC_ANC;
-        break;
-    case NOISE_CONTROL_TRANSPARENCY:
-        src = AAP_PKT_NC_TRANSPARENCY;
-        break;
-    case NOISE_CONTROL_ADAPTIVE:
-        src = AAP_PKT_NC_ADAPTIVE;
-        break;
-    default:
-        src = AAP_PKT_NC_OFF;
-        break;
-    }
-    memcpy(buffer, src, AAP_CONTROL_CMD_SIZE);
+    /* The modes are numbered as on the wire */
+    uint8_t value = mode >= NOISE_CONTROL_OFF && mode <= NOISE_CONTROL_ADAPTIVE
+                        ? (uint8_t)mode : NOISE_CONTROL_OFF;
+    aap_build_control_cmd(AAP_CTRL_NOISE_CONTROL, &value, 1, buffer);
 }
 
 int aap_ca_speaking_from_level(uint8_t level)
@@ -560,7 +524,8 @@ size_t aap_build_priority_list(const char *const *addresses, size_t count, uint8
 
 void aap_build_conv_awareness_cmd(bool enable, uint8_t *buffer)
 {
-    memcpy(buffer, enable ? AAP_PKT_CA_ENABLE : AAP_PKT_CA_DISABLE, AAP_CONTROL_CMD_SIZE);
+    const uint8_t value = enable ? 0x01 : 0x02;
+    aap_build_control_cmd(AAP_CTRL_CONV_AWARENESS, &value, 1, buffer);
 }
 
 void aap_build_listening_modes_cmd(uint8_t modes, uint8_t *buffer)
