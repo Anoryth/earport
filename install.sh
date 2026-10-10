@@ -196,8 +196,13 @@ enable_extension() {
 
     # Try to enable the extension
     if command -v gnome-extensions &> /dev/null; then
-        gnome-extensions enable "$EXTENSION_UUID" 2>/dev/null || true
-        print_success "Extension enabled"
+        # Fails on Wayland until the Shell has seen the new extension (next login)
+        if gnome-extensions enable "$EXTENSION_UUID" 2>/dev/null; then
+            print_success "Extension enabled"
+        else
+            print_warning "Could not enable the extension yet"
+            echo "    Log out and back in, then enable EarPort in the Extensions app"
+        fi
     else
         print_warning "Could not enable extension automatically"
         echo "    Please enable it manually via GNOME Extensions app"
