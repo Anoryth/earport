@@ -15,6 +15,8 @@
 /* Far away devices are not ours to connect to */
 #define DISCOVERY_RSSI_THRESHOLD -80
 
+#define MATCH_CACHE_MAX 1024
+
 struct BleScanner {
     GDBusConnection *bus;
     char *adapter_path;
@@ -65,6 +67,10 @@ static void report_manufacturer_data(BleScanner *scanner, const char *address, G
             const guint8 *bytes = g_variant_get_fixed_array(value, &len, 1);
             int match = cached_match(scanner, address);
             if (match < 0) {
+                /* Nearby phones change address every ~15 min: don't keep
+                 * them all, deciding again costs one AES block */
+                if (g_hash_table_size(scanner->matches) >= MATCH_CACHE_MAX)
+                    g_hash_table_remove_all(scanner->matches);
                 match = scanner->filter(address, bytes, len, scanner->user_data);
                 g_hash_table_insert(scanner->matches, g_strdup(address), GINT_TO_POINTER(match));
             }
