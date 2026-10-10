@@ -90,31 +90,6 @@ bool config_save_drain_rate(const char *device_address, double drain_rate);
 void config_get_default_profile(DeviceProfile *profile);
 
 /**
- * Load listening modes for a specific device
- *
- * @param device_address Bluetooth MAC address of the device
- * @param modes Pointer to structure to fill with listening modes
- * @return true if found and loaded, false if not found (defaults used)
- */
-bool config_load_device_listening_modes(const char *device_address, ListeningModesConfig *modes);
-
-/**
- * Save listening modes for a specific device
- *
- * @param device_address Bluetooth MAC address of the device
- * @param modes Pointer to listening modes to save
- * @return true on success
- */
-bool config_save_device_listening_modes(const char *device_address, const ListeningModesConfig *modes);
-
-/**
- * Get default listening modes
- *
- * @param modes Pointer to structure to fill with defaults
- */
-void config_get_default_listening_modes(ListeningModesConfig *modes);
-
-/**
  * IRK of the AirPods used last, to recognize their BLE advertisements.
  * Kept in keys.conf, readable by the user only.
  */

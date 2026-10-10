@@ -223,6 +223,22 @@ static void test_irk_corrupt(void)
     g_assert_null(address);
 }
 
+/* A settings file with a typo is not replaced by the defaults */
+static void test_broken_config_kept(void)
+{
+    const char *broken = "[Settings]\nauto_connect=true\noops\n";
+    EarPortConfig config;
+
+    write_config_file("earport", "daemon.conf", broken);
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Failed to load config file*");
+    g_assert_true(config_load(&config));
+    g_test_assert_expected_messages();
+
+    g_assert_false(config.auto_connect);
+    g_autofree char *contents = read_config_file("daemon.conf");
+    g_assert_cmpstr(contents, ==, broken);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
@@ -236,6 +252,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/config/drain-rate", test_drain_rate);
     g_test_add_func("/config/irk", test_irk);
     g_test_add_func("/config/irk-corrupt", test_irk_corrupt);
+    g_test_add_func("/config/broken-config-kept", test_broken_config_kept);
 
     return g_test_run();
 }

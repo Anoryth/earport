@@ -120,17 +120,15 @@ bool config_load(EarPortConfig *config)
     GError *error = NULL;
 
     if (!g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_NONE, &error)) {
-        if (error != NULL) {
-            if (!g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
-                g_warning("Failed to load config file: %s", error->message);
-            }
-            g_error_free(error);
-        }
+        /* Only a missing file is replaced: one with a typo keeps the
+         * user's settings for them to fix */
+        if (g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT))
+            config_save(config);
+        else
+            g_warning("Failed to load config file, using defaults: %s", error->message);
+        g_error_free(error);
         g_key_file_free(keyfile);
         g_free(config_path);
-
-        /* Create default config file */
-        config_save(config);
         return true;
     }
 
@@ -226,116 +224,6 @@ static gchar *address_to_group(const char *address)
         if (*p == ':') *p = '_';
     }
     return group;
-}
-
-void config_get_default_listening_modes(ListeningModesConfig *modes)
-{
-    *modes = AIRPODS_DEFAULT_LISTENING_MODES;
-}
-
-bool config_load_device_listening_modes(const char *device_address, ListeningModesConfig *modes)
-{
-    /* Start with defaults */
-    config_get_default_listening_modes(modes);
-
-    if (device_address == NULL || device_address[0] == '\0') {
-        return false;
-    }
-
-    gchar *config_path = get_devices_config_path();
-    GKeyFile *keyfile = g_key_file_new();
-    GError *error = NULL;
-
-    if (!g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_NONE, &error)) {
-        if (error != NULL) {
-            if (!g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
-                g_warning("Failed to load devices config: %s", error->message);
-            }
-            g_error_free(error);
-        }
-        g_key_file_free(keyfile);
-        g_free(config_path);
-        return false;
-    }
-
-    gchar *group = address_to_group(device_address);
-
-    if (!g_key_file_has_group(keyfile, group)) {
-        g_key_file_free(keyfile);
-        g_free(config_path);
-        g_free(group);
-        return false;
-    }
-
-    /* Read listening modes */
-    if (g_key_file_has_key(keyfile, group, "listening_mode_off", NULL)) {
-        modes->off_enabled = g_key_file_get_boolean(keyfile, group, "listening_mode_off", NULL);
-    }
-    if (g_key_file_has_key(keyfile, group, "listening_mode_transparency", NULL)) {
-        modes->transparency_enabled = g_key_file_get_boolean(keyfile, group, "listening_mode_transparency", NULL);
-    }
-    if (g_key_file_has_key(keyfile, group, "listening_mode_anc", NULL)) {
-        modes->anc_enabled = g_key_file_get_boolean(keyfile, group, "listening_mode_anc", NULL);
-    }
-    if (g_key_file_has_key(keyfile, group, "listening_mode_adaptive", NULL)) {
-        modes->adaptive_enabled = g_key_file_get_boolean(keyfile, group, "listening_mode_adaptive", NULL);
-    }
-
-    g_message("Loaded listening modes for %s: off=%d, transparency=%d, anc=%d, adaptive=%d",
-              device_address,
-              modes->off_enabled, modes->transparency_enabled,
-              modes->anc_enabled, modes->adaptive_enabled);
-
-    g_key_file_free(keyfile);
-    g_free(config_path);
-    g_free(group);
-    return true;
-}
-
-bool config_save_device_listening_modes(const char *device_address, const ListeningModesConfig *modes)
-{
-    if (device_address == NULL || device_address[0] == '\0') {
-        g_warning("Cannot save listening modes: no device address");
-        return false;
-    }
-
-    if (!ensure_config_dir()) {
-        return false;
-    }
-
-    gchar *config_path = get_devices_config_path();
-    GKeyFile *keyfile = g_key_file_new();
-    GError *error = NULL;
-
-    /* Load existing file if present */
-    g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_KEEP_COMMENTS, NULL);
-
-    gchar *group = address_to_group(device_address);
-
-    /* Write listening modes */
-    g_key_file_set_boolean(keyfile, group, "listening_mode_off", modes->off_enabled);
-    g_key_file_set_boolean(keyfile, group, "listening_mode_transparency", modes->transparency_enabled);
-    g_key_file_set_boolean(keyfile, group, "listening_mode_anc", modes->anc_enabled);
-    g_key_file_set_boolean(keyfile, group, "listening_mode_adaptive", modes->adaptive_enabled);
-
-    if (!g_key_file_save_to_file(keyfile, config_path, &error)) {
-        g_warning("Failed to save devices config: %s", error->message);
-        g_error_free(error);
-        g_key_file_free(keyfile);
-        g_free(config_path);
-        g_free(group);
-        return false;
-    }
-
-    g_message("Saved listening modes for %s: off=%d, transparency=%d, anc=%d, adaptive=%d",
-              device_address,
-              modes->off_enabled, modes->transparency_enabled,
-              modes->anc_enabled, modes->adaptive_enabled);
-
-    g_key_file_free(keyfile);
-    g_free(config_path);
-    g_free(group);
-    return true;
 }
 
 /* ============================================================================
