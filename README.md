@@ -101,6 +101,7 @@ curl -fsSLO "$base/install-daemon.sh"
 curl -fsSLO "$base/earport-daemon-linux-$(uname -m).tar.gz"
 curl -fsSLO "$base/SHA256SUMS"
 sha256sum --check --ignore-missing SHA256SUMS
+gh attestation verify install-daemon.sh --repo Anoryth/earport   # optional: built by this repository's CI
 less install-daemon.sh   # read it
 bash install-daemon.sh --from-file "earport-daemon-linux-$(uname -m).tar.gz"
 ```
