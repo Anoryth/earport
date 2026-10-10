@@ -37,9 +37,6 @@ void media_control_free(MediaControl *mc);
 /* Set ear pause mode */
 void media_control_set_ear_pause_mode(MediaControl *mc, EarPauseMode mode);
 
-/* Get current ear pause mode */
-EarPauseMode media_control_get_ear_pause_mode(MediaControl *mc);
-
 /* Update ear detection state - will trigger pause/play as needed */
 void media_control_on_ear_detection_changed(MediaControl *mc,
                                             bool left_in_ear,
@@ -71,5 +68,8 @@ void media_control_resume_handoff(MediaControl *mc);
 
 /* Resume media players that were paused by us */
 void media_control_resume(MediaControl *mc);
+
+/* The AirPods left: the next session starts from scratch */
+void media_control_session_ended(MediaControl *mc);
 
 #endif /* MEDIA_CONTROL_H */

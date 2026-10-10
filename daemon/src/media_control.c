@@ -352,11 +352,6 @@ void media_control_set_ear_pause_mode(MediaControl *mc, EarPauseMode mode)
     }
 }
 
-EarPauseMode media_control_get_ear_pause_mode(MediaControl *mc)
-{
-    return mc ? mc->ear_pause_mode : EAR_PAUSE_DISABLED;
-}
-
 void media_control_on_ear_detection_changed(MediaControl *mc,
                                             bool left_in_ear,
                                             bool right_in_ear)
@@ -507,6 +502,17 @@ void media_control_resume(MediaControl *mc)
     }
 
     /* Clear the paused list */
+    g_list_free_full(mc->paused_players, g_free);
+    mc->paused_players = NULL;
+}
+
+void media_control_session_ended(MediaControl *mc)
+{
+    if (mc == NULL)
+        return;
+
+    /* Otherwise the first ear state of the next session reads as a change */
+    mc->prev_state_valid = false;
     g_list_free_full(mc->paused_players, g_free);
     mc->paused_players = NULL;
 }

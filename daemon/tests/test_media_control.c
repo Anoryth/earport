@@ -331,6 +331,31 @@ static void test_first_state_is_not_a_change(void)
     fake_player_free(player);
 }
 
+/* A new session doesn't continue the last one: AirPods that left in the
+ * ears and come back in their case pause nothing, and what was paused
+ * before is not resumed */
+static void test_session_ended(void)
+{
+    FakePlayer *player = fake_player_new("session", "Playing");
+    MediaControl *mc = media_control_new();
+
+    ears(mc, true, true);
+    media_control_session_ended(mc);
+    ears(mc, false, false);
+    g_assert_cmpint(pauses(player), ==, 0);
+
+    ears(mc, true, true);
+    ears(mc, false, true);
+    g_assert_cmpint(pauses(player), ==, 1);
+    media_control_session_ended(mc);
+    ears(mc, false, true);
+    ears(mc, true, true);
+    g_assert_cmpint(plays(player), ==, 0);
+
+    media_control_free(mc);
+    fake_player_free(player);
+}
+
 /* Taken out again after the user resumed by hand: paused again */
 static void test_pause_after_manual_resume(void)
 {
@@ -462,6 +487,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/both-out", test_both_out);
     g_test_add_func("/media/disabled", test_disabled);
     g_test_add_func("/media/first-state-is-not-a-change", test_first_state_is_not_a_change);
+    g_test_add_func("/media/session-ended", test_session_ended);
     g_test_add_func("/media/pause-after-manual-resume", test_pause_after_manual_resume);
     g_test_add_func("/media/playback-started", test_playback_started);
     g_test_add_func("/media/frozen-player", test_frozen_player);

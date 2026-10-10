@@ -365,6 +365,7 @@ static void on_link_disconnected(void *user_data)
     (void)user_data;
     battery_provider_update(app.battery_provider, NULL, NULL, -1);
     sleep_pause_session_ended(app.sleep_pause);
+    media_control_session_ended(app.media_control);
     handoff_source_changed(app.handoff, NULL, false);
     device_session_ended(&app.device);
 }
