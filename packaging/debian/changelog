@@ -1,0 +1,5 @@
+earport (0.6.0-1) unstable; urgency=medium
+
+  * First Debian package.
+
+ -- Florent Pauliat <flo7634@gmail.com>  Sat, 10 Oct 2026 12:00:00 +0200

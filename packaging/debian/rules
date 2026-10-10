@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+EXTDIR = $(CURDIR)/debian/earport/usr/share/gnome-shell/extensions/earport@anoryth.github.io
+
+%:
+	dh $@ --sourcedirectory=daemon --buildsystem=meson
+
+override_dh_auto_install:
+	dh_auto_install
+	tools/pack-extension.sh --dir $(EXTDIR)
+	# A system-wide extension can't compile its schema itself
+	glib-compile-schemas $(EXTDIR)/schemas
+
+# Started on demand by the extension (D-Bus activation), not for every user
+override_dh_installsystemduser:
+	dh_installsystemduser --no-enable

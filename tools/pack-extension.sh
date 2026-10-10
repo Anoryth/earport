@@ -4,7 +4,8 @@
 # Build the extension zip for extensions.gnome.org and GitHub releases:
 # only the files the extension needs, translations compiled from po/.
 #
-#   tools/pack-extension.sh      -> dist/<uuid>.shell-extension.zip
+#   tools/pack-extension.sh             -> dist/<uuid>.shell-extension.zip
+#   tools/pack-extension.sh --dir DEST  -> the same files in DEST (distribution packages)
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -13,8 +14,13 @@ uuid=$(sed -n 's/.*"uuid": *"\([^"]*\)".*/\1/p' extension/metadata.json)
 domain=$(sed -n 's/.*"gettext-domain": *"\([^"]*\)".*/\1/p' extension/metadata.json)
 out="dist/$uuid.shell-extension.zip"
 
-stage=$(mktemp -d)
-trap 'rm -rf "$stage"' EXIT
+if [ "${1:-}" = --dir ]; then
+    stage=${2:?--dir needs a destination}
+    mkdir -p "$stage"
+else
+    stage=$(mktemp -d)
+    trap 'rm -rf "$stage"' EXIT
+fi
 
 cp -r extension/metadata.json extension/*.js extension/stylesheet.css \
       extension/icons extension/schemas "$stage/"
@@ -28,6 +34,8 @@ for po in po/*.po; do
     mkdir -p "$stage/locale/$lang/LC_MESSAGES"
     msgfmt --check -o "$stage/locale/$lang/LC_MESSAGES/$domain.mo" "$po"
 done
+
+[ "${1:-}" = --dir ] && exit 0
 
 mkdir -p dist
 rm -f "$out"

@@ -1,0 +1,27 @@
+Source: earport
+Section: gnome
+Priority: optional
+Maintainer: Florent Pauliat <flo7634@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               meson,
+               pkgconf,
+               libglib2.0-dev,
+               libbluetooth-dev,
+               gettext,
+               libglib2.0-bin,
+               dbus-daemon
+Standards-Version: 4.7.2
+Homepage: https://github.com/Anoryth/earport
+Vcs-Git: https://github.com/Anoryth/earport.git
+Vcs-Browser: https://github.com/Anoryth/earport
+Rules-Requires-Root: no
+
+Package: earport
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}, bluez, gnome-shell (>= 46)
+Description: AirPods integration for GNOME
+ EarPort brings AirPods to the GNOME desktop: battery levels in the panel
+ and Quick Settings, noise control modes (noise cancellation, transparency,
+ adaptive), conversation awareness, and media paused when an AirPod leaves
+ the ear. A small service talks to the AirPods over Bluetooth; the GNOME
+ Shell extension shows it.
