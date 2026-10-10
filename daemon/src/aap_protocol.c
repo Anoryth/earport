@@ -536,6 +536,11 @@ void aap_build_listening_modes_cmd(uint8_t modes, uint8_t *buffer)
 void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)
 {
     /* Raw packet dumps are verbose: only shown with G_MESSAGES_DEBUG set */
+    if (len > 4 && data[0] == 0x04 && data[4] == AAP_OPCODE_PROXIMITY_KEYS_RSP) {
+        /* Debug logs get pasted in issues: never the IRK and encryption key */
+        g_debug("%s: proximity keys (%zu bytes, not shown)", prefix, len);
+        return;
+    }
     GString *hex = g_string_sized_new(3 * 64 + 32);
     for (size_t i = 0; i < len && i < 64; i++) {
         g_string_append_printf(hex, "%02X ", data[i]);
