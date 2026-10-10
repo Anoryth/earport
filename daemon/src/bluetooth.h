@@ -82,11 +82,6 @@ void bt_connection_disconnect(BluetoothConnection *conn);
 bool bt_connection_is_connected(BluetoothConnection *conn);
 
 /**
- * Get current connection state
- */
-BluetoothState bt_connection_get_state(BluetoothConnection *conn);
-
-/**
  * Send data to device
  *
  * @param conn Connection context
@@ -97,20 +92,9 @@ BluetoothState bt_connection_get_state(BluetoothConnection *conn);
 ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_t len);
 
 /**
- * Get file descriptor for event loop integration
- * Returns -1 if not connected
- */
-int bt_connection_get_fd(BluetoothConnection *conn);
-
-/**
  * Attach connection to GLib main loop
  * This sets up a GSource to monitor the socket
  */
 bool bt_connection_attach_to_mainloop(BluetoothConnection *conn, GMainContext *context);
-
-/**
- * Detach from main loop
- */
-void bt_connection_detach_from_mainloop(BluetoothConnection *conn);
 
 #endif /* BLUETOOTH_H */

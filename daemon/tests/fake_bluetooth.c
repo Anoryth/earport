@@ -99,11 +99,6 @@ bool bt_connection_is_connected(BluetoothConnection *conn)
     return conn->state == BT_STATE_CONNECTED;
 }
 
-BluetoothState bt_connection_get_state(BluetoothConnection *conn)
-{
-    return conn->state;
-}
-
 ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_t len)
 {
     if (conn->state != BT_STATE_CONNECTED)
@@ -112,22 +107,11 @@ ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_
     return (ssize_t)len;
 }
 
-int bt_connection_get_fd(BluetoothConnection *conn)
-{
-    (void)conn;
-    return -1;
-}
-
 bool bt_connection_attach_to_mainloop(BluetoothConnection *conn, GMainContext *context)
 {
     (void)conn;
     (void)context;
     return true;
-}
-
-void bt_connection_detach_from_mainloop(BluetoothConnection *conn)
-{
-    (void)conn;
 }
 
 void fake_bt_receive(const uint8_t *data, size_t len)

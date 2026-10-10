@@ -257,11 +257,6 @@ bool bt_connection_is_connected(BluetoothConnection *conn)
     return conn->state == BT_STATE_CONNECTED;
 }
 
-BluetoothState bt_connection_get_state(BluetoothConnection *conn)
-{
-    return conn->state;
-}
-
 ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_t len)
 {
     if (conn->socket_fd < 0 || conn->state != BT_STATE_CONNECTED) {
@@ -282,11 +277,6 @@ ssize_t bt_connection_send(BluetoothConnection *conn, const uint8_t *data, size_
     return sent;
 }
 
-int bt_connection_get_fd(BluetoothConnection *conn)
-{
-    return conn->socket_fd;
-}
-
 /* GSource callbacks for main loop integration */
 typedef struct {
     GSource source;
@@ -303,7 +293,8 @@ static gboolean bt_source_prepare(GSource *source G_GNUC_UNUSED, gint *timeout)
 static gboolean bt_source_check(GSource *source)
 {
     BtSource *bt_source = (BtSource *)source;
-    return (bt_source->poll_fd.revents & G_IO_IN) != 0;
+    /* A hangup or error alone must be dispatched too, or poll() spins */
+    return (bt_source->poll_fd.revents & (G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL)) != 0;
 }
 
 static gboolean bt_source_dispatch(GSource *source,
@@ -380,13 +371,4 @@ bool bt_connection_attach_to_mainloop(BluetoothConnection *conn, GMainContext *c
     conn->source = (GSource *)bt_source;
 
     return true;
-}
-
-void bt_connection_detach_from_mainloop(BluetoothConnection *conn)
-{
-    if (conn->source) {
-        g_source_destroy(conn->source);
-        g_source_unref(conn->source);
-        conn->source = NULL;
-    }
 }
