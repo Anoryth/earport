@@ -516,6 +516,19 @@ static void test_model_from_number(void)
     g_assert_false(airpods_model_supports_anc(AIRPODS_MODEL_4));
 }
 
+/* The proximity keys never reach the debug logs, other packets do */
+static void test_debug_hides_keys(void)
+{
+    const uint8_t keys[] = { 0x04, 0x00, 0x04, 0x00, 0x31, 0x00, 0x01, 0xAB, 0xCD };
+    const uint8_t other[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x02 };
+
+    g_test_expect_message(NULL, G_LOG_LEVEL_DEBUG, "RX: proximity keys (9 bytes, not shown)");
+    aap_debug_print_packet("RX", keys, sizeof(keys));
+    g_test_expect_message(NULL, G_LOG_LEVEL_DEBUG, "TX: 04 00 04 00 09 00 0D 02 ");
+    aap_debug_print_packet("TX", other, sizeof(other));
+    g_test_assert_expected_messages();
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -542,6 +555,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
     g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);
+    g_test_add_func("/aap/debug-hides-keys", test_debug_hides_keys);
     g_test_add_func("/model/from-number", test_model_from_number);
 
     return g_test_run();
