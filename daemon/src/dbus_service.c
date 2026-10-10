@@ -4,6 +4,7 @@
  */
 
 #include "dbus_service.h"
+#include <stdlib.h>
 #include <string.h>
 
 /* D-Bus introspection XML */
@@ -543,7 +544,10 @@ static void on_name_lost(GDBusConnection *connection G_GNUC_UNUSED,
                           const gchar *name,
                           gpointer user_data G_GNUC_UNUSED)
 {
-    g_warning("D-Bus name lost: %s", name);
+    /* Another instance runs: two AAP links would steal the AirPods from
+     * each other (they only talk to the last one opened) */
+    g_printerr("D-Bus name %s not available (EarPort already running?), exiting\n", name);
+    exit(1);
 }
 
 DbusService *dbus_service_new(AirPodsState *state)
