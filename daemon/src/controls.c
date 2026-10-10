@@ -222,21 +222,24 @@ static void on_set_display_name(const char *name, void *user_data)
 {
     Controls *c = user_data;
 
-    g_message("Setting display name to '%s'", name ? name : "");
+    /* As long as the profile keeps it, cut between two characters: an
+     * invalid UTF-8 name would not load back */
+    char display_name[sizeof(((DeviceProfile *)NULL)->display_name)];
+    const char *end;
+    g_strlcpy(display_name, name ? name : "", sizeof(display_name));
+    g_utf8_validate(display_name, -1, &end);
+    *(char *)end = '\0';
+
+    g_message("Setting display name to '%s'", display_name);
 
     /* Update state */
-    airpods_state_set_display_name(c->device->state, name);
+    airpods_state_set_display_name(c->device->state, display_name);
 
     /* Save to device profile */
     if (c->device->state->device_address && c->device->state->device_address[0] != '\0') {
         DeviceProfile profile;
         config_load_device_profile(c->device->state->device_address, &profile);
-        if (name && name[0] != '\0') {
-            strncpy(profile.display_name, name, sizeof(profile.display_name) - 1);
-            profile.display_name[sizeof(profile.display_name) - 1] = '\0';
-        } else {
-            profile.display_name[0] = '\0';
-        }
+        g_strlcpy(profile.display_name, display_name, sizeof(profile.display_name));
         config_save_device_profile(c->device->state->device_address, &profile);
     }
 

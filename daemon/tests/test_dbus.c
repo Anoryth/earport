@@ -502,6 +502,18 @@ static void test_display_name(Fixture *f, gconstpointer data)
     call_ok(f, "SetDisplayName", g_variant_new("(s)", ""));
     g_autofree char *model = get_string(f, "DisplayName");
     g_assert_cmpstr(model, ==, "AirPods Pro 2 (USB-C)");
+
+    /* Too long: cut between two characters, the same now and once saved */
+    g_autoptr(GString) long_name = g_string_new(NULL);
+    for (int i = 0; i < 40; i++)
+        g_string_append(long_name, "é");
+    call_ok(f, "SetDisplayName", g_variant_new("(s)", long_name->str));
+    g_autofree char *cut = get_string(f, "DisplayName");
+    g_assert_true(g_utf8_validate(cut, -1, NULL));
+    g_assert_cmpuint(g_utf8_strlen(cut, -1), ==, 31);
+    DeviceProfile profile;
+    g_assert_true(config_load_device_profile(ADDRESS, &profile));
+    g_assert_cmpstr(profile.display_name, ==, cut);
 }
 
 static void save_profile(bool listening_modes_set)
