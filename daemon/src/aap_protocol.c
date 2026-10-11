@@ -146,6 +146,8 @@ AapParseResult aap_parse_ear_detection(const uint8_t *data, size_t len, AapEarDe
 
     ear->primary_in_ear = (primary_status == AAP_EAR_IN_EAR);
     ear->secondary_in_ear = (secondary_status == AAP_EAR_IN_EAR);
+    ear->primary_in_case = (primary_status == AAP_EAR_IN_CASE);
+    ear->secondary_in_case = (secondary_status == AAP_EAR_IN_CASE);
 
     return AAP_PARSE_OK;
 }

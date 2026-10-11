@@ -116,14 +116,18 @@ static void test_ear_detection(void)
     g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_EAR_DETECTION);
     g_assert_true(p.data.ear_detection.primary_in_ear);
     g_assert_true(p.data.ear_detection.secondary_in_ear);
+    g_assert_false(p.data.ear_detection.primary_in_case);
 
     g_assert_cmpint(PARSE(primary_out, &p), ==, AAP_PARSE_OK);
     g_assert_false(p.data.ear_detection.primary_in_ear);
     g_assert_true(p.data.ear_detection.secondary_in_ear);
+    g_assert_false(p.data.ear_detection.primary_in_case);
 
     g_assert_cmpint(PARSE(both_in_case, &p), ==, AAP_PARSE_OK);
     g_assert_false(p.data.ear_detection.primary_in_ear);
     g_assert_false(p.data.ear_detection.secondary_in_ear);
+    g_assert_true(p.data.ear_detection.primary_in_case);
+    g_assert_true(p.data.ear_detection.secondary_in_case);
 }
 
 /* ============================================================================

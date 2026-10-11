@@ -181,8 +181,8 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         bool secondary_in_ear = pkt->data.ear_detection.secondary_in_ear;
 
         g_message("Ear detection: primary=%s secondary=%s",
-                  primary_in_ear ? "in" : "out",
-                  secondary_in_ear ? "in" : "out");
+                  primary_in_ear ? "in" : pkt->data.ear_detection.primary_in_case ? "case" : "out",
+                  secondary_in_ear ? "in" : pkt->data.ear_detection.secondary_in_case ? "case" : "out");
 
         /* AirPods Max have a single sensor: the secondary slot always reads
          * "out", which would jam the one-out auto-pause logic. Mirror the

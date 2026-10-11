@@ -128,6 +128,8 @@ typedef struct {
 typedef struct {
     bool primary_in_ear;
     bool secondary_in_ear;
+    bool primary_in_case;
+    bool secondary_in_case;
 } AapEarDetectionData;
 
 /* Parsed metadata */
