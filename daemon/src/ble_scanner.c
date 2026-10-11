@@ -308,11 +308,6 @@ void ble_scanner_stop(BleScanner *scanner)
                            on_discovery_call_done, (gpointer)"StopDiscovery");
 }
 
-bool ble_scanner_is_running(const BleScanner *scanner)
-{
-    return scanner != NULL && scanner->running;
-}
-
 void ble_scanner_reset_filter(BleScanner *scanner)
 {
     if (scanner != NULL)

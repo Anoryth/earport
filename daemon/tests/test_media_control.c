@@ -441,6 +441,53 @@ static void test_back_in_during_pause(void)
     fake_player_free(slow);
 }
 
+/* Another device borrowed the AirPods: paused, then resumed; the ears do
+ * not resume it meanwhile */
+static void test_handoff(void)
+{
+    FakePlayer *player = fake_player_new("borrowed", "Playing");
+    MediaControl *mc = media_control_new();
+
+    media_control_pause_for_handoff(mc);
+    run_for(200);
+    WAIT_FOR(pauses(player) >= 1);
+    g_assert_cmpint(pauses(player), ==, 1);
+    media_control_on_ear_detection_changed(mc, true, true);
+    run_for(100);
+    g_assert_cmpint(plays(player), ==, 0);
+
+    media_control_resume_handoff(mc);
+    run_for(200);
+    WAIT_FOR(plays(player) >= 1);
+    g_assert_cmpint(plays(player), ==, 1);
+    g_autofree char *status = get_status(player);
+    g_assert_cmpstr(status, ==, "Playing");
+
+    media_control_free(mc);
+    fake_player_free(player);
+}
+
+/* The other device let go before a slow player answered the pause: the
+ * player is not left paused */
+static void test_handoff_resumed_during_pause(void)
+{
+    FakePlayer *slow = fake_player_new_delayed("slowhandoff", "Playing", 150);
+    MediaControl *mc = media_control_new();
+
+    media_control_pause_for_handoff(mc);
+    run_for(200);  /* Status read, pause sent but not answered yet */
+    media_control_resume_handoff(mc);
+    run_for(600);
+
+    g_assert_cmpint(pauses(slow), ==, 1);
+    g_assert_cmpint(plays(slow), ==, 1);
+    g_autofree char *status = get_status(slow);
+    g_assert_cmpstr(status, ==, "Playing");
+
+    media_control_free(mc);
+    fake_player_free(slow);
+}
+
 /* Freed with calls in flight: their answers must not reach it */
 static void test_free_with_pending_calls(void)
 {
@@ -495,6 +542,8 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/playback-started", test_playback_started);
     g_test_add_func("/media/frozen-player", test_frozen_player);
     g_test_add_func("/media/back-in-during-pause", test_back_in_during_pause);
+    g_test_add_func("/media/handoff", test_handoff);
+    g_test_add_func("/media/handoff-resumed-during-pause", test_handoff_resumed_during_pause);
     g_test_add_func("/media/free-with-pending-calls", test_free_with_pending_calls);
     g_test_add_func("/media/pause-for-sleep", test_pause_for_sleep);
 

@@ -34,7 +34,6 @@ void ble_scanner_free(BleScanner *scanner);
 /* Start/stop LE discovery (asynchronous, errors are only logged) */
 void ble_scanner_start(BleScanner *scanner);
 void ble_scanner_stop(BleScanner *scanner);
-bool ble_scanner_is_running(const BleScanner *scanner);
 
 /* Forget which addresses matched (e.g. after the IRK changed) */
 void ble_scanner_reset_filter(BleScanner *scanner);

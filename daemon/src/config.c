@@ -210,6 +210,20 @@ bool config_save(const EarPortConfig *config)
 
 #define DEVICES_FILE_NAME "devices.conf"
 
+/* Loads a file to change some keys in it: false when it exists but does not
+ * load (a typo), as writing it back would lose all its other keys */
+static bool load_for_update(GKeyFile *keyfile, const char *path, GKeyFileFlags flags)
+{
+    GError *error = NULL;
+    if (g_key_file_load_from_file(keyfile, path, flags, &error))
+        return true;
+    bool missing = g_error_matches(error, G_FILE_ERROR, G_FILE_ERROR_NOENT);
+    if (!missing)
+        g_warning("Not writing %s, it does not load: %s", path, error->message);
+    g_error_free(error);
+    return missing;
+}
+
 static gchar *get_devices_config_path(void)
 {
     gchar *config_dir = get_config_dir();
@@ -244,7 +258,6 @@ void config_get_default_profile(DeviceProfile *profile)
     /* Default feature settings */
     profile->conversational_awareness = false;
     profile->adaptive_noise_level = AIRPODS_DEFAULT_ADAPTIVE_LEVEL;
-    strncpy(profile->preferred_nc_mode, "anc", sizeof(profile->preferred_nc_mode) - 1);
 
     profile->has_saved_settings = false;
 }
@@ -317,15 +330,6 @@ bool config_load_device_profile(const char *device_address, DeviceProfile *profi
         if (profile->adaptive_noise_level < 0) profile->adaptive_noise_level = 0;
         if (profile->adaptive_noise_level > 100) profile->adaptive_noise_level = 100;
     }
-    if (g_key_file_has_key(keyfile, group, "preferred_nc_mode", NULL)) {
-        gchar *mode = g_key_file_get_string(keyfile, group, "preferred_nc_mode", NULL);
-        if (mode) {
-            strncpy(profile->preferred_nc_mode, mode, sizeof(profile->preferred_nc_mode) - 1);
-            profile->preferred_nc_mode[sizeof(profile->preferred_nc_mode) - 1] = '\0';
-            g_free(mode);
-        }
-    }
-
     if (g_key_file_has_key(keyfile, group, "listening_modes_set", NULL))
         profile->listening_modes_set = g_key_file_get_boolean(keyfile, group, "listening_modes_set", NULL);
 
@@ -334,8 +338,8 @@ bool config_load_device_profile(const char *device_address, DeviceProfile *profi
         profile->has_saved_settings = g_key_file_get_boolean(keyfile, group, "has_saved_settings", NULL);
     }
 
-    g_message("Loaded profile for %s: display_name='%s', nc_mode=%s, ca=%d, adaptive_level=%d",
-              device_address, profile->display_name, profile->preferred_nc_mode,
+    g_message("Loaded profile for %s: display_name='%s', ca=%d, adaptive_level=%d",
+              device_address, profile->display_name,
               profile->conversational_awareness, profile->adaptive_noise_level);
 
     g_key_file_free(keyfile);
@@ -358,8 +362,11 @@ bool config_save_device_profile(const char *device_address, const DeviceProfile 
     gchar *config_path = get_devices_config_path();
     GKeyFile *keyfile = g_key_file_new();
 
-    /* Load existing file if present */
-    g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_KEEP_COMMENTS, NULL);
+    if (!load_for_update(keyfile, config_path, G_KEY_FILE_KEEP_COMMENTS)) {
+        g_key_file_free(keyfile);
+        g_free(config_path);
+        return false;
+    }
 
     gchar *group = address_to_group(device_address);
 
@@ -375,7 +382,6 @@ bool config_save_device_profile(const char *device_address, const DeviceProfile 
     /* Write feature settings */
     g_key_file_set_boolean(keyfile, group, "conversational_awareness", profile->conversational_awareness);
     g_key_file_set_integer(keyfile, group, "adaptive_noise_level", profile->adaptive_noise_level);
-    g_key_file_set_string(keyfile, group, "preferred_nc_mode", profile->preferred_nc_mode);
     g_key_file_set_boolean(keyfile, group, "has_saved_settings", true);
     g_key_file_set_boolean(keyfile, group, "listening_modes_set", profile->listening_modes_set);
 
@@ -389,8 +395,8 @@ bool config_save_device_profile(const char *device_address, const DeviceProfile 
         return false;
     }
 
-    g_message("Saved profile for %s: display_name='%s', nc_mode=%s, ca=%d, adaptive_level=%d",
-              device_address, profile->display_name, profile->preferred_nc_mode,
+    g_message("Saved profile for %s: display_name='%s', ca=%d, adaptive_level=%d",
+              device_address, profile->display_name,
               profile->conversational_awareness, profile->adaptive_noise_level);
 
     g_key_file_free(keyfile);
@@ -434,11 +440,12 @@ bool config_save_drain_rate(const char *device_address, double drain_rate)
 
     /* Only this key: saving the whole profile would mark it as having saved
      * settings, which are then pushed to the AirPods on every connection */
-    g_key_file_load_from_file(keyfile, config_path, G_KEY_FILE_KEEP_COMMENTS, NULL);
-    g_key_file_set_double(keyfile, group, "drain_rate", drain_rate);
-
-    bool ok = g_key_file_save_to_file(keyfile, config_path, &error);
-    if (!ok) {
+    bool ok = load_for_update(keyfile, config_path, G_KEY_FILE_KEEP_COMMENTS);
+    if (ok) {
+        g_key_file_set_double(keyfile, group, "drain_rate", drain_rate);
+        ok = g_key_file_save_to_file(keyfile, config_path, &error);
+    }
+    if (!ok && error != NULL) {
         g_warning("Failed to save drain rate: %s", error->message);
         g_error_free(error);
     }
@@ -496,7 +503,13 @@ static bool save_key(const char *device_address, const char *name, const uint8_t
     gchar *hex = key_to_hex(key);
 
     GKeyFile *keyfile = g_key_file_new();
-    g_key_file_load_from_file(keyfile, path, G_KEY_FILE_NONE, NULL);
+    if (!load_for_update(keyfile, path, G_KEY_FILE_NONE)) {
+        g_key_file_free(keyfile);
+        g_free(hex);
+        g_free(group);
+        g_free(path);
+        return false;
+    }
     g_key_file_set_string(keyfile, group, name, hex);
     g_key_file_set_string(keyfile, KEYS_GENERAL_GROUP, "last_device", device_address);
 

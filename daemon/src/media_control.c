@@ -26,6 +26,7 @@ struct MediaControl {
     GList *paused_players;     /* List of player names (strings) that we paused */
     GList *handoff_players;    /* Paused because another device took the AirPods */
     guint resume_count;        /* Resumes so far, to spot pauses that land after one */
+    guint handoff_resumes;     /* The same for the other device's borrows */
     GCancellable *cancellable; /* Pending player calls, cancelled on free */
 
     /* Previous ear state for edge detection */
@@ -74,6 +75,7 @@ typedef struct {
     guint resume_count;        /* mc->resume_count when the pause started */
     bool for_sleep;            /* Not resumed with the ears; rewound */
     bool for_handoff;          /* Not resumed with the ears either */
+    guint handoff_resumes;     /* mc->handoff_resumes when the handoff pause started */
     int rewind_seconds;
 } PauseOp;
 
@@ -155,7 +157,10 @@ static void on_pause_done(GObject *source, GAsyncResult *res, gpointer user_data
     g_message("Paused media player: %s", op->player);
 
     if (op->for_handoff) {
-        if (g_list_find_custom(mc->handoff_players, op->player, (GCompareFunc)g_strcmp0) == NULL)
+        /* The other device let go while the player was being paused */
+        if (mc->handoff_resumes != op->handoff_resumes)
+            player_play(mc, op->player);
+        else if (g_list_find_custom(mc->handoff_players, op->player, (GCompareFunc)g_strcmp0) == NULL)
             mc->handoff_players = g_list_append(mc->handoff_players, g_strdup(op->player));
         pause_op_free(op);
         return;
@@ -206,8 +211,9 @@ static void on_status_done(GObject *source, GAsyncResult *res, gpointer user_dat
     g_variant_unref(reply);
 
     /* Only the players actually playing are paused, and later resumed */
-    if (playing && (op->for_sleep || op->for_handoff ||
-                    op->mc->resume_count == op->resume_count))
+    if (playing && (op->for_sleep ||
+                    (op->for_handoff && op->mc->handoff_resumes == op->handoff_resumes) ||
+                    (!op->for_handoff && op->mc->resume_count == op->resume_count)))
         player_call(op->mc, op->player, "Pause", on_pause_done, op);
     else
         pause_op_free(op);
@@ -218,6 +224,7 @@ typedef struct {
     MediaControl *mc;
     bool for_sleep;
     bool for_handoff;
+    guint handoff_resumes;
     int rewind_seconds;
 } PauseRequest;
 
@@ -249,6 +256,7 @@ static void on_list_names_done(GObject *source, GAsyncResult *res, gpointer user
         op->resume_count = mc->resume_count;
         op->for_sleep = request->for_sleep;
         op->for_handoff = request->for_handoff;
+        op->handoff_resumes = request->handoff_resumes;
         op->rewind_seconds = request->rewind_seconds;
         g_dbus_connection_call(mc->connection, name, MPRIS_DBUS_PATH, DBUS_PROPERTIES_INTERFACE,
                                "Get", g_variant_new("(ss)", MPRIS_PLAYER_INTERFACE, "PlaybackStatus"),
@@ -461,6 +469,7 @@ void media_control_pause_for_handoff(MediaControl *mc)
     PauseRequest *request = g_new0(PauseRequest, 1);
     request->mc = mc;
     request->for_handoff = true;
+    request->handoff_resumes = mc->handoff_resumes;
     g_dbus_connection_call(mc->connection, "org.freedesktop.DBus", "/org/freedesktop/DBus",
                            "org.freedesktop.DBus", "ListNames", NULL, G_VARIANT_TYPE("(as)"),
                            G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS, mc->cancellable,
@@ -472,6 +481,8 @@ void media_control_resume_handoff(MediaControl *mc)
     if (mc == NULL || mc->connection == NULL)
         return;
 
+    /* Pauses still in flight will resume their player themselves */
+    mc->handoff_resumes++;
     for (GList *l = mc->handoff_players; l != NULL; l = l->next) {
         g_message("Resuming media player: %s", (const char *)l->data);
         player_play(mc, l->data);

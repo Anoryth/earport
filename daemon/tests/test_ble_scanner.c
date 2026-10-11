@@ -82,7 +82,6 @@ static void test_discovery(void)
 
     ble_scanner_start(scanner);
     ble_scanner_start(scanner);
-    g_assert_true(ble_scanner_is_running(scanner));
     g_assert_cmpint(fake_bluez_wait_calls("StartDiscovery", 1), ==, 1);
     g_autoptr(GVariant) params = fake_bluez_last_call("SetDiscoveryFilter");
     g_autoptr(GVariant) filter_dict = g_variant_get_child_value(params, 0);
@@ -95,7 +94,6 @@ static void test_discovery(void)
 
     ble_scanner_stop(scanner);
     ble_scanner_stop(scanner);
-    g_assert_false(ble_scanner_is_running(scanner));
     g_assert_cmpint(fake_bluez_wait_calls("StopDiscovery", 1), ==, 1);
     fake_bluez_run(30);
     g_assert_cmpint(fake_bluez_calls("StartDiscovery"), ==, 1);

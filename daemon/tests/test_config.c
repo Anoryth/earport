@@ -239,6 +239,31 @@ static void test_broken_config_kept(void)
     g_assert_cmpstr(contents, ==, broken);
 }
 
+/* A file with a typo is never written back with one key: all the others
+ * would be lost */
+static void test_broken_files_kept(void)
+{
+    const char *broken = "[00_11_22_33_44_55]\ndrain_rate=5\noops\n";
+    write_config_file("earport", "devices.conf", broken);
+    write_config_file("earport", "keys.conf", broken);
+    DeviceProfile profile;
+    config_get_default_profile(&profile);
+    const uint8_t key[16] = { 0 };
+
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Not writing *");
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Not writing *");
+    g_test_expect_message(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING, "Not writing *");
+    g_assert_false(config_save_drain_rate(ADDRESS, 3));
+    g_assert_false(config_save_device_profile(ADDRESS, &profile));
+    g_assert_false(config_save_proximity_irk(ADDRESS, key));
+    g_test_assert_expected_messages();
+
+    g_autofree char *devices = read_config_file("devices.conf");
+    g_autofree char *keys = read_config_file("keys.conf");
+    g_assert_cmpstr(devices, ==, broken);
+    g_assert_cmpstr(keys, ==, broken);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
@@ -253,6 +278,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/config/irk", test_irk);
     g_test_add_func("/config/irk-corrupt", test_irk_corrupt);
     g_test_add_func("/config/broken-config-kept", test_broken_config_kept);
+    g_test_add_func("/config/broken-files-kept", test_broken_files_kept);
 
     return g_test_run();
 }
