@@ -163,9 +163,12 @@ void relink_disconnect_done(Relink *relink)
 
 void relink_connect_done(Relink *relink, bool connected)
 {
-    if (relink->step == RELINK_CONNECTING && !connected &&
-        relink->connect_tries < RELINK_CONNECT_TRIES)
+    if (relink->step != RELINK_CONNECTING || connected)
+        return;
+    if (relink->connect_tries < RELINK_CONNECT_TRIES)
         pause_then_connect(relink);
+    else
+        finish(relink, "could not connect, giving up");
 }
 
 void relink_link_closed(Relink *relink)

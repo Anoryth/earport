@@ -26,6 +26,10 @@ struct BluezMonitor {
 
     /* Track known devices */
     GHashTable *known_devices;  /* path -> BluezDeviceInfo */
+
+    /* The AirPods reported to the callbacks, kept after they left: with
+     * several pairs paired, the others are ignored while these are here */
+    char *followed_path;
 };
 
 void bluez_device_info_free(BluezDeviceInfo *info)
@@ -50,6 +54,27 @@ BluezDeviceInfo *bluez_device_info_copy(const BluezDeviceInfo *info)
     copy->connected = info->connected;
     copy->paired = info->paired;
     return copy;
+}
+
+static void report_connected(BluezMonitor *monitor, const BluezDeviceInfo *info)
+{
+    if (monitor->followed_path != NULL && g_strcmp0(info->object_path, monitor->followed_path) != 0 &&
+        g_hash_table_contains(monitor->known_devices, monitor->followed_path)) {
+        g_message("Other AirPods connected, ignored: %s", info->name ? info->name : "Unknown");
+        return;
+    }
+    g_free(monitor->followed_path);
+    monitor->followed_path = g_strdup(info->object_path);
+    if (monitor->connected_callback)
+        monitor->connected_callback(info, monitor->connected_user_data);
+}
+
+static void report_disconnected(BluezMonitor *monitor, const BluezDeviceInfo *info)
+{
+    if (g_strcmp0(info->object_path, monitor->followed_path) != 0)
+        return;
+    if (monitor->disconnected_callback)
+        monitor->disconnected_callback(info, monitor->disconnected_user_data);
 }
 
 static bool device_is_airpods(GDBusConnection *connection, const char *object_path)
@@ -214,16 +239,12 @@ static void on_properties_changed(GDBusConnection *connection,
                             g_strdup(object_path),
                             bluez_device_info_copy(info));
 
-        if (monitor->connected_callback) {
-            monitor->connected_callback(info, monitor->connected_user_data);
-        }
+        report_connected(monitor, info);
     } else {
         /* Remove from known devices */
         g_hash_table_remove(monitor->known_devices, object_path);
 
-        if (monitor->disconnected_callback) {
-            monitor->disconnected_callback(info, monitor->disconnected_user_data);
-        }
+        report_disconnected(monitor, info);
     }
 
     bluez_device_info_free(info);
@@ -263,9 +284,7 @@ static void on_interfaces_added(GDBusConnection *connection,
                                 g_strdup(obj_path),
                                 bluez_device_info_copy(info));
 
-            if (monitor->connected_callback) {
-                monitor->connected_callback(info, monitor->connected_user_data);
-            }
+            report_connected(monitor, info);
         }
         bluez_device_info_free(info);
     }
@@ -282,16 +301,19 @@ static void on_interfaces_removed(GDBusConnection *connection G_GNUC_UNUSED,
     BluezMonitor *monitor = user_data;
 
     const gchar *obj_path = NULL;
-    g_variant_get(parameters, "(&oas)", &obj_path, NULL);
+    g_autofree const gchar **interfaces = NULL;
+    g_variant_get(parameters, "(&o^a&s)", &obj_path, &interfaces);
+
+    /* Battery1 goes away when our battery provider drops it: not a departure */
+    if (!g_strv_contains(interfaces, "org.bluez.Device1"))
+        return;
 
     /* Check if we were tracking this device */
     BluezDeviceInfo *info = g_hash_table_lookup(monitor->known_devices, obj_path);
     if (info) {
         g_message("AirPods device removed: %s", info->name);
 
-        if (monitor->disconnected_callback) {
-            monitor->disconnected_callback(info, monitor->disconnected_user_data);
-        }
+        report_disconnected(monitor, info);
 
         g_hash_table_remove(monitor->known_devices, obj_path);
     }
@@ -325,6 +347,7 @@ void bluez_monitor_free(BluezMonitor *monitor)
 
     bluez_monitor_stop(monitor);
     g_hash_table_destroy(monitor->known_devices);
+    g_free(monitor->followed_path);
     g_object_unref(monitor->connection);
     g_free(monitor);
 }
@@ -459,9 +482,7 @@ void bluez_monitor_check_existing_devices(BluezMonitor *monitor)
                                         g_strdup(object_path),
                                         bluez_device_info_copy(info));
 
-                    if (monitor->connected_callback) {
-                        monitor->connected_callback(info, monitor->connected_user_data);
-                    }
+                    report_connected(monitor, info);
                 }
                 bluez_device_info_free(info);
             }

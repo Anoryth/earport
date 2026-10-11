@@ -19,22 +19,32 @@
  * nearby answer within 0.5 s. So scan in short bursts that end at their
  * first advert, and scan right away when playback starts. Don't insist
  * when a connection attempt fails. */
-#define SCAN_INTERVAL_SEC 30
-#define SCAN_BURST_SEC 3
+#ifndef SCAN_INTERVAL_MS
+#define SCAN_INTERVAL_MS 30000
+#endif
+#ifndef SCAN_BURST_MS
+#define SCAN_BURST_MS 3000
+#endif
 /* Long enough for AirPods paused on another device to report it (2-3 s) */
-#define PLAYBACK_WINDOW_SEC 8
-#define AUTOCONNECT_COOLDOWN_SEC 30
+#ifndef PLAYBACK_WINDOW_MS
+#define PLAYBACK_WINDOW_MS 8000
+#endif
+#ifndef AUTOCONNECT_COOLDOWN_MS
+#define AUTOCONNECT_COOLDOWN_MS 30000
+#endif
 #define DEFAULT_ADAPTER_PATH "/org/bluez/hci0"
 /* Not seen for this long: away, or the keys changed */
-#define NEARBY_TIMEOUT_SEC (2 * SCAN_INTERVAL_SEC + 15)
+#define NEARBY_TIMEOUT_MS (2 * SCAN_INTERVAL_MS + SCAN_INTERVAL_MS / 2)
 /* The case advertises every 2-16 s, less often than the pods: refresh it
  * with a longer scan every minute, also while the AirPods are connected
  * here (they don't know it once out of it). Less often when it was not
  * found (left somewhere else). */
-#define CASE_REFRESH_SEC 50     /* Every other scan cycle */
-#define CASE_ABSENT_RETRY_SEC 300
-#define CASE_BURST_SEC 20
-#define CASE_TIMEOUT_SEC (2 * CASE_REFRESH_SEC + 60)
+#ifndef CASE_REFRESH_MS
+#define CASE_REFRESH_MS 50000   /* Every other scan cycle */
+#endif
+#define CASE_ABSENT_RETRY_MS (6 * CASE_REFRESH_MS)
+#define CASE_BURST_MS (CASE_REFRESH_MS * 2 / 5)
+#define CASE_TIMEOUT_MS (2 * CASE_REFRESH_MS + CASE_REFRESH_MS * 6 / 5)
 
 struct AutoConnect {
     bool enabled;
@@ -68,6 +78,13 @@ struct AutoConnect {
     gint64 last_attempt_us;
 };
 
+/* Whole seconds let GLib group the wakeups; tests shorten the delays */
+static guint add_timeout(guint ms, GSourceFunc function, gpointer data)
+{
+    return ms % 1000 == 0 ? g_timeout_add_seconds(ms / 1000, function, data)
+                          : g_timeout_add(ms, function, data);
+}
+
 static void on_device_connect_done(GObject *source, GAsyncResult *res, gpointer user_data)
 {
     (void)user_data;
@@ -86,7 +103,7 @@ static void try_connect(AutoConnect *ac, const char *reason)
 {
     gint64 now = g_get_monotonic_time();
     if (ac->last_attempt_us > 0 &&
-        now - ac->last_attempt_us < AUTOCONNECT_COOLDOWN_SEC * G_USEC_PER_SEC)
+        now - ac->last_attempt_us < AUTOCONNECT_COOLDOWN_MS * 1000)
         return;
     ac->last_attempt_us = now;
 
@@ -123,7 +140,7 @@ static bool ble_address_is_ours(const char *address, const uint8_t *data, size_t
 static bool case_fresh(AutoConnect *ac)
 {
     return ac->case_seen_us > 0 &&
-           g_get_monotonic_time() - ac->case_seen_us < CASE_REFRESH_SEC * G_USEC_PER_SEC;
+           g_get_monotonic_time() - ac->case_seen_us < CASE_REFRESH_MS * 1000;
 }
 
 /* Done with this scan: what it was for has been seen */
@@ -241,7 +258,7 @@ void autoconnect_on_playback_started(AutoConnect *ac)
     ac->playback_seen_busy = false;
     if (ac->playback_window_id > 0)
         g_source_remove(ac->playback_window_id);
-    ac->playback_window_id = g_timeout_add_seconds(PLAYBACK_WINDOW_SEC, playback_window_cb, ac);
+    ac->playback_window_id = add_timeout(PLAYBACK_WINDOW_MS, playback_window_cb, ac);
     ble_scanner_start(ac->ble_scanner);
 }
 
@@ -273,16 +290,16 @@ static gboolean scan_cycle_cb(gpointer user_data)
     AutoConnect *ac = user_data;
     gint64 now = g_get_monotonic_time();
 
-    if (ac->nearby_seen_us > 0 && now - ac->nearby_seen_us > NEARBY_TIMEOUT_SEC * G_USEC_PER_SEC)
+    if (ac->nearby_seen_us > 0 && now - ac->nearby_seen_us > NEARBY_TIMEOUT_MS * 1000)
         nearby_gone(ac);
-    if (ac->case_seen_us > 0 && now - ac->case_seen_us > CASE_TIMEOUT_SEC * G_USEC_PER_SEC)
+    if (ac->case_seen_us > 0 && now - ac->case_seen_us > CASE_TIMEOUT_MS * 1000)
         case_gone(ac);
 
     /* Not more than one long scan per refresh period */
-    gint64 retry_sec = ac->case_missed ? CASE_ABSENT_RETRY_SEC : CASE_REFRESH_SEC;
+    gint64 retry_ms = ac->case_missed ? CASE_ABSENT_RETRY_MS : CASE_REFRESH_MS;
     bool case_burst = case_wanted(ac) && !case_fresh(ac) &&
                       (ac->case_burst_us == 0 ||
-                       now - ac->case_burst_us >= retry_sec * G_USEC_PER_SEC);
+                       now - ac->case_burst_us >= retry_ms * 1000);
 
     /* Connected here: only the case is worth a scan */
     if (ac->airpods_connected && !case_burst)
@@ -294,7 +311,7 @@ static gboolean scan_cycle_cb(gpointer user_data)
     ble_scanner_start(ac->ble_scanner);
     if (ac->burst_timer_id > 0)
         g_source_remove(ac->burst_timer_id);
-    ac->burst_timer_id = g_timeout_add_seconds(case_burst ? CASE_BURST_SEC : SCAN_BURST_SEC,
+    ac->burst_timer_id = add_timeout(case_burst ? CASE_BURST_MS : SCAN_BURST_MS,
                                                burst_end_cb, ac);
     return G_SOURCE_CONTINUE;
 }
@@ -313,7 +330,7 @@ static void update(AutoConnect *ac)
     if (wanted && ac->scan_timer_id == 0 && ac->ble_scanner != NULL) {
         g_message("Watching for the AirPods nearby");
         scan_cycle_cb(ac);
-        ac->scan_timer_id = g_timeout_add_seconds(SCAN_INTERVAL_SEC, scan_cycle_cb, ac);
+        ac->scan_timer_id = add_timeout(SCAN_INTERVAL_MS, scan_cycle_cb, ac);
     } else if (!wanted && ac->scan_timer_id > 0) {
         g_source_remove(ac->scan_timer_id);
         ac->scan_timer_id = 0;
@@ -373,6 +390,9 @@ void autoconnect_free(AutoConnect *ac)
 void autoconnect_set_enabled(AutoConnect *ac, bool enabled)
 {
     ac->enabled = enabled;
+    /* Turned off while waiting for the AirPods after playback started */
+    if (!enabled && ac->playback_pending)
+        end_playback_wait(ac);
     update(ac);
 }
 

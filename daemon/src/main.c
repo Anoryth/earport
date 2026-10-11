@@ -419,19 +419,10 @@ static void read_adapter_address(const char *adapter_path)
     g_object_unref(bus);
 }
 
-/* Other AirPods than the ones the link is open with (several paired) */
-static bool other_airpods(const BluezDeviceInfo *device)
-{
-    return aap_link_is_connected(app.link) && app.state.device_address != NULL &&
-           g_ascii_strcasecmp(device->address ? device->address : "", app.state.device_address) != 0;
-}
-
 static void on_bluez_device_connected(const BluezDeviceInfo *device, void *user_data)
 {
     (void)user_data;
     g_message("BlueZ: AirPods connected - %s (%s)", device->name, device->address);
-    if (other_airpods(device))
-        return;
     /* The adapter the AirPods use is the one to scan on */
     char *adapter_path = device->object_path ? g_path_get_dirname(device->object_path) : NULL;
     autoconnect_set_airpods_connected(app.autoconnect, true, adapter_path);
@@ -449,8 +440,6 @@ static void on_bluez_device_disconnected(const BluezDeviceInfo *device, void *us
 {
     (void)user_data;
     g_message("BlueZ: AirPods disconnected - %s (%s)", device->name, device->address);
-    if (other_airpods(device))
-        return;
     aap_link_device_disconnected(app.link);
     autoconnect_set_airpods_connected(app.autoconnect, false, NULL);
     relink_link_closed(app.relink);

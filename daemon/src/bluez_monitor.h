@@ -61,6 +61,9 @@ void bluez_monitor_stop(BluezMonitor *monitor);
 
 /**
  * Set callback for device connected events
+ *
+ * Only one pair is followed: other AirPods connecting while it is
+ * connected, and their disconnections, are not reported
  */
 void bluez_monitor_set_connected_callback(BluezMonitor *monitor,
                                            BluezDeviceCallback callback,

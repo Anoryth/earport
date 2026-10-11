@@ -17,6 +17,10 @@
 
 #define MATCH_CACHE_MAX 1024
 
+/* Cached for devices that advertise no Apple data (most of those around):
+ * their RSSI changes are not worth a Get, an Apple advert is still decided */
+#define NO_APPLE_DATA 2
+
 struct BleScanner {
     GDBusConnection *bus;
     char *adapter_path;
@@ -28,7 +32,7 @@ struct BleScanner {
     BleAdvertCallback callback;
     void *user_data;
 
-    GHashTable *matches;    /* address -> GINT_TO_POINTER(matches filter) */
+    GHashTable *matches;    /* address -> GINT_TO_POINTER(matches filter, or NO_APPLE_DATA) */
     GCancellable *cancellable;
 };
 
@@ -53,6 +57,15 @@ static int cached_match(BleScanner *scanner, const char *address)
     return -1;
 }
 
+static void cache_match(BleScanner *scanner, const char *address, int match)
+{
+    /* Nearby phones change address every ~15 min: don't keep them all,
+     * deciding again costs one AES block */
+    if (g_hash_table_size(scanner->matches) >= MATCH_CACHE_MAX)
+        g_hash_table_remove_all(scanner->matches);
+    g_hash_table_insert(scanner->matches, g_strdup(address), GINT_TO_POINTER(match));
+}
+
 /* Report the Apple entry of a ManufacturerData (a{qv}) value, if the
  * address is one to report */
 static void report_manufacturer_data(BleScanner *scanner, const char *address, GVariant *data)
@@ -60,25 +73,25 @@ static void report_manufacturer_data(BleScanner *scanner, const char *address, G
     GVariantIter iter;
     guint16 company;
     GVariant *value;
+    bool apple = false;
     g_variant_iter_init(&iter, data);
     while (g_variant_iter_next(&iter, "{qv}", &company, &value)) {
         if (company == APPLE_COMPANY_ID && g_variant_is_of_type(value, G_VARIANT_TYPE_BYTESTRING)) {
+            apple = true;
             gsize len;
             const guint8 *bytes = g_variant_get_fixed_array(value, &len, 1);
             int match = cached_match(scanner, address);
-            if (match < 0) {
-                /* Nearby phones change address every ~15 min: don't keep
-                 * them all, deciding again costs one AES block */
-                if (g_hash_table_size(scanner->matches) >= MATCH_CACHE_MAX)
-                    g_hash_table_remove_all(scanner->matches);
+            if (match < 0 || match == NO_APPLE_DATA) {
                 match = scanner->filter(address, bytes, len, scanner->user_data);
-                g_hash_table_insert(scanner->matches, g_strdup(address), GINT_TO_POINTER(match));
+                cache_match(scanner, address, match);
             }
             if (match)
                 scanner->callback(address, bytes, len, scanner->user_data);
         }
         g_variant_unref(value);
     }
+    if (!apple && cached_match(scanner, address) < 0)
+        cache_match(scanner, address, NO_APPLE_DATA);
 }
 
 /* Pending ManufacturerData read; the scanner may be freed before it ends */
@@ -94,12 +107,16 @@ static void on_manufacturer_data_ready(GObject *source, GAsyncResult *res, gpoin
     GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
 
     /* A reply may still arrive after cancellation: check before use */
-    if (result != NULL && !g_cancellable_is_cancelled(request->cancellable) &&
-        request->scanner->running) {
-        GVariant *value;
-        g_variant_get(result, "(v)", &value);
-        report_manufacturer_data(request->scanner, request->address, value);
-        g_variant_unref(value);
+    if (!g_cancellable_is_cancelled(request->cancellable) && request->scanner->running) {
+        if (result != NULL) {
+            GVariant *value;
+            g_variant_get(result, "(v)", &value);
+            report_manufacturer_data(request->scanner, request->address, value);
+            g_variant_unref(value);
+        } else if (cached_match(request->scanner, request->address) < 0) {
+            /* No ManufacturerData at all */
+            cache_match(request->scanner, request->address, NO_APPLE_DATA);
+        }
     }
 
     g_clear_pointer(&result, g_variant_unref);
@@ -167,7 +184,8 @@ static void on_properties_changed(GDBusConnection *bus,
         report_manufacturer_data(scanner, address, data);
         g_variant_unref(data);
         g_free(address);
-    } else if (g_variant_lookup(changed, "RSSI", "n", NULL)) {
+    } else if (g_variant_lookup(changed, "RSSI", "n", NULL) &&
+               cached_match(scanner, address) != NO_APPLE_DATA) {
         /* Same advert again (only the RSSI changed): its data is still
          * current, fetch it so that each advert gives a fresh state, or so
          * that an address not decided yet (first seen while not scanning,

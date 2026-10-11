@@ -452,7 +452,7 @@ static void on_bt_state_changed(BluetoothState state, const char *error, void *u
         schedule_reconnect(link);
         break;
 
-    default:
+    case BT_STATE_CONNECTING:
         break;
     }
 }

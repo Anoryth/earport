@@ -5,6 +5,8 @@
  * Configuration file management
  */
 
+#define _POSIX_C_SOURCE 200809L /* fchmod under -std=c11 */
+
 #include "config.h"
 #include <stdio.h>
 #include <string.h>

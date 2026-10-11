@@ -40,6 +40,13 @@ static void on_register_done(GObject *source, GAsyncResult *res, gpointer user_d
         return;
     }
 
+    /* Registered twice, the first one holds */
+    g_autofree char *remote = g_dbus_error_get_remote_error(error);
+    if (g_strcmp0(remote, "org.bluez.Error.AlreadyExists") == 0) {
+        g_error_free(error);
+        return;
+    }
+
     /* Older BlueZ without the API: GNOME just won't show it. Tried again
      * with the next battery level. */
     BatteryProvider *bp = user_data;
@@ -53,16 +60,19 @@ static void register_with(BatteryProvider *bp, const char *adapter_path)
     if (bp->registering && g_strcmp0(bp->adapter_path, adapter_path) == 0)
         return;
 
+    /* adapter_path may be bp->adapter_path itself (bluetoothd restarted) */
+    char *path = g_strdup(adapter_path);
     g_free(bp->adapter_path);
-    bp->adapter_path = g_strdup(adapter_path);
+    bp->adapter_path = path;
     bp->registering = true;
-    g_dbus_connection_call(bp->bus, "org.bluez", adapter_path,
+    g_dbus_connection_call(bp->bus, "org.bluez", bp->adapter_path,
                            "org.bluez.BatteryProviderManager1", "RegisterBatteryProvider",
                            g_variant_new("(o)", PROVIDER_ROOT), NULL, G_DBUS_CALL_FLAGS_NONE,
                            5000, bp->cancellable, on_register_done, bp);
 }
 
-/* bluetoothd restarted: it forgot the providers */
+/* bluetoothd restarted: it forgot the providers. Its first appearance
+ * may also be reported after a registration: AlreadyExists then. */
 static void on_bluez_appeared(GDBusConnection *bus, const gchar *name, const gchar *owner,
                               gpointer user_data)
 {
