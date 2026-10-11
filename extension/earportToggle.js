@@ -8,6 +8,7 @@
 import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
@@ -24,6 +25,10 @@ import {Notifications} from './notifications.js';
 
 /* Last service version without the Version property */
 const UNVERSIONED_SERVICE = '0.4.0';
+
+/* Away this long before the disconnection is notified: a cut, or the daemon
+ * getting them back from an Apple device, is over by then */
+const DISCONNECT_NOTICE_DELAY_S = 5;
 
 /* Major and minor only: a patch release never needs a service update */
 function minorVersion(version) {
@@ -47,6 +52,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._propertiesChangedId = 0;
         this._signalIds = [];
         this._quietDisconnect = null;
+        this._disconnectNoticeId = 0;
 
         /* Custom symbolic icons shipped with the extension */
         const iconsDir = `${extensionObject.path}/icons`;
@@ -256,31 +262,48 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _onPropertiesChanged() {
-        /* The daemon gave up getting the AirPods back from an Apple device:
-         * the disconnection kept quiet is real */
-        if (this._quietDisconnect && !this._proxy?.Reconnecting) {
-            this._notifications.disconnected(this._proxy?.DisplayName, this._quietDisconnect.name);
-            this._quietDisconnect = null;
-        }
+        /* The daemon gave up getting the AirPods back: the disconnection kept
+         * quiet is real */
+        this._noticeDisconnection();
         this._updateState();
     }
 
     _onDeviceConnected(_proxy, _sender, [_address, name]) {
         if (this._quietDisconnect)
-            this._quietDisconnect = null;
+            this._clearQuietDisconnect();
         else
             this._notifications.connected(this._proxy?.DisplayName, name, this._proxy?.DeviceModel);
         this._updateState();
     }
 
+    /* A radio cut, another device borrowing the AirPods for a moment, or
+     * the daemon getting them back (Reconnecting, as on a Mac): tell only
+     * once they stayed away a few seconds */
     _onDeviceDisconnected(_proxy, _sender, [_address, name]) {
-        /* Dropped for an Apple device and coming back in a few seconds, as
-         * on a Mac: nothing to tell yet */
-        if (this._proxy?.Reconnecting)
-            this._quietDisconnect = {name};
-        else
-            this._notifications.disconnected(this._proxy?.DisplayName, name);
+        this._clearQuietDisconnect();
+        this._quietDisconnect = {name};
+        this._disconnectNoticeId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT,
+            DISCONNECT_NOTICE_DELAY_S, () => {
+                this._disconnectNoticeId = 0;
+                this._noticeDisconnection();
+                return GLib.SOURCE_REMOVE;
+            });
         this._updateDisconnectedState();
+    }
+
+    _noticeDisconnection() {
+        if (!this._quietDisconnect || this._disconnectNoticeId > 0 || this._proxy?.Reconnecting)
+            return;
+        this._notifications.disconnected(this._proxy?.DisplayName, this._quietDisconnect.name);
+        this._quietDisconnect = null;
+    }
+
+    _clearQuietDisconnect() {
+        if (this._disconnectNoticeId > 0) {
+            GLib.source_remove(this._disconnectNoticeId);
+            this._disconnectNoticeId = 0;
+        }
+        this._quietDisconnect = null;
     }
 
     _onSpeakingChanged(proxy, sender, [speaking]) {
@@ -576,6 +599,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
 
     destroy() {
         this._conversationVolume.destroy();
+        this._clearQuietDisconnect();
 
         if (this._proxy) {
             if (this._propertiesChangedId > 0) {
