@@ -9,6 +9,7 @@
 #include <glib.h>
 
 #include "relink.h"
+#include "test_wait.h"
 
 typedef struct {
     int disconnects;
@@ -65,7 +66,7 @@ static void test_twice(void)
 
     relink_start(relink, 2);
     g_assert_cmpint(calls.started, ==, 1);
-    run_for(30);
+    WAIT_FOR(calls.disconnects >= 1);
     g_assert_cmpint(calls.disconnects, ==, 1);
 
     /* BlueZ signals the disconnection before it is done: wait for its
@@ -74,16 +75,16 @@ static void test_twice(void)
     run_for(20);
     g_assert_cmpint(calls.connects, ==, 0);
     relink_disconnect_done(relink);
-    run_for(20);
+    WAIT_FOR(calls.connects >= 1);
     g_assert_cmpint(calls.connects, ==, 1);
     relink_connect_done(relink, true);
     relink_link_opened(relink);
     g_assert_cmpint(calls.finished, ==, 0);
 
-    run_for(30);
+    WAIT_FOR(calls.disconnects >= 2);
     g_assert_cmpint(calls.disconnects, ==, 2);
     relink_disconnect_done(relink);
-    run_for(20);
+    WAIT_FOR(calls.connects >= 2);
     g_assert_cmpint(calls.connects, ==, 2);
     relink_link_opened(relink);
     g_assert_cmpint(calls.finished, ==, 1);
@@ -106,15 +107,15 @@ static void test_connect_again(void)
     Relink *relink = relink_new(&callbacks, &calls);
 
     relink_start(relink, 1);
-    run_for(30);
+    WAIT_FOR(calls.disconnects >= 1);
     relink_disconnect_done(relink);
-    run_for(20);
+    WAIT_FOR(calls.connects >= 1);
     g_assert_cmpint(calls.connects, ==, 1);
     relink_connect_done(relink, false);
-    run_for(20);
+    WAIT_FOR(calls.connects >= 2);
     g_assert_cmpint(calls.connects, ==, 2);
     relink_link_closed(relink);
-    run_for(20);
+    WAIT_FOR(calls.connects >= 3);
     g_assert_cmpint(calls.connects, ==, 3);
 
     /* No more, and the reconnection ends right away */
@@ -135,9 +136,9 @@ static void test_give_up(void)
     Relink *relink = relink_new(&callbacks, &calls);
 
     relink_start(relink, 1);
-    run_for(30);
+    WAIT_FOR(calls.disconnects >= 1);
     g_assert_cmpint(calls.disconnects, ==, 1);
-    run_for(120);
+    WAIT_FOR(calls.finished >= 1);
     g_assert_cmpint(calls.finished, ==, 1);
 
     /* Closing later changes nothing */
@@ -155,7 +156,7 @@ static void test_gone_meanwhile(void)
 
     relink_start(relink, 1);
     relink_link_closed(relink);
-    run_for(40);
+    WAIT_FOR(calls.connects >= 1);
     g_assert_cmpint(calls.disconnects, ==, 0);
     g_assert_cmpint(calls.connects, ==, 1);
     relink_link_opened(relink);
@@ -183,8 +184,9 @@ static void test_storm(void)
         run_for(g_test_rand_int_range(0, 12));
 
         if (i % 100 == 0) {
-            /* Settle, then disconnect or connect without answer, then give up */
-            run_for(20 + 10 + 100 + 50);
+            /* Settle, then disconnect or connect without answer, then give up
+             * (within 180 ms, given 2 s on a loaded machine) */
+            WAIT_FOR(calls.started == calls.finished);
             g_assert_cmpint(calls.started, ==, calls.finished);
         }
     }

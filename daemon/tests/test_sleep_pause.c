@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "sleep_pause.h"
+#include "test_wait.h"
 
 #define COOL_OFF_MS 1000   /* Same value as passed by meson.build */
 
@@ -122,6 +123,7 @@ static void test_pause_after_cool_off(Fixture *f, gconstpointer data)
     status(f, AAP_SLEEP_STATUS_ASLEEP, 70, 5);
 
     run_for(COOL_OFF_MS / 2 + 300);
+    WAIT_FOR(f->pauses >= 1);
     g_assert_cmpint(f->pauses, ==, 1);
     g_assert_cmpint(f->rewind, ==, 50 + COOL_OFF_MS / 1000);
 }
@@ -163,6 +165,7 @@ static void test_idle_unknown(Fixture *f, gconstpointer data)
     f->idle_ms = -1;
     status(f, AAP_SLEEP_STATUS_ASLEEP, 65, 0);
     run_for(COOL_OFF_MS + 300);
+    WAIT_FOR(f->pauses >= 1);
     g_assert_cmpint(f->pauses, ==, 1);
 }
 

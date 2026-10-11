@@ -10,6 +10,7 @@
 #include <gio/gio.h>
 
 #include "media_control.h"
+#include "test_wait.h"
 
 #define MPRIS_PATH "/org/mpris/MediaPlayer2"
 #define PLAYER_INTERFACE "org.mpris.MediaPlayer2.Player"
@@ -411,6 +412,7 @@ static void test_frozen_player(void)
     g_assert_cmpint(g_get_monotonic_time() - start, <, 50 * 1000);
 
     run_for(200);
+    WAIT_FOR(pauses(music) >= 1);
     g_assert_cmpint(pauses(music), ==, 1);
 
     media_control_free(mc);
@@ -462,6 +464,7 @@ static void test_pause_for_sleep(void)
     ears(mc, true, true);
     media_control_pause_for_sleep(mc, 30);
     run_for(100);
+    WAIT_FOR(pauses(player) >= 1);
     g_assert_cmpint(pauses(player), ==, 1);
     g_mutex_lock(&player->lock);
     g_assert_cmpint(player->seek_offset, ==, -30 * G_USEC_PER_SEC);

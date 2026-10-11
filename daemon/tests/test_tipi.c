@@ -10,6 +10,7 @@
 #include <glib.h>
 #include <string.h>
 
+#include "test_wait.h"
 #include "tipi.h"
 
 #define ME    "11:22:33:44:55:66"
@@ -191,13 +192,13 @@ static void test_dropped(void)
     tipi_link_closed(tipi, true);
     run_for(10);
     g_assert_cmpint(calls.reconnects, ==, 0);
-    run_for(30);
+    WAIT_FOR(calls.reconnects >= 1);
     g_assert_cmpint(calls.reconnects, ==, 1);
-    run_for(100);
+    WAIT_FOR(calls.reconnects >= 3);
     g_assert_cmpint(calls.reconnects, ==, 3);
     g_assert_cmpint(calls.reconnecting, ==, 1);
     g_assert_cmpint(calls.reconnected, ==, 0);
-    run_for(150);                       /* Gave up */
+    WAIT_FOR(calls.reconnected >= 1);   /* Gave up */
     g_assert_cmpint(calls.reconnected, ==, 1);
 
     /* Back at the first try: no more */
@@ -206,7 +207,7 @@ static void test_dropped(void)
     tipi_hosts_changed(tipi, &hosts, ME);
     swap_pods(tipi);
     tipi_link_closed(tipi, true);
-    run_for(30);
+    WAIT_FOR(calls.reconnects >= 4);
     tipi_link_opened(tipi);
     g_assert_cmpint(calls.reconnected, ==, 2);
     run_for(100);

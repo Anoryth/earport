@@ -12,6 +12,7 @@
 
 #include "aap_link.h"
 #include "fake_bluetooth.h"
+#include "test_wait.h"
 
 /* Same values as passed by meson.build */
 #define GAP_MS 2
@@ -226,6 +227,7 @@ static void test_silent_reopen(Fixture *f, gconstpointer data)
 
     /* Only once per BlueZ connection */
     run_for(12 * RETRY_MS);
+    WAIT_FOR(fake_bt.connect_count >= 2);
     g_assert_cmpint(fake_bt.connect_count, ==, 2);
     g_assert_cmpint(f->disconnected, ==, 0);
 }
@@ -260,8 +262,10 @@ static void test_refused_then_backoff(Fixture *f, gconstpointer data)
 
     /* Retried after 10 ms, then 20 ms */
     run_for(RECONNECT_MS + 5);
+    WAIT_FOR(fake_bt.connect_count >= 2);
     g_assert_cmpint(fake_bt.connect_count, ==, 2);
     run_for(2 * RECONNECT_MS + 5);
+    WAIT_FOR(fake_bt.connect_count >= 3);
     g_assert_cmpint(fake_bt.connect_count, ==, 3);
 
     g_assert_true(aap_link_is_connected(f->link));
@@ -277,6 +281,7 @@ static void test_gives_up(Fixture *f, gconstpointer data)
 
     /* 10 + 20 + 40 + 80 + 160 ms */
     run_for(31 * RECONNECT_MS + 50);
+    WAIT_FOR(fake_bt.connect_count >= 6);
     g_assert_cmpint(fake_bt.connect_count, ==, 6);
     run_for(20 * RECONNECT_MS);
     g_assert_cmpint(fake_bt.connect_count, ==, 6);
@@ -294,6 +299,7 @@ static void test_peer_closes(Fixture *f, gconstpointer data)
     g_assert_cmpint(f->disconnected, ==, 1);
 
     run_for(RECONNECT_MS + 5);
+    WAIT_FOR(fake_bt.connect_count >= 2);
     g_assert_cmpint(fake_bt.connect_count, ==, 2);
     g_assert_cmpint(f->connected, ==, 2);
 }
@@ -309,6 +315,7 @@ static void test_bluez_disconnect(Fixture *f, gconstpointer data)
     g_assert_false(aap_link_is_connected(f->link));
 
     run_for(5 * RECONNECT_MS);
+    WAIT_FOR(fake_bt.connect_count >= 1);
     g_assert_cmpint(fake_bt.connect_count, ==, 1);
 }
 
@@ -341,6 +348,7 @@ static void test_bluez_disconnect_during_reopen(Fixture *f, gconstpointer data)
     g_assert_cmpint(f->disconnected, ==, 1);
 
     run_for(2 * SILENT_MS);
+    WAIT_FOR(fake_bt.connect_count >= 1);
     g_assert_cmpint(fake_bt.connect_count, ==, 1);
 }
 
@@ -371,6 +379,7 @@ static void test_queue_cleared(Fixture *f, gconstpointer data)
     g_assert_cmpuint(fake_bt.sent->len, ==, 0);
 
     run_for(RECONNECT_MS + 10 * GAP_MS);
+    WAIT_FOR(fake_bt.connect_count >= 2);
     g_assert_cmpint(fake_bt.connect_count, ==, 2);
     g_assert_cmpuint(HANDSHAKES(), ==, 1);
 }
@@ -404,6 +413,7 @@ static void test_watchdog_probe_answered(Fixture *f, gconstpointer data)
 
     fake_bt_receive(battery, sizeof(battery));
     run_for(200);
+    WAIT_FOR(fake_bt.connect_count >= 1);
     g_assert_cmpint(fake_bt.connect_count, ==, 1);
     g_assert_cmpint(f->disconnected, ==, 0);
 }

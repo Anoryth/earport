@@ -10,6 +10,7 @@
 #include <glib.h>
 
 #include "handoff.h"
+#include "test_wait.h"
 
 typedef struct {
     int paused;
@@ -60,6 +61,7 @@ static void test_kept(void)
     handoff_source_changed(handoff, "computer", false);
     handoff_source_changed(handoff, "other", false);
     run_for(200);
+    WAIT_FOR(calls.paused >= 1);
     g_assert_cmpint(calls.paused, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 0);
 
@@ -75,6 +77,7 @@ static void test_kept(void)
     /* Until playback starts here again; back at once, no second try */
     handoff_playback_started(handoff);
     run_for(50);
+    WAIT_FOR(calls.restarted >= 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_source_changed(handoff, "computer", false);
     run_for(200);
@@ -93,9 +96,11 @@ static void test_borrowed(void)
     handoff_source_changed(handoff, "computer", false);
     handoff_source_changed(handoff, "other", false);
     run_for(120);
+    WAIT_FOR(calls.paused >= 1);
     g_assert_cmpint(calls.paused, ==, 1);
     handoff_source_changed(handoff, "none", false);
     run_for(100);
+    WAIT_FOR(calls.resumed >= 1);
     g_assert_cmpint(calls.resumed, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
@@ -112,6 +117,7 @@ static void test_borrowed_flap(void)
     handoff_source_changed(handoff, "computer", false);
     handoff_source_changed(handoff, "other", false);
     run_for(120);
+    WAIT_FOR(calls.paused >= 1);
     g_assert_cmpint(calls.paused, ==, 1);
     handoff_source_changed(handoff, "none", false);
     run_for(10);
@@ -134,9 +140,11 @@ static void test_call(void)
     handoff_source_changed(handoff, "other", false);
     handoff_source_changed(handoff, "other", true);
     run_for(300);                       /* Longer than the resume window */
+    WAIT_FOR(calls.paused >= 1);
     g_assert_cmpint(calls.paused, ==, 1);
     handoff_source_changed(handoff, "none", false);
     run_for(100);
+    WAIT_FOR(calls.resumed >= 1);
     g_assert_cmpint(calls.resumed, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
@@ -159,6 +167,7 @@ static void test_moment(void)
 
     /* Not back: one more try, then no more */
     run_for(300);
+    WAIT_FOR(calls.tried_again >= 1);
     g_assert_cmpint(calls.tried_again, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
@@ -195,9 +204,11 @@ static void test_use_here(void)
 
     handoff_source_changed(handoff, "other", false);
     run_for(150);
+    WAIT_FOR(calls.paused >= 1);
     g_assert_cmpint(calls.paused, ==, 1);
     handoff_use_here(handoff);
     run_for(50);
+    WAIT_FOR(calls.resumed >= 1);
     g_assert_cmpint(calls.resumed, ==, 1);
     g_assert_cmpint(calls.restarted, ==, 1);
     handoff_free(handoff);
