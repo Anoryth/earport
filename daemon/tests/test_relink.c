@@ -17,16 +17,22 @@ typedef struct {
     int finished;
 } Calls;
 
+/* BlueZ is only asked while a reconnection is announced */
 static void disconnect_airpods(void *user_data)
 {
-    ((Calls *)user_data)->disconnects++;
+    Calls *calls = user_data;
+    g_assert_cmpint(calls->started, ==, calls->finished + 1);
+    calls->disconnects++;
 }
 
 static void connect_airpods(void *user_data)
 {
-    ((Calls *)user_data)->connects++;
+    Calls *calls = user_data;
+    g_assert_cmpint(calls->started, ==, calls->finished + 1);
+    calls->connects++;
 }
 
+/* Announced on, then off, never twice in a row */
 static void reconnecting(bool on, void *user_data)
 {
     Calls *calls = user_data;
@@ -34,6 +40,8 @@ static void reconnecting(bool on, void *user_data)
         calls->started++;
     else
         calls->finished++;
+    g_assert_cmpint(calls->started - calls->finished, >=, 0);
+    g_assert_cmpint(calls->started - calls->finished, <=, 1);
 }
 
 static const RelinkCallbacks callbacks = {
@@ -109,8 +117,9 @@ static void test_connect_again(void)
     run_for(20);
     g_assert_cmpint(calls.connects, ==, 3);
 
-    /* No more */
+    /* No more, and the reconnection ends right away */
     relink_connect_done(relink, false);
+    g_assert_cmpint(calls.finished, ==, 1);
     relink_link_closed(relink);
     run_for(20);
     g_assert_cmpint(calls.connects, ==, 3);
@@ -154,6 +163,35 @@ static void test_gone_meanwhile(void)
     relink_free(relink);
 }
 
+/* Events in any order, at any time: the invariants above hold, and once
+ * nothing happens for longer than a step, the reconnection is over.
+ * Replay a failure with the seed it prints: --seed=R02S... */
+static void test_storm(void)
+{
+    Calls calls = { 0 };
+    Relink *relink = relink_new(&callbacks, &calls);
+
+    for (int i = 1; i <= 600; i++) {
+        switch (g_test_rand_int_range(0, 6)) {
+        case 0: relink_start(relink, g_test_rand_int_range(1, 3)); break;
+        case 1: relink_disconnect_done(relink); break;
+        case 2: relink_connect_done(relink, g_test_rand_bit()); break;
+        case 3: relink_link_opened(relink); break;
+        case 4: relink_link_closed(relink); break;
+        case 5: break;
+        }
+        run_for(g_test_rand_int_range(0, 12));
+
+        if (i % 100 == 0) {
+            /* Settle, then disconnect or connect without answer, then give up */
+            run_for(20 + 10 + 100 + 50);
+            g_assert_cmpint(calls.started, ==, calls.finished);
+        }
+    }
+    g_assert_cmpint(calls.started, >, 0);
+    relink_free(relink);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -162,6 +200,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/relink/connect-again", test_connect_again);
     g_test_add_func("/relink/give-up", test_give_up);
     g_test_add_func("/relink/gone-meanwhile", test_gone_meanwhile);
+    g_test_add_func("/relink/storm", test_storm);
 
     return g_test_run();
 }

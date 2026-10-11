@@ -164,6 +164,64 @@ test_media_control = executable('test-media-control',
 )
 test('media-control', test_media_control)
 
+# BlueZ monitoring against a fake org.bluez (tests/fake_bluez.c)
+test_bluez_monitor = executable('test-bluez-monitor',
+    files('tests/test_bluez_monitor.c', 'tests/fake_bluez.c', 'src/bluez_monitor.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('bluez-monitor', test_bluez_monitor)
+
+test_ble_scanner = executable('test-ble-scanner',
+    files('tests/test_ble_scanner.c', 'tests/fake_bluez.c', 'src/ble_scanner.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('ble-scanner', test_ble_scanner)
+
+test_battery_provider = executable('test-battery-provider',
+    files('tests/test_battery_provider.c', 'tests/fake_bluez.c', 'src/battery_provider.c',
+          'src/bluez_monitor.c'),
+    battery_provider_gen,
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('battery-provider', test_battery_provider)
+
+test_apple_identity = executable('test-apple-identity',
+    files('tests/test_apple_identity.c', 'tests/fake_bluez.c', 'src/apple_identity.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep, gio_unix_dep],
+)
+test('apple-identity', test_apple_identity)
+
+test_link_trace = executable('test-link-trace',
+    files('tests/test_link_trace.c', 'tests/fake_bluez.c', 'src/link_trace.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('link-trace', test_link_trace)
+
+# Against a fake pactl written by the test
+test_audio_route = executable('test-audio-route',
+    files('tests/test_audio_route.c', 'src/audio_route.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('audio-route', test_audio_route)
+
+# Delays shortened (keep in sync with the test)
+test_autoconnect = executable('test-autoconnect',
+    files('tests/test_autoconnect.c', 'tests/fake_bluez.c', 'src/autoconnect.c',
+          'src/ble_scanner.c', 'src/ble_proximity.c', 'src/aes128.c', 'src/config.c',
+          'src/airpods_state.c', 'src/airpods_settings.c', 'src/bluez_monitor.c'),
+    include_directories: include_directories('src'),
+    c_args: ['-DSCAN_INTERVAL_MS=300', '-DSCAN_BURST_MS=100', '-DPLAYBACK_WINDOW_MS=150',
+             '-DAUTOCONNECT_COOLDOWN_MS=250', '-DCASE_REFRESH_MS=500'],
+    dependencies: [glib_dep, gio_dep, m_dep],
+)
+test('autoconnect', test_autoconnect)
+
 test_sleep_pause = executable('test-sleep-pause',
     files('tests/test_sleep_pause.c', 'src/sleep_pause.c', 'src/aap_protocol.c',
           'src/airpods_settings.c', 'src/airpods_state.c'),
