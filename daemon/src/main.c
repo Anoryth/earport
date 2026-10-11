@@ -355,9 +355,11 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
     else if (pkt->type == AAP_PKT_TYPE_EAR_DETECTION)
         tipi_ear_changed(app.tipi, app.state.ear_detection.primary_in_ear,
                          app.state.ear_detection.secondary_in_ear);
-    else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE)
+    else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE) {
         handoff_source_changed(app.handoff, app.state.audio_source,
                                pkt->data.audio_source.type == AAP_AUDIO_SOURCE_CALL);
+        tipi_source_changed(app.tipi, app.state.audio_source);
+    }
 }
 
 static void on_link_disconnected(void *user_data)
@@ -367,6 +369,7 @@ static void on_link_disconnected(void *user_data)
     sleep_pause_session_ended(app.sleep_pause);
     media_control_session_ended(app.media_control);
     handoff_source_changed(app.handoff, NULL, false);
+    tipi_source_changed(app.tipi, NULL);
     device_session_ended(&app.device);
 }
 
@@ -521,6 +524,13 @@ static bool tipi_send(const uint8_t *data, size_t len, void *user_data)
 {
     (void)user_data;
     return aap_link_is_connected(app.link) && aap_link_send(app.link, data, len);
+}
+
+static void tipi_relink(void *user_data)
+{
+    (void)user_data;
+    /* Connected seconds ago: no need to let them settle */
+    relink_start_now(app.relink, 1);
 }
 
 static void on_airpods_disconnected(GObject *source, GAsyncResult *res, gpointer user_data)
@@ -796,6 +806,7 @@ int main(int argc, char *argv[])
         .send = tipi_send,
         .reconnect = connect_airpods,
         .reconnecting = tipi_reconnecting,
+        .relink = tipi_relink,
     };
     app.tipi = tipi_new(&tipi_callbacks, NULL);
     tipi_set_enabled(app.tipi, app.config.apple_handoff);

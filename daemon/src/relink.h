@@ -29,6 +29,8 @@ void relink_free(Relink *relink);
 
 /* Reconnect them this many times, starting shortly (call while connected) */
 void relink_start(Relink *relink, int times);
+/* The same, disconnecting at once: they settled already */
+void relink_start_now(Relink *relink, int times);
 
 /* BlueZ answered the disconnect callback's request */
 void relink_disconnect_done(Relink *relink);

@@ -143,6 +143,15 @@ void relink_start(Relink *relink, int times)
         relink->callbacks.reconnecting(true, relink->user_data);
 }
 
+void relink_start_now(Relink *relink, int times)
+{
+    relink_start(relink, times);
+    if (relink->step != RELINK_SETTLING)
+        return;
+    cancel_timer(relink);
+    on_settled(relink);
+}
+
 void relink_link_opened(Relink *relink)
 {
     if (relink->step != RELINK_CONNECTING)

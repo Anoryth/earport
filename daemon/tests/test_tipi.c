@@ -4,7 +4,8 @@
  *
  * Sharing the AirPods with an Apple device, with made-up addresses and the
  * delays shortened in meson.build (reconnection: 20 ms then 30 ms, giving
- * up: 150 ms, same list again: 50 ms, pods switching: 100 ms)
+ * up: 150 ms, same list again: 50 ms, pods switching: 100 ms, alone
+ * check: 200 ms)
  */
 
 #include <glib.h>
@@ -23,6 +24,7 @@ typedef struct {
     int reconnects;
     int reconnecting;           /* Times announced, and ended */
     int reconnected;
+    int relinks;
 } Calls;
 
 static bool send_packet(const uint8_t *data, size_t len, void *user_data)
@@ -48,10 +50,16 @@ static void reconnecting(bool on, void *user_data)
         calls->reconnected++;
 }
 
+static void relink(void *user_data)
+{
+    ((Calls *)user_data)->relinks++;
+}
+
 static const TipiCallbacks callbacks = {
     .send = send_packet,
     .reconnect = reconnect,
     .reconnecting = reconnecting,
+    .relink = relink,
 };
 
 static void run_for(guint ms)
@@ -283,6 +291,122 @@ static void test_not_dropped(void)
     tipi_free(tipi);
 }
 
+static AapHosts alone_table(void)
+{
+    AapHosts hosts = { .count = 1 };
+    g_strlcpy(hosts.hosts[0].address, ME, sizeof(hosts.hosts[0].address));
+    hosts.hosts[0].status = 2;
+    hosts.hosts[0].flags = 0x06;
+    return hosts;
+}
+
+/* A session: opened, its tables, then the alone check's time */
+static void session(Tipi *tipi, const AapHosts *hosts)
+{
+    tipi_link_closed(tipi, false);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, hosts, ME);
+    run_for(250);
+}
+
+/* Alone after connecting: reconnected once, whether a phone is around or
+ * not; again once the AirPods left by themselves (their case) */
+static void test_alone(void)
+{
+    Calls calls = { 0 };
+    Tipi *tipi = new_session(&calls);
+    AapHosts alone = alone_table();
+    tipi_hosts_changed(tipi, &alone, ME);
+    run_for(150);
+    g_assert_cmpint(calls.relinks, ==, 0);
+    WAIT_FOR(calls.relinks >= 1);
+    g_assert_cmpint(calls.relinks, ==, 1);
+
+    /* Back from that reconnection (closed here), still alone: not again */
+    session(tipi, &alone);
+    session(tipi, &alone);
+    g_assert_cmpint(calls.relinks, ==, 1);
+
+    /* Put away, out again, alone: once more */
+    tipi_link_closed(tipi, true);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, &alone, ME);
+    WAIT_FOR(calls.relinks >= 2);
+    g_assert_cmpint(calls.relinks, ==, 2);
+    tipi_free(tipi);
+}
+
+/* The other device seen since: worth one again (BlueZ before 5.73 does not
+ * tell who closed the link) */
+static void test_alone_after_phone(void)
+{
+    Calls calls = { 0 };
+    Tipi *tipi = new_session(&calls);
+    AapHosts alone = alone_table();
+    AapHosts with_phone = table(2, 0x05, 2, 0x13);
+    tipi_hosts_changed(tipi, &alone, ME);
+    WAIT_FOR(calls.relinks >= 1);
+    session(tipi, &with_phone);
+    session(tipi, &alone);
+    WAIT_FOR(calls.relinks >= 2);
+    g_assert_cmpint(calls.relinks, ==, 2);
+    tipi_free(tipi);
+}
+
+/* Left alone: the phone in the table, coming within the check, the option
+ * off, or the link closing first */
+static void test_alone_left_alone(void)
+{
+    Calls calls = { 0 };
+    Tipi *tipi = new_session(&calls);
+    AapHosts with_phone = table(2, 0x05, 2, 0x13);
+    AapHosts connecting = table(2, 0x06, 1, 0x00);
+    AapHosts alone = alone_table();
+
+    tipi_hosts_changed(tipi, &with_phone, ME);
+    run_for(250);
+    tipi_link_closed(tipi, false);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, &connecting, ME);
+    run_for(100);
+    tipi_hosts_changed(tipi, &with_phone, ME);
+    run_for(150);
+    g_assert_cmpint(calls.relinks, ==, 0);
+
+    tipi_set_enabled(tipi, false);
+    session(tipi, &alone);
+    tipi_set_enabled(tipi, true);
+    tipi_link_closed(tipi, false);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, &alone, ME);
+    run_for(100);
+    tipi_link_closed(tipi, true);
+    run_for(150);
+    g_assert_cmpint(calls.relinks, ==, 0);
+    tipi_free(tipi);
+}
+
+/* Playing here: not in the middle of it, once it stops */
+static void test_alone_playing(void)
+{
+    Calls calls = { 0 };
+    Tipi *tipi = new_session(&calls);
+    AapHosts with_phone = table(2, 0x05, 2, 0x13);
+    AapHosts alone = alone_table();
+    tipi_hosts_changed(tipi, &with_phone, ME);
+
+    tipi_link_closed(tipi, false);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, &alone, ME);
+    tipi_source_changed(tipi, "computer");
+    run_for(450);
+    g_assert_cmpint(calls.relinks, ==, 0);
+    tipi_source_changed(tipi, "none");
+    WAIT_FOR(calls.relinks >= 1);
+    g_assert_cmpint(calls.relinks, ==, 1);
+    tipi_free(tipi);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -291,6 +415,10 @@ int main(int argc, char *argv[])
     g_test_add_func("/tipi/playback", test_playback);
     g_test_add_func("/tipi/dropped", test_dropped);
     g_test_add_func("/tipi/not-dropped", test_not_dropped);
+    g_test_add_func("/tipi/alone", test_alone);
+    g_test_add_func("/tipi/alone-left-alone", test_alone_left_alone);
+    g_test_add_func("/tipi/alone-playing", test_alone_playing);
+    g_test_add_func("/tipi/alone-after-phone", test_alone_after_phone);
 
     return g_test_run();
 }

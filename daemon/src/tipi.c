@@ -40,6 +40,13 @@
 #endif
 #define TIPI_LISTS_MAX 8
 
+/* Alone this long after the link opened: the other device would be in the
+ * table by then (seen within 2 s in 27 sessions); early, the reconnection
+ * happens while the pods go in the ears */
+#ifndef TIPI_ALONE_CHECK_MS
+#define TIPI_ALONE_CHECK_MS 3000
+#endif
+
 /* In the hosts table */
 #define HOST_CONNECTED 0x02     /* Status */
 #define HOST_LISTED    0x01     /* Flags: kept with the other one */
@@ -64,6 +71,11 @@ struct Tipi {
     bool secondary_in;
     gint64 primary_out_us;      /* When the primary pod came out, 0 if in */
     gint64 back_us;             /* When reconnected after a drop */
+    bool playing_here;          /* The AirPods play from this computer */
+    guint alone_id;             /* Checking that the other device came */
+
+    bool relinked;              /* Reconnected for being alone: not again
+                                 * until the AirPods leave by themselves */
 
     guint reconnect_id;
     int tries;
@@ -89,8 +101,18 @@ static void cancel_reconnect(Tipi *tipi)
     set_reconnecting(tipi, false);
 }
 
+static void cancel_alone_check(Tipi *tipi)
+{
+    if (tipi->alone_id > 0) {
+        g_source_remove(tipi->alone_id);
+        tipi->alone_id = 0;
+    }
+}
+
 static void reset_session(Tipi *tipi)
 {
+    cancel_alone_check(tipi);
+    tipi->playing_here = false;
     tipi->known = false;
     tipi->my_flags = 0;
     tipi->other[0] = '\0';
@@ -119,14 +141,36 @@ void tipi_free(Tipi *tipi)
         return;
     tipi->callbacks.reconnecting = NULL;    /* Nobody to tell any more */
     cancel_reconnect(tipi);
+    cancel_alone_check(tipi);
     g_free(tipi);
 }
 
 void tipi_set_enabled(Tipi *tipi, bool enabled)
 {
     tipi->enabled = enabled;
-    if (!enabled)
+    if (!enabled) {
         cancel_reconnect(tipi);
+        cancel_alone_check(tipi);
+    }
+}
+
+static gboolean on_alone_check(gpointer user_data)
+{
+    Tipi *tipi = user_data;
+    if (!tipi->enabled || tipi->partner[0] != '\0' || tipi->relinked) {
+        tipi->alone_id = 0;
+        return G_SOURCE_REMOVE;
+    }
+    /* Not in the middle of listening: once it stops */
+    if (tipi->playing_here)
+        return G_SOURCE_CONTINUE;
+
+    tipi->alone_id = 0;
+    tipi->relinked = true;
+    g_message("The AirPods keep this computer alone: reconnecting once so that another "
+              "Apple device can join");
+    tipi->callbacks.relink(tipi->user_data);
+    return G_SOURCE_REMOVE;
 }
 
 void tipi_link_opened(Tipi *tipi)
@@ -134,6 +178,8 @@ void tipi_link_opened(Tipi *tipi)
     tipi->back_us = tipi->reconnecting ? g_get_monotonic_time() : 0;
     cancel_reconnect(tipi);
     reset_session(tipi);
+    if (tipi->enabled)
+        tipi->alone_id = g_timeout_add(TIPI_ALONE_CHECK_MS, on_alone_check, tipi);
 }
 
 /* Both listed, the one playing first. Again when that changes, and when
@@ -185,8 +231,10 @@ void tipi_hosts_changed(Tipi *tipi, const AapHosts *hosts, const char *my_addres
         }
     }
 
-    if (tipi->other_connected)
+    if (tipi->other_connected) {
         g_strlcpy(tipi->partner, tipi->other, sizeof(tipi->partner));
+        tipi->relinked = false;
+    }
     if (tipi->enabled && tipi->known && tipi->partner[0] != '\0')
         update_list(tipi, my_address);
 }
@@ -212,6 +260,11 @@ void tipi_playback_started(Tipi *tipi)
     aap_build_control_cmd(AAP_CTRL_OWNS_CONNECTION, &plays, 1, packet);
     g_message("Telling the AirPods this computer plays");
     tipi->callbacks.send(packet, sizeof(packet), tipi->user_data);
+}
+
+void tipi_source_changed(Tipi *tipi, const char *source)
+{
+    tipi->playing_here = g_strcmp0(source, "computer") == 0;
 }
 
 static gboolean on_give_up(gpointer user_data)
@@ -247,6 +300,10 @@ void tipi_link_closed(Tipi *tipi, bool left)
     bool dropped = tipi->enabled && left && tipi->known && tipi->other[0] != '\0' &&
                    !(tipi->my_flags & HOST_PLAYS) && swapping && !again;
     reset_session(tipi);
+    /* Gone by themselves (their case, out of reach): the next time they
+     * come alone is worth a reconnection again */
+    if (left)
+        tipi->relinked = false;
     if (!dropped || tipi->reconnect_id > 0)
         return;
 

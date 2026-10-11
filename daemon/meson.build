@@ -247,7 +247,7 @@ test_tipi = executable('test-tipi',
     include_directories: include_directories('src'),
     c_args: ['-DTIPI_RECONNECT_FIRST_MS=20', '-DTIPI_RECONNECT_NEXT_MS=30',
              '-DTIPI_RECONNECT_GIVE_UP_MS=150', '-DTIPI_LIST_REPEAT_MS=50',
-             '-DTIPI_SWAP_WINDOW_MS=100'],
+             '-DTIPI_SWAP_WINDOW_MS=100', '-DTIPI_ALONE_CHECK_MS=200'],
     dependencies: [glib_dep],
 )
 test('tipi', test_tipi)

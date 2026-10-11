@@ -148,6 +148,23 @@ static void test_give_up(void)
     relink_free(relink);
 }
 
+/* At once: disconnected right away, then as usual */
+static void test_now(void)
+{
+    Calls calls = { 0 };
+    Relink *relink = relink_new(&callbacks, &calls);
+
+    relink_start_now(relink, 1);
+    g_assert_cmpint(calls.started, ==, 1);
+    g_assert_cmpint(calls.disconnects, ==, 1);
+    relink_disconnect_done(relink);
+    WAIT_FOR(calls.connects >= 1);
+    g_assert_cmpint(calls.connects, ==, 1);
+    relink_link_opened(relink);
+    g_assert_cmpint(calls.finished, ==, 1);
+    relink_free(relink);
+}
+
 /* Gone before being disconnected: connected back all the same */
 static void test_gone_meanwhile(void)
 {
@@ -202,6 +219,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/relink/connect-again", test_connect_again);
     g_test_add_func("/relink/give-up", test_give_up);
     g_test_add_func("/relink/gone-meanwhile", test_gone_meanwhile);
+    g_test_add_func("/relink/now", test_now);
     g_test_add_func("/relink/storm", test_storm);
 
     return g_test_run();
