@@ -85,18 +85,11 @@ static guint add_timeout(guint ms, GSourceFunc function, gpointer data)
                           : g_timeout_add(ms, function, data);
 }
 
-static void on_device_connect_done(GObject *source, GAsyncResult *res, gpointer user_data)
+static void on_device_connect_done(bool connected, const char *error, void *user_data)
 {
     (void)user_data;
-    GError *error = NULL;
-    GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
-
-    if (result != NULL) {
-        g_variant_unref(result);
-    } else {
-        g_message("Automatic connection failed: %s", error->message);
-        g_error_free(error);
-    }
+    if (!connected)
+        g_message("Automatic connection failed: %s", error);
 }
 
 static void try_connect(AutoConnect *ac, const char *reason)
@@ -107,19 +100,10 @@ static void try_connect(AutoConnect *ac, const char *reason)
         return;
     ac->last_attempt_us = now;
 
-    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    if (bus == NULL)
-        return;
-
     char *path = bluez_device_path(ac->adapter_path, ac->irk_address);
-
     g_message("Connecting to the AirPods automatically (%s)", reason);
-    g_dbus_connection_call(bus, "org.bluez", path, "org.bluez.Device1", "Connect",
-                           NULL, NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL,
-                           on_device_connect_done, NULL);
-
+    bluez_device_connect(path, on_device_connect_done, NULL);
     g_free(path);
-    g_object_unref(bus);
 }
 
 static bool case_wanted(AutoConnect *ac)

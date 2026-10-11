@@ -48,6 +48,9 @@ int fake_bluez_wait_calls(const char *method, int count);
 
 /* The next calls of this method fail with org.bluez.Error.Failed */
 void fake_bluez_fail(const char *method, bool fail);
+/* The next 'times' calls (-1: all, 0: none any more) fail with this error,
+ * e.g. "org.bluez.Error.InProgress" */
+void fake_bluez_fail_with(const char *method, const char *error, int times);
 
 /* Registrations of a kind, "BatteryProvider" or "Profile": Register<kind>
  * answers AlreadyExists for the same sender and path, as BlueZ does */

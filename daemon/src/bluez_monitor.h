@@ -96,4 +96,14 @@ char *bluez_device_path(const char *adapter_path, const char *address);
  */
 BluezDeviceInfo *bluez_device_info_copy(const BluezDeviceInfo *info);
 
+/* Done connecting: connected or not, with BlueZ's error (NULL if connected) */
+typedef void (*BluezConnectCallback)(bool connected, const char *error, void *user_data);
+
+/* Device1.Connect. BlueZ answers "busy" while a connection is under way,
+ * and keeps answering it once one got stuck (after the AirPods bounced
+ * between hosts): if the device is still not connected a little later,
+ * Disconnect cancels the stuck one, then one more try. */
+void bluez_device_connect(const char *device_path, BluezConnectCallback callback,
+                          void *user_data);
+
 #endif /* BLUEZ_MONITOR_H */

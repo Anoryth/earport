@@ -6,6 +6,7 @@
  */
 
 #include <gio/gio.h>
+#include <string.h>
 
 #include "bluez_monitor.h"
 #include "fake_bluez.h"
@@ -184,6 +185,96 @@ static void test_existing_two_pairs(void)
     events_stop(&ev);
 }
 
+/* ============================================================================
+ * Connecting, with BlueZ stuck "busy" (wait shortened to 100 ms in
+ * meson.build)
+ * ========================================================================== */
+
+typedef struct {
+    bool done;
+    bool connected;
+    char *error;
+} Connected;
+
+static void on_connect_done(bool connected, const char *error, void *user_data)
+{
+    Connected *result = user_data;
+    result->done = true;
+    result->connected = connected;
+    result->error = g_strdup(error);
+}
+
+static void connect_and_wait(const char *path, Connected *result)
+{
+    *result = (Connected){ 0 };
+    bluez_device_connect(path, on_connect_done, result);
+    gint64 end = g_get_monotonic_time() + 2 * G_USEC_PER_SEC;
+    while (!result->done && g_get_monotonic_time() < end)
+        g_main_context_iteration(NULL, FALSE);
+    g_assert_true(result->done);
+}
+
+#define BUSY "org.bluez.Error.InProgress"
+
+static void test_connect(void)
+{
+    add_devices();
+    Connected result;
+
+    connect_and_wait(path_a, &result);
+    g_assert_true(result.connected);
+    g_assert_null(result.error);
+
+    /* Refused: said so, nothing more */
+    fake_bluez_fail("Connect", true);
+    connect_and_wait(path_a, &result);
+    g_assert_false(result.connected);
+    g_assert_nonnull(strstr(result.error, "Failed (fake)"));
+    g_free(result.error);
+    fake_bluez_settle();
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 2);
+    g_assert_cmpint(fake_bluez_calls("Disconnect"), ==, 0);
+}
+
+/* Busy because the AirPods were connecting by themselves: left alone */
+static void test_connect_busy(void)
+{
+    add_devices();
+    fake_bluez_fail_with("Connect", BUSY, 1);
+    Connected result = { 0 };
+    bluez_device_connect(path_a, on_connect_done, &result);
+    fake_bluez_wait_calls("Connect", 1);
+    fake_bluez_set(path_a, "Connected", g_variant_new_boolean(TRUE), false);
+
+    gint64 end = g_get_monotonic_time() + 2 * G_USEC_PER_SEC;
+    while (!result.done && g_get_monotonic_time() < end)
+        g_main_context_iteration(NULL, FALSE);
+    g_assert_true(result.connected);
+    g_assert_cmpint(fake_bluez_calls("Disconnect"), ==, 0);
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 1);
+}
+
+/* Stuck: cancelled, then once more; stuck again, given up */
+static void test_connect_stuck(void)
+{
+    add_devices();
+    Connected result;
+    fake_bluez_fail_with("Connect", BUSY, 1);
+    connect_and_wait(path_a, &result);
+    g_assert_true(result.connected);
+    g_assert_cmpint(fake_bluez_calls("Disconnect"), ==, 1);
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 2);
+
+    add_devices();
+    fake_bluez_fail_with("Connect", BUSY, -1);
+    connect_and_wait(path_a, &result);
+    g_assert_false(result.connected);
+    g_free(result.error);
+    fake_bluez_settle();
+    g_assert_cmpint(fake_bluez_calls("Disconnect"), ==, 1);
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 2);
+}
+
 int main(int argc, char **argv)
 {
     g_test_init(&argc, &argv, NULL);
@@ -195,6 +286,9 @@ int main(int argc, char **argv)
     g_test_add_func("/bluez-monitor/connect-disconnect", test_connect_disconnect);
     g_test_add_func("/bluez-monitor/battery-removed", test_battery_removed);
     g_test_add_func("/bluez-monitor/other-pair", test_other_pair);
+    g_test_add_func("/bluez-connect/connect", test_connect);
+    g_test_add_func("/bluez-connect/busy", test_connect_busy);
+    g_test_add_func("/bluez-connect/stuck", test_connect_stuck);
     int ret = g_test_run();
 
     fake_bluez_stop();

@@ -61,6 +61,18 @@ typedef struct {
     GVariant *params;
 } Call;
 
+typedef struct {
+    char *error;                /* D-Bus error name */
+    int times;                  /* Calls left to fail, -1: all */
+} Failure;
+
+static void failure_free(gpointer data)
+{
+    Failure *failure = data;
+    g_free(failure->error);
+    g_free(failure);
+}
+
 static struct {
     GTestDBus *bus;
     GThread *thread;
@@ -75,7 +87,7 @@ static struct {
     bool ready;
     GHashTable *objects;        /* path -> FakeObject */
     GPtrArray *calls;           /* Call */
-    GHashTable *failing;        /* method names */
+    GHashTable *failing;        /* method name -> Failure */
     GHashTable *registrations;  /* "kind sender path": battery providers, profiles */
     guint get_delay_ms;         /* Properties.Get answered this late */
 } fake;
@@ -230,8 +242,14 @@ static void method_call(GDBusConnection *connection, const char *sender, const c
 
     g_mutex_lock(&fake.lock);
     record_call(method_name, parameters);
-    const char *error = g_hash_table_contains(fake.failing, method_name) ? "org.bluez.Error.Failed"
-                                                                         : NULL;
+    g_autofree char *failed = NULL;
+    Failure *failure = g_hash_table_lookup(fake.failing, method_name);
+    if (failure != NULL) {
+        failed = g_strdup(failure->error);
+        if (failure->times > 0 && --failure->times == 0)
+            g_hash_table_remove(fake.failing, method_name);
+    }
+    const char *error = failed;
     /* One per kind, sender and path, as BlueZ does */
     const char *kind = g_str_has_prefix(method_name, "Register")     ? method_name + 8
                        : g_str_has_prefix(method_name, "Unregister") ? method_name + 10
@@ -350,7 +368,7 @@ void fake_bluez_start(void)
     fake.info = g_dbus_node_info_new_for_xml(bluez_xml, NULL);
     fake.objects = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, object_free);
     fake.calls = g_ptr_array_new_with_free_func(call_free);
-    fake.failing = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+    fake.failing = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, failure_free);
     fake.registrations = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
     FakeObject *adapter = object_new(FAKE_ADAPTER_PATH);
@@ -520,14 +538,23 @@ int fake_bluez_wait_calls(const char *method, int count)
     return fake_bluez_calls(method);
 }
 
-void fake_bluez_fail(const char *method, bool fail)
+void fake_bluez_fail_with(const char *method, const char *error, int times)
 {
     g_mutex_lock(&fake.lock);
-    if (fail)
-        g_hash_table_add(fake.failing, g_strdup(method));
-    else
+    if (times != 0) {
+        Failure *failure = g_new0(Failure, 1);
+        failure->error = g_strdup(error);
+        failure->times = times;
+        g_hash_table_insert(fake.failing, g_strdup(method), failure);
+    } else {
         g_hash_table_remove(fake.failing, method);
+    }
     g_mutex_unlock(&fake.lock);
+}
+
+void fake_bluez_fail(const char *method, bool fail)
+{
+    fake_bluez_fail_with(method, "org.bluez.Error.Failed", fail ? -1 : 0);
 }
 
 int fake_bluez_registered(const char *kind)

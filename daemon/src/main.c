@@ -523,51 +523,50 @@ static bool tipi_send(const uint8_t *data, size_t len, void *user_data)
     return aap_link_is_connected(app.link) && aap_link_send(app.link, data, len);
 }
 
-static void on_device_call_done(GObject *source, GAsyncResult *res, gpointer user_data)
+static void on_airpods_disconnected(GObject *source, GAsyncResult *res, gpointer user_data)
 {
-    const char *method = user_data;
+    (void)user_data;
     GError *error = NULL;
     GVariant *result = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
-    bool ok = result != NULL;
-    if (ok) {
+    if (result != NULL) {
         g_variant_unref(result);
     } else {
-        g_message("%s the AirPods failed: %s", method, error->message);
+        g_message("Disconnect the AirPods failed: %s", error->message);
         g_error_free(error);
     }
-
-    if (app.relink == NULL)
-        return;
-    if (g_strcmp0(method, "Disconnect") == 0)
+    if (app.relink != NULL)
         relink_disconnect_done(app.relink);
-    else
-        relink_connect_done(app.relink, ok);
+}
+
+static void on_airpods_connected(bool connected, const char *error, void *user_data)
+{
+    (void)user_data;
+    if (!connected)
+        g_message("Connect the AirPods failed: %s", error);
+    if (app.relink != NULL)
+        relink_connect_done(app.relink, connected);
 }
 
 /* Device1.Connect or Disconnect on the AirPods used last */
-static void call_airpods(const char *method)
-{
-    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    if (bus == NULL || app.device_path == NULL) {
-        g_clear_object(&bus);
-        return;
-    }
-    g_dbus_connection_call(bus, "org.bluez", app.device_path, "org.bluez.Device1", method,
-                           NULL, NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL,
-                           on_device_call_done, (gpointer)method);
-    g_object_unref(bus);
-}
-
 static void connect_airpods(void *user_data)
 {
     (void)user_data;
-    call_airpods("Connect");
+    if (app.device_path != NULL)
+        bluez_device_connect(app.device_path, on_airpods_connected, NULL);
 }
 
 static void disconnect_airpods(void *user_data)
 {
     (void)user_data;
-    call_airpods("Disconnect");
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
+    if (bus == NULL || app.device_path == NULL) {
+        g_clear_object(&bus);
+        return;
+    }
+    g_dbus_connection_call(bus, "org.bluez", app.device_path, "org.bluez.Device1", "Disconnect",
+                           NULL, NULL, G_DBUS_CALL_FLAGS_NONE, 30000, NULL,
+                           on_airpods_disconnected, NULL);
+    g_object_unref(bus);
 }
 
 static void update_reconnecting(void)

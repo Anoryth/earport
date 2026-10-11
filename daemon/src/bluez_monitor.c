@@ -12,6 +12,12 @@
  * after a few seconds instead of the default 25 s */
 #define BLUEZ_CALL_TIMEOUT_MS 5000
 
+/* A connection under way is done by then */
+#ifndef BLUEZ_BUSY_SETTLE_MS
+#define BLUEZ_BUSY_SETTLE_MS 3000
+#endif
+#define BLUEZ_CONNECT_TIMEOUT_MS 30000
+
 struct BluezMonitor {
     GDBusConnection *connection;
     guint properties_signal_id;
@@ -501,4 +507,115 @@ char *bluez_device_path(const char *adapter_path, const char *address)
     char *path = g_strdup_printf("%s/dev_%s", adapter_path, device);
     g_free(device);
     return path;
+}
+
+typedef struct {
+    GDBusConnection *bus;
+    char *path;
+    BluezConnectCallback callback;
+    void *user_data;
+    bool retried;
+} ConnectRequest;
+
+static void connect_finish(ConnectRequest *request, bool connected, const char *error)
+{
+    if (request->callback != NULL)
+        request->callback(connected, error, request->user_data);
+    g_object_unref(request->bus);
+    g_free(request->path);
+    g_free(request);
+}
+
+static void connect_call(ConnectRequest *request);
+
+static void on_stuck_disconnected(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    /* Whatever it answers: try again */
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
+    if (reply != NULL)
+        g_variant_unref(reply);
+    connect_call(user_data);
+}
+
+static void on_connected_read(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    ConnectRequest *request = user_data;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, NULL);
+    gboolean connected = FALSE;
+    if (reply != NULL) {
+        GVariant *value;
+        g_variant_get(reply, "(v)", &value);
+        connected = g_variant_is_of_type(value, G_VARIANT_TYPE_BOOLEAN) &&
+                    g_variant_get_boolean(value);
+        g_variant_unref(value);
+        g_variant_unref(reply);
+    }
+    if (connected) {
+        connect_finish(request, true, NULL);
+        return;
+    }
+
+    g_message("BlueZ is stuck connecting the AirPods: cancelling, then trying again");
+    request->retried = true;
+    g_dbus_connection_call(request->bus, BLUEZ_SERVICE, request->path, BLUEZ_DEVICE_INTERFACE,
+                           "Disconnect", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+                           BLUEZ_CALL_TIMEOUT_MS, NULL, on_stuck_disconnected, request);
+}
+
+static gboolean on_busy_settled(gpointer user_data)
+{
+    ConnectRequest *request = user_data;
+    g_dbus_connection_call(request->bus, BLUEZ_SERVICE, request->path, DBUS_PROPERTIES_INTERFACE,
+                           "Get", g_variant_new("(ss)", BLUEZ_DEVICE_INTERFACE, "Connected"),
+                           G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE, BLUEZ_CALL_TIMEOUT_MS,
+                           NULL, on_connected_read, request);
+    return G_SOURCE_REMOVE;
+}
+
+static void on_connect_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    ConnectRequest *request = user_data;
+    GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+    if (reply != NULL) {
+        g_variant_unref(reply);
+        connect_finish(request, true, NULL);
+        return;
+    }
+
+    g_autofree char *remote = g_dbus_error_get_remote_error(error);
+    if (!request->retried && g_strcmp0(remote, "org.bluez.Error.InProgress") == 0) {
+        g_error_free(error);
+        g_timeout_add(BLUEZ_BUSY_SETTLE_MS, on_busy_settled, request);
+        return;
+    }
+    connect_finish(request, false, error->message);
+    g_error_free(error);
+}
+
+static void connect_call(ConnectRequest *request)
+{
+    g_dbus_connection_call(request->bus, BLUEZ_SERVICE, request->path, BLUEZ_DEVICE_INTERFACE,
+                           "Connect", NULL, NULL, G_DBUS_CALL_FLAGS_NONE,
+                           BLUEZ_CONNECT_TIMEOUT_MS, NULL, on_connect_done, request);
+}
+
+void bluez_device_connect(const char *device_path, BluezConnectCallback callback,
+                          void *user_data)
+{
+    GError *error = NULL;
+    GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+    if (bus == NULL) {
+        if (callback != NULL)
+            callback(false, error->message, user_data);
+        g_error_free(error);
+        return;
+    }
+
+    ConnectRequest *request = g_new0(ConnectRequest, 1);
+    request->bus = bus;
+    request->path = g_strdup(device_path);
+    request->callback = callback;
+    request->user_data = user_data;
+    connect_call(request);
 }

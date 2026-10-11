@@ -168,6 +168,7 @@ test('media-control', test_media_control)
 test_bluez_monitor = executable('test-bluez-monitor',
     files('tests/test_bluez_monitor.c', 'tests/fake_bluez.c', 'src/bluez_monitor.c'),
     include_directories: include_directories('src'),
+    c_args: ['-DBLUEZ_BUSY_SETTLE_MS=100'],
     dependencies: [glib_dep, gio_dep],
 )
 test('bluez-monitor', test_bluez_monitor)
