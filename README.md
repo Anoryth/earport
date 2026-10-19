@@ -41,21 +41,24 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 ### Supported Models
 
-| Model | Battery | ANC | Transparency | Adaptive | Case battery, AirPods out |
-|-------|---------|-----|--------------|----------|---------------------------|
-| AirPods 1st/2nd Gen | ✓ | - | - | - | - |
-| AirPods 3rd Gen | ✓ | - | - | - | - |
-| AirPods 4th Gen | ✓ | - | - | - | - |
-| AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| AirPods 5 | ✓ | ✓ | ✓ | ✓ | - |
-| AirPods 5 (Wireless Charging Case) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| AirPods Pro | ✓ | ✓ | ✓ | - | - |
-| AirPods Pro 2 (Lightning and USB-C) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| AirPods Max | ✓ | ✓ | ✓ | - | - |
-| AirPods Max 2 | ✓ | ✓ | ✓ | - | - |
+| Model | Battery | ANC | Transparency | Adaptive | Case battery, AirPods out | Tested |
+|-------|---------|-----|--------------|----------|---------------------------|--------|
+| AirPods 1st/2nd Gen | ✓ | - | - | - | - | - |
+| AirPods 3rd Gen | ✓ | - | - | - | - | - |
+| AirPods 4th Gen | ✓ | - | - | - | - | - |
+| AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ | ✓ | - |
+| AirPods 5 | ✓ | ✓ | ✓ | ✓ | - | - |
+| AirPods 5 (Wireless Charging Case) | ✓ | ✓ | ✓ | ✓ | ✓ | - |
+| AirPods Pro | ✓ | ✓ | ✓ | - | - | - |
+| AirPods Pro 2 (Lightning and USB-C) | ✓ | ✓ | ✓ | ✓ | ✓ | USB-C |
+| AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ | ✓ | - |
+| AirPods Max | ✓ | ✓ | ✓ | - | - | - |
+| AirPods Max 2 | ✓ | ✓ | ✓ | - | - | - |
 
-The case battery with the AirPods out was tested on AirPods Pro 2 (USB-C); reports for the other models are welcome.
+The features follow what each model supports in the protocol, but EarPort has
+only been tested on AirPods Pro 2 (USB-C) so far. If you use another model,
+please [tell how it went](https://github.com/Anoryth/earport/issues), even when
+everything works.
 
 The battery while on another device and the case battery with the AirPods out
 come from the AirPods' Bluetooth LE broadcasts: they work once the AirPods have
