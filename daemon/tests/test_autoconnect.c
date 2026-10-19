@@ -4,17 +4,20 @@
  *
  * Automatic connection from BLE adverts, against a fake org.bluez
  * (fake_bluez.c), with the delays shortened in meson.build (scan every
- * 300 ms for 100 ms, playback window 150 ms, cooldown 250 ms). The keys are
- * the Bluetooth spec's sample IRK, no encryption key: the case and the
- * battery of AirPods nearby are not covered.
+ * 300 ms for 100 ms, playback window 150 ms, cooldown 250 ms, case refresh
+ * 500 ms). The keys are the Bluetooth spec's sample IRK and a made-up
+ * encryption key (the real one is a secret).
  */
 
 #include <gio/gio.h>
 #include <string.h>
 
+#include "aes128.h"
+#include "airpods_state.h"
 #include "autoconnect.h"
 #include "ble_proximity.h"
 #include "fake_bluez.h"
+#include "test_wait.h"
 
 #define AIRPODS "00:00:00:00:00:0A"
 #define AIRPODS_PATH FAKE_ADAPTER_PATH "/dev_00_00_00_00_00_0A"
@@ -24,29 +27,88 @@
 #define SCAN_BURST 100
 #define PLAYBACK_WINDOW 150
 #define COOLDOWN 250
+#define CASE_REFRESH 500
+/* Not seen for 2.2 refresh periods: gone (CASE_TIMEOUT_MS) */
+#define CASE_TIMEOUT (2 * CASE_REFRESH + CASE_REFRESH * 6 / 5)
+#define CASE_ADDRESS "00:00:00:00:00:0C"
+#define OTHER_CASE_ADDRESS "00:00:00:00:00:0D"
 
 static const uint8_t irk_msb[16] = {
     0xec, 0x02, 0x34, 0xa3, 0x57, 0xc8, 0xad, 0x05,
     0x34, 0x10, 0x10, 0xa6, 0x0a, 0x39, 0x7d, 0x9b,
 };
+static const uint8_t enc_key[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 
 /* Proximity advert of AirPods Pro 2 USB-C (layout of a captured one,
  * test_ble_proximity.c), with its status and connection state */
 #define STATUS_IN_EAR 0x22
 #define STATUS_IN_CASE 0x24
 
-static GVariant *advert(uint8_t status, uint8_t connection_state)
+static GVariant *manufacturer_data(const uint8_t *data, size_t len)
+{
+    GVariantBuilder builder;
+    g_variant_builder_init(&builder, G_VARIANT_TYPE("a{qv}"));
+    g_variant_builder_add(&builder, "{qv}", (guint16)APPLE_COMPANY_ID,
+                          g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, data, len, 1));
+    return g_variant_builder_end(&builder);
+}
+
+/* The last 16 bytes: the battery, encrypted when 'battery' is given */
+static GVariant *advert_with_battery(uint8_t status, uint8_t connection_state,
+                                     const uint8_t *battery)
 {
     uint8_t data[27] = {
         0x07, 0x19, 0x01, 0x24, 0x20, 0x00, 0x43, 0x8f, 0x11, 0x00, 0x00,
     };
     data[5] = status;
     data[10] = connection_state;
-    GVariantBuilder builder;
-    g_variant_builder_init(&builder, G_VARIANT_TYPE("a{qv}"));
-    g_variant_builder_add(&builder, "{qv}", (guint16)APPLE_COMPANY_ID,
-                          g_variant_new_fixed_array(G_VARIANT_TYPE_BYTE, data, sizeof(data), 1));
-    return g_variant_builder_end(&builder);
+    if (battery != NULL)
+        aes128_encrypt_block(enc_key, battery, data + sizeof(data) - 16);
+    return manufacturer_data(data, sizeof(data));
+}
+
+static GVariant *advert(uint8_t status, uint8_t connection_state)
+{
+    return advert_with_battery(status, connection_state, NULL);
+}
+
+/* The case's own advert (layout of test_ble_proximity.c), at 'level' % */
+static GVariant *case_advert(const uint8_t *key, uint8_t level, bool charging)
+{
+    const uint8_t plain[16] = {
+        0x10, 0x20, 0x0E, (uint8_t)((charging ? 0x80 : 0) | level), 0xFF, 0xFF, 0x50, 0x01,
+    };
+    uint8_t data[23] = { 0x12, 0x02, 0x64, 0x00, 0x07, 0x11, 0x06 };
+    aes128_encrypt_block(key, plain, data + 7);
+    return manufacturer_data(data, sizeof(data));
+}
+
+/* What the callbacks reported */
+typedef struct {
+    int nearby_calls;
+    bool nearby_gone;
+    ProximityBattery battery;
+    int case_calls;
+    int case_level;
+    bool case_charging;
+} Seen;
+
+static void on_nearby(const ProximityBattery *battery, const ProximityInfo *info, void *user_data)
+{
+    (void)info;
+    Seen *seen = user_data;
+    seen->nearby_calls++;
+    seen->nearby_gone = battery == NULL;
+    if (battery != NULL)
+        seen->battery = *battery;
+}
+
+static void on_case(int level, bool charging, void *user_data)
+{
+    Seen *seen = user_data;
+    seen->case_calls++;
+    seen->case_level = level;
+    seen->case_charging = charging;
 }
 
 static const char *rpa_path;
@@ -57,7 +119,7 @@ static void send_advert(uint8_t status, uint8_t connection_state)
     fake_bluez_run(20);
 }
 
-static AutoConnect *autoconnect_ready(bool enabled)
+static AutoConnect *autoconnect_ready_seen(bool enabled, Seen *seen)
 {
     fake_bluez_reset();
     fake_bluez_add_device(AIRPODS, "AirPods", true, false, false);
@@ -66,12 +128,18 @@ static AutoConnect *autoconnect_ready(bool enabled)
     uint8_t irk[16];
     for (int i = 0; i < 16; i++)
         irk[i] = irk_msb[15 - i];
-    AutoConnect *ac = autoconnect_new(enabled, NULL, NULL, NULL);
+    AutoConnect *ac = autoconnect_new(enabled, seen != NULL ? on_nearby : NULL,
+                                      seen != NULL ? on_case : NULL, seen);
     autoconnect_set_irk(ac, AIRPODS, irk);
     autoconnect_start(ac);
     fake_bluez_sync();
     g_assert_cmpint(fake_bluez_wait_calls("StartDiscovery", 1), ==, 1);
     return ac;
+}
+
+static AutoConnect *autoconnect_ready(bool enabled)
+{
+    return autoconnect_ready_seen(enabled, NULL);
 }
 
 /* No advert: short scans, at intervals */
@@ -219,6 +287,67 @@ static void test_connected_here(void)
     autoconnect_free(ac);
 }
 
+/* Battery of the AirPods on another device, decrypted with their key; gone
+ * once they stop advertising */
+static void test_nearby_battery(void)
+{
+    Seen seen = { 0 };
+    AutoConnect *ac = autoconnect_ready_seen(false, &seen);
+    autoconnect_set_enc(ac, AIRPODS, enc_key);
+
+    /* Left pod primary: [?] [left 80 %] [right 70 %, charging] [case unknown] */
+    const uint8_t battery[16] = { 0x00, 80, 0x80 | 70, 0x7F };
+    fake_bluez_set(rpa_path, "ManufacturerData",
+                   advert_with_battery(STATUS_IN_EAR, PROXIMITY_CONN_MUSIC, battery), true);
+    WAIT_FOR(seen.nearby_calls >= 1);
+    g_assert_cmpint(seen.nearby_calls, ==, 1);
+    g_assert_false(seen.nearby_gone);
+    g_assert_cmpint(seen.battery.left, ==, 80);
+    g_assert_false(seen.battery.left_charging);
+    g_assert_cmpint(seen.battery.right, ==, 70);
+    g_assert_true(seen.battery.right_charging);
+    g_assert_cmpint(seen.battery.case_level, ==, -1);
+
+    WAIT_FOR(seen.nearby_gone);
+    g_assert_true(seen.nearby_gone);
+    g_assert_cmpint(seen.nearby_calls, ==, 2);
+    autoconnect_free(ac);
+}
+
+/* The case's battery from its own adverts, also while the AirPods are
+ * connected here; another case is ignored, and silence means gone */
+static void test_case(void)
+{
+    Seen seen = { 0 };
+    const uint8_t other_key[16] = { 0 };
+    AutoConnect *ac = autoconnect_ready_seen(false, &seen);
+    const char *case_path = fake_bluez_add_device(CASE_ADDRESS, "", false, false, false);
+    const char *other_path = fake_bluez_add_device(OTHER_CASE_ADDRESS, "", false, false, false);
+
+    autoconnect_set_airpods_connected(ac, true, FAKE_ADAPTER_PATH);
+    autoconnect_set_model(ac, AIRPODS_MODEL_PRO_2_USBC);
+    /* The key makes the case worth a scan */
+    int starts = fake_bluez_calls("StartDiscovery");
+    autoconnect_set_enc(ac, AIRPODS, enc_key);
+    g_assert_cmpint(fake_bluez_wait_calls("StartDiscovery", starts + 1), ==, starts + 1);
+
+    fake_bluez_set(other_path, "ManufacturerData", case_advert(other_key, 30, false), true);
+    fake_bluez_run(30);
+    g_assert_cmpint(seen.case_calls, ==, 0);
+
+    fake_bluez_set(case_path, "ManufacturerData", case_advert(enc_key, 49, true), true);
+    WAIT_FOR(seen.case_calls >= 1);
+    g_assert_cmpint(seen.case_calls, ==, 1);
+    g_assert_cmpint(seen.case_level, ==, 49);
+    g_assert_true(seen.case_charging);
+
+    fake_bluez_run(CASE_TIMEOUT);
+    WAIT_FOR(seen.case_level == -1);
+    g_assert_cmpint(seen.case_level, ==, -1);
+    g_assert_cmpint(seen.case_calls, ==, 2);
+    autoconnect_free(ac);
+}
+
 /* Events in any order: never a connection while connected here or with
  * the option off, never two within the cooldown, and no scan left running
  * once connected here. Replay with --seed. */
@@ -293,6 +422,8 @@ int main(int argc, char **argv)
     g_test_add_func("/autoconnect/playback-busy", test_playback_busy);
     g_test_add_func("/autoconnect/playback-disabled", test_playback_disabled);
     g_test_add_func("/autoconnect/connected-here", test_connected_here);
+    g_test_add_func("/autoconnect/nearby-battery", test_nearby_battery);
+    g_test_add_func("/autoconnect/case", test_case);
     g_test_add_func("/autoconnect/storm", test_storm);
     int ret = g_test_run();
 
