@@ -33,3 +33,6 @@ CLAUDE.md
 dist/
 node_modules/
 extension/schemas/gschemas.compiled
+
+# Compiled from po/ at install time (install.sh, tools/pack-extension.sh)
+extension/locale/

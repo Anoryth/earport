@@ -330,9 +330,9 @@ from native speakers are very welcome.
 # Start a new language (here Polish)
 msginit --no-translator -l pl.UTF-8 -i po/earport.pot -o po/pl.po
 
-# Compile it (commit the .mo too, the extension ships it)
-mkdir -p extension/locale/pl/LC_MESSAGES
-msgfmt --check -o extension/locale/pl/LC_MESSAGES/earport.mo po/pl.po
+# Check it, then try it: install.sh compiles every po/*.po
+msgfmt --check -o /dev/null po/pl.po
+./install.sh --extension
 ```
 
 ## Credits

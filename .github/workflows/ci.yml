@@ -63,17 +63,6 @@ jobs:
             msgfmt --check -o /dev/null "$po"
           done
 
-      - name: Check every translation is compiled
-        run: |
-          for po in po/*.po; do
-            lang=$(basename "$po" .po)
-            mo="extension/locale/$lang/LC_MESSAGES/earport.mo"
-            if [ ! -f "$mo" ]; then
-              echo "::error file=$po::Missing $mo (run: msgfmt --check -o $mo $po)"
-              exit 1
-            fi
-          done
-
   lint:
     name: Lint extension
     runs-on: ubuntu-latest

@@ -170,6 +170,13 @@ remove_system_install() {
 install_extension() {
     print_step "Installing GNOME Shell extension..."
 
+    # Translations are compiled from po/, the schema checked
+    if ! command -v msgfmt &> /dev/null || ! command -v glib-compile-schemas &> /dev/null; then
+        print_error "msgfmt and glib-compile-schemas are needed: install gettext and the glib2 tools"
+        echo "  (Debian/Ubuntu: gettext libglib2.0-bin, Fedora: gettext glib2, Arch: gettext glib2)"
+        exit 1
+    fi
+
     # Create extensions directory if it doesn't exist
     mkdir -p "$(dirname "$EXTENSION_DIR")"
 
@@ -178,15 +185,11 @@ install_extension() {
         rm -rf "$EXTENSION_DIR"
     fi
 
-    # Copy extension files
-    cp -r "$SCRIPT_DIR/extension" "$EXTENSION_DIR"
+    # The same files as the release zip and the distribution packages
+    "$SCRIPT_DIR/tools/pack-extension.sh" --dir "$EXTENSION_DIR"
 
     # Compile GSettings schemas (required by getSettings())
-    if command -v glib-compile-schemas &> /dev/null; then
-        glib-compile-schemas "$EXTENSION_DIR/schemas"
-    else
-        print_warning "glib-compile-schemas not found (glib2 tools): the extension settings won't load"
-    fi
+    glib-compile-schemas "$EXTENSION_DIR/schemas"
 
     print_success "Extension installed to $EXTENSION_DIR"
 }
