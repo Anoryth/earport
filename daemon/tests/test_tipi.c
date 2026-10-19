@@ -386,7 +386,8 @@ static void test_alone_left_alone(void)
     tipi_free(tipi);
 }
 
-/* Playing here: not in the middle of it, once it stops */
+/* Playing here: not in the middle of it, nor once it stops (a pause), but
+ * again in the next session */
 static void test_alone_playing(void)
 {
     Calls calls = { 0 };
@@ -402,7 +403,12 @@ static void test_alone_playing(void)
     run_for(450);
     g_assert_cmpint(calls.relinks, ==, 0);
     tipi_source_changed(tipi, "none");
-    WAIT_FOR(calls.relinks >= 1);
+    run_for(450);
+    g_assert_cmpint(calls.relinks, ==, 0);
+
+    /* Put away, out again, alone and nothing playing */
+    tipi_link_closed(tipi, true);
+    session(tipi, &alone);
     g_assert_cmpint(calls.relinks, ==, 1);
     tipi_free(tipi);
 }

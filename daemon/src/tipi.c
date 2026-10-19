@@ -157,15 +157,12 @@ void tipi_set_enabled(Tipi *tipi, bool enabled)
 static gboolean on_alone_check(gpointer user_data)
 {
     Tipi *tipi = user_data;
-    if (!tipi->enabled || tipi->partner[0] != '\0' || tipi->relinked) {
-        tipi->alone_id = 0;
-        return G_SOURCE_REMOVE;
-    }
-    /* Not in the middle of listening: once it stops */
-    if (tipi->playing_here)
-        return G_SOURCE_CONTINUE;
-
     tipi->alone_id = 0;
+    /* Playing here: the user chose this computer. Not once it stops either:
+     * a pause or a gap between videos would cut the AirPods mid-session */
+    if (!tipi->enabled || tipi->partner[0] != '\0' || tipi->relinked || tipi->playing_here)
+        return G_SOURCE_REMOVE;
+
     tipi->relinked = true;
     g_message("The AirPods keep this computer alone: reconnecting once so that another "
               "Apple device can join");

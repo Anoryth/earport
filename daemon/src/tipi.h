@@ -16,9 +16,9 @@
  * - alone after connecting: back from their case, the AirPods forgot the
  *   pair and may come to this computer first; another device only comes in
  *   while they are free (sending the list does not bring it). Reconnect
- *   once, whether one is around or not (the user turned switching on); not
- *   again until the AirPods leave by themselves or the other device is
- *   seen.
+ *   once, whether one is around or not (the user turned switching on), but
+ *   not if something already plays here; not again until the AirPods leave
+ *   by themselves or the other device is seen.
  * Sending and connecting are left to the callbacks.
  */
 
