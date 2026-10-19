@@ -380,6 +380,46 @@ static void test_noise_control(Fixture *f, gconstpointer data)
     g_assert_cmpstr(mode, ==, "transparency");
 }
 
+/* AirPods that missed SET_FEATURES switch to Adaptive but report another
+ * mode (real AirPods Pro 2: 0x01): send the features and the request again,
+ * once */
+static void test_adaptive_resent_when_refused(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t adaptive[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x04 };
+
+    connect_airpods(f);
+    run_for(10 * GAP_MS);
+    guint features = fake_bt_count_sent(AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
+
+    call_ok(f, "SetNoiseControlMode", g_variant_new("(s)", "adaptive"));
+    assert_sent(adaptive, sizeof(adaptive));
+    RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x01, 0x00, 0x00, 0x00);
+    RUN_UNTIL(fake_bt_count_sent(adaptive, sizeof(adaptive)) == 2);
+    g_assert_cmpuint(fake_bt_count_sent(AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE), ==, features + 1);
+
+    /* Once only */
+    run_for(4000);
+    g_assert_cmpuint(fake_bt_count_sent(adaptive, sizeof(adaptive)), ==, 2);
+}
+
+static void test_adaptive_not_resent_when_reported(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t adaptive[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x04 };
+
+    connect_airpods(f);
+    run_for(10 * GAP_MS);
+    guint features = fake_bt_count_sent(AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
+
+    call_ok(f, "SetNoiseControlMode", g_variant_new("(s)", "adaptive"));
+    assert_sent(adaptive, sizeof(adaptive));
+    RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x04, 0x00, 0x00, 0x00);
+    run_for(4000);
+    g_assert_cmpuint(fake_bt_count_sent(adaptive, sizeof(adaptive)), ==, 1);
+    g_assert_cmpuint(fake_bt_count_sent(AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE), ==, features);
+}
+
 /* A typo must not turn noise control off */
 static void test_noise_control_unknown(Fixture *f, gconstpointer data)
 {
@@ -686,6 +726,8 @@ int main(int argc, char *argv[])
     ADD("/dbus/listening-modes-remembered", test_listening_modes_remembered);
     ADD("/dbus/conversation-signals", test_conversation_signals);
     ADD("/dbus/disconnection", test_disconnection);
+    ADD("/dbus/adaptive-resent-when-refused", test_adaptive_resent_when_refused);
+    ADD("/dbus/adaptive-not-resent-when-reported", test_adaptive_not_resent_when_reported);
     ADD("/dbus/disconnect-announces-reset", test_disconnect_announces_reset);
 
     int result = g_test_run();

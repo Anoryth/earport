@@ -20,6 +20,8 @@ typedef struct {
     Device *device;
     AapLink *link;
     guint saved_settings_id;     /* Pending send of the long-press modes */
+    guint adaptive_check_id;     /* Pending check that Adaptive took effect */
+    bool adaptive_resent;        /* Features and request sent again once */
     /* A setting was sent to the AirPods (they don't echo it), optional */
     void (*setting_sent)(uint8_t id, uint8_t value, void *user_data);
     void *user_data;

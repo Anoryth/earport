@@ -77,11 +77,45 @@ void controls_cleanup(Controls *c)
         g_source_remove(c->saved_settings_id);
         c->saved_settings_id = 0;
     }
+    if (c->adaptive_check_id > 0) {
+        g_source_remove(c->adaptive_check_id);
+        c->adaptive_check_id = 0;
+    }
 }
 
 /* ============================================================================
  * D-Bus methods
  * ========================================================================== */
+
+/* Adaptive needs SET_FEATURES: AirPods that missed it switch but report
+ * another mode or nothing (seen on AirPods Pro 2, reply 0x01). The replies
+ * came within 1 s. */
+#define ADAPTIVE_CHECK_MS 1500
+
+static void send_noise_control(Controls *c, NoiseControlMode mode)
+{
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    aap_build_noise_control_cmd(mode, packet);
+    aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
+}
+
+static gboolean adaptive_check_cb(gpointer user_data)
+{
+    Controls *c = user_data;
+    c->adaptive_check_id = 0;
+
+    NoiseControlMode reported = c->device->state->noise_control_mode;
+    if (reported == NOISE_CONTROL_ADAPTIVE || c->adaptive_resent || !aap_link_is_connected(c->link))
+        return G_SOURCE_REMOVE;
+
+    g_message("Asked for Adaptive, the AirPods report '%s': sending the features and the request again",
+              noise_control_mode_to_string(reported));
+    c->adaptive_resent = true;
+    aap_link_send(c->link, AAP_PKT_SET_FEATURES, AAP_SET_FEATURES_SIZE);
+    send_noise_control(c, NOISE_CONTROL_ADAPTIVE);
+    c->adaptive_check_id = g_timeout_add(ADAPTIVE_CHECK_MS, adaptive_check_cb, c);
+    return G_SOURCE_REMOVE;
+}
 
 static bool on_set_noise_control(NoiseControlMode mode, void *user_data)
 {
@@ -91,9 +125,16 @@ static bool on_set_noise_control(NoiseControlMode mode, void *user_data)
         return false;
     }
 
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_noise_control_cmd(mode, packet);
-    aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
+    send_noise_control(c, mode);
+
+    if (c->adaptive_check_id > 0) {
+        g_source_remove(c->adaptive_check_id);
+        c->adaptive_check_id = 0;
+    }
+    if (mode == NOISE_CONTROL_ADAPTIVE) {
+        c->adaptive_resent = false;
+        c->adaptive_check_id = g_timeout_add(ADAPTIVE_CHECK_MS, adaptive_check_cb, c);
+    }
 
     return true;
 }
@@ -252,6 +293,8 @@ void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus
     c->device = device;
     c->link = link;
     c->saved_settings_id = 0;
+    c->adaptive_check_id = 0;
+    c->adaptive_resent = false;
 
     dbus_service_set_noise_control_callback(dbus, on_set_noise_control, c);
     dbus_service_set_conv_awareness_callback(dbus, on_set_conv_awareness, c);
