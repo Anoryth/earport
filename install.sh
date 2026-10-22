@@ -72,8 +72,8 @@ check_dependencies() {
         missing_deps+=("libbluetooth-dev (Debian/Ubuntu) or bluez-libs-devel (Fedora) or bluez-libs (Arch)")
     fi
 
-    # Check for GNOME Shell
-    if ! command -v gnome-shell &> /dev/null; then
+    # Check for GNOME Shell, unless only the daemon is installed
+    if [ "${1:-}" != "--daemon" ] && ! command -v gnome-shell &> /dev/null; then
         missing_deps+=("gnome-shell")
     fi
 
@@ -282,7 +282,7 @@ main() {
             ;;
         --daemon)
             print_header
-            check_dependencies
+            check_dependencies --daemon
             remove_legacy_install
             build_daemon
             install_daemon
