@@ -187,9 +187,20 @@ static void test_disconnected_meanwhile(Fixture *f, gconstpointer data)
     g_assert_cmpint(f->pauses, ==, 0);
 }
 
+/* A desktop with no idle reporting must not read as "in use", or the
+ * playback would never be paused there */
+static void test_logind_idle(void)
+{
+    g_assert_cmpint(sleep_pause_idle_from_logind(false, 0, 5000000), ==, -1);
+    g_assert_cmpint(sleep_pause_idle_from_logind(false, 1000000, 5000000), ==, 0);
+    g_assert_cmpint(sleep_pause_idle_from_logind(true, 1000000, 5000000), ==, 4000);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
+
+    g_test_add_func("/sleep/logind-idle", test_logind_idle);
 
 #define ADD(path, func) \
     g_test_add(path, Fixture, NULL, fixture_setup, func, fixture_teardown)

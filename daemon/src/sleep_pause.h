@@ -42,4 +42,8 @@ void sleep_pause_handle(SleepPause *sp, const AapSleepDetection *msg);
 /* The AirPods disconnected: forget a pending pause */
 void sleep_pause_session_ended(SleepPause *sp);
 
+/* Idle time from logind's session idle hint (monotonic microseconds), -1
+ * when no one ever set the hint */
+int64_t sleep_pause_idle_from_logind(bool idle_hint, uint64_t idle_since_us, uint64_t now_us);
+
 #endif /* SLEEP_PAUSE_H */

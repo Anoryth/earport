@@ -128,3 +128,13 @@ void sleep_pause_session_ended(SleepPause *sp)
 {
     cancel_cool_off(sp);
 }
+
+int64_t sleep_pause_idle_from_logind(bool idle_hint, uint64_t idle_since_us, uint64_t now_us)
+{
+    /* Zero until a desktop first sets the hint: no one reports input */
+    if (idle_since_us == 0)
+        return -1;
+    if (!idle_hint || now_us < idle_since_us)
+        return 0;
+    return (int64_t)((now_us - idle_since_us) / 1000);
+}
