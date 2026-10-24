@@ -4,8 +4,7 @@
 
 AirPods integration for GNOME Shell on Linux. This project provides full support for Apple AirPods features including battery status, noise control modes, and automatic media pause on ear detection.
 
-![GNOME 46+](https://img.shields.io/badge/GNOME-46%2B-blue)
-![License](https://img.shields.io/badge/license-GPL--3.0-green)
+![GNOME 46+](https://img.shields.io/badge/GNOME-46%2B-blue)![License](https://img.shields.io/badge/license-GPL--3.0-green)
 
 <img src="extension.png" width="384" alt="The EarPort menu in GNOME Shell Quick Settings: AirPods Pro at 85 % and 82 %, case charging at 64 %, about 4:30 of listening left, noise cancellation on">
 
@@ -41,19 +40,19 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 ### Supported Models
 
-| Model | Battery | ANC | Transparency | Adaptive | Case battery, AirPods out | Tested |
-|-------|---------|-----|--------------|----------|---------------------------|--------|
-| AirPods 1st/2nd Gen | ✓ | - | - | - | - | - |
-| AirPods 3rd Gen | ✓ | - | - | - | - | - |
-| AirPods 4th Gen | ✓ | - | - | - | - | - |
-| AirPods 4th Gen (ANC) | ✓ | ✓ | ✓ | ✓ | ✓ | - |
-| AirPods 5 | ✓ | ✓ | ✓ | ✓ | - | - |
-| AirPods 5 (Wireless Charging Case) | ✓ | ✓ | ✓ | ✓ | ✓ | - |
-| AirPods Pro | ✓ | ✓ | ✓ | - | - | - |
-| AirPods Pro 2 (Lightning and USB-C) | ✓ | ✓ | ✓ | ✓ | ✓ | USB-C |
-| AirPods Pro 3 | ✓ | ✓ | ✓ | ✓ | ✓ | - |
-| AirPods Max | ✓ | ✓ | ✓ | - | - | - |
-| AirPods Max 2 | ✓ | ✓ | ✓ | - | - | - |
+| Model                               | Battery | ANC | Transparency | Adaptive | Case battery, AirPods out | Tested |
+|-------------------------------------|---------|-----|--------------|----------|---------------------------|--------|
+| AirPods 1st/2nd Gen                 | ✓       | \-  | \-           | \-       | \-                        | \-     |
+| AirPods 3rd Gen                     | ✓       | \-  | \-           | \-       | \-                        | \-     |
+| AirPods 4th Gen                     | ✓       | \-  | \-           | \-       | \-                        | \-     |
+| AirPods 4th Gen (ANC)               | ✓       | ✓   | ✓            | ✓        | ✓                         | \-     |
+| AirPods 5                           | ✓       | ✓   | ✓            | ✓        | \-                        | \-     |
+| AirPods 5 (Wireless Charging Case)  | ✓       | ✓   | ✓            | ✓        | ✓                         | \-     |
+| AirPods Pro                         | ✓       | ✓   | ✓            | \-       | \-                        | \-     |
+| AirPods Pro 2 (Lightning and USB-C) | ✓       | ✓   | ✓            | ✓        | ✓                         | USB-C  |
+| AirPods Pro 3                       | ✓       | ✓   | ✓            | ✓        | ✓                         | \-     |
+| AirPods Max                         | ✓       | ✓   | ✓            | \-       | \-                        | \-     |
+| AirPods Max 2                       | ✓       | ✓   | ✓            | \-       | \-                        | \-     |
 
 The features follow what each model supports in the protocol, but EarPort has
 only been tested on AirPods Pro 2 (USB-C) so far. If you use another model,
@@ -97,7 +96,6 @@ To remove it: `curl -fsSL https://github.com/Anoryth/earport/releases/latest/dow
 
 <details>
 <summary>Prefer to check what you run? Same install, step by step</summary>
-
 ```bash
 base=https://github.com/Anoryth/earport/releases/latest/download
 curl -fsSLO "$base/install-daemon.sh"
@@ -110,7 +108,6 @@ bash install-daemon.sh --from-file "earport-daemon-linux-$(uname -m).tar.gz"
 ```
 
 </details>
-
 **2. The extension**: download `earport@anoryth.github.io.shell-extension.zip` from the
 [latest release](https://github.com/Anoryth/earport/releases/latest), then:
 
@@ -155,7 +152,6 @@ to remove it (the only step asking for sudo).
    ninja -C daemon/build
    bash install-daemon.sh --from-file "$(tools/pack-daemon.sh daemon/build)"
    ```
-
 2. Install the extension:
 
    ```bash
@@ -163,7 +159,6 @@ to remove it (the only step asking for sudo).
    glib-compile-schemas ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io/schemas
    gnome-extensions enable earport@anoryth.github.io
    ```
-
 3. Restart GNOME Shell: log out and back in (Wayland), or `Alt+F2`, `r` (X11)
 
 ## Usage
@@ -186,14 +181,10 @@ notice it. Nothing to change in the system's Bluetooth configuration: no Apple
 does it from your session, only while the option is on. From then on, as
 between a Mac and an iPhone:
 
-- the AirPods stay connected to the computer and to your iPhone (or iPad, or
-  Mac) at the same time;
-- they play from the one you start playing on: when another device takes them,
-  playback pauses here, and resumes after a notification read aloud or a call;
+- the AirPods stay connected to the computer and to your iPhone (or iPad, or Mac) at the same time;
+- they play from the one you start playing on: when another device takes them, playback pauses here, and resumes after a notification read aloud or a call;
 - **Use on This Computer** in the menu brings them back at once;
-- taking out one AirPod keeps the computer connected while it plays; if the
-  other device was playing, the computer reconnects by itself in a few seconds,
-  without notifications.
+- taking out one AirPod keeps the computer connected while it plays; if the other device was playing, the computer reconnects by itself in a few seconds, without notifications.
 
 Getting there took a lot of research: the AirPods only share themselves
 between Apple devices, and how they decide which device to keep is not
@@ -243,6 +234,7 @@ rm -rf ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
 ### Daemon not starting
 
 Check the daemon logs:
+
 ```bash
 journalctl --user -u earport-daemon.service -f
 ```
@@ -250,11 +242,12 @@ journalctl --user -u earport-daemon.service -f
 ### Extension not appearing
 
 1. Ensure the extension is enabled:
+
    ```bash
    gnome-extensions list | grep earport
    ```
-
 2. Check for extension errors:
+
    ```bash
    journalctl -f /usr/bin/gnome-shell
    ```
@@ -263,6 +256,7 @@ journalctl --user -u earport-daemon.service -f
 
 1. Ensure AirPods are paired and connected via Bluetooth
 2. Check if the daemon detects the device:
+
    ```bash
    journalctl --user -u earport-daemon.service | grep -i airpods
    ```
@@ -319,9 +313,7 @@ npm run lint    # GJS / GNOME Shell rules recommended by gjs.guide
 
 ### Packaging
 
-- `tools/pack-extension.sh` builds the extension zip for extensions.gnome.org and
-  GitHub releases (only the files the extension needs, translations compiled from
-  `po/`); CI builds it on every push
+- `tools/pack-extension.sh` builds the extension zip for extensions.gnome.org and GitHub releases (only the files the extension needs, translations compiled from `po/`); CI builds it on every push
 
 ### Translations
 

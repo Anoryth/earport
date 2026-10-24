@@ -10,8 +10,12 @@ permissions:
 
 jobs:
   daemon:
-    name: Build and test daemon
-    runs-on: ubuntu-latest
+    name: Build and test daemon (${{ matrix.runner }})
+    strategy:
+      matrix:
+        # 22.04: the base the release builds on (older GLib layout)
+        runner: [ubuntu-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
