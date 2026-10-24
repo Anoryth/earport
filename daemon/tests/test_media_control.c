@@ -178,10 +178,19 @@ static FakePlayer *fake_player_new(const char *id, const char *status)
     return fake_player_new_delayed(id, status, 0);
 }
 
-static void fake_player_free(FakePlayer *p)
+/* The player quits: it leaves the bus, its counts stay readable */
+static void fake_player_stop(FakePlayer *p)
 {
+    if (p->thread == NULL)
+        return;
     g_main_loop_quit(p->loop);
     g_thread_join(p->thread);
+    p->thread = NULL;
+}
+
+static void fake_player_free(FakePlayer *p)
+{
+    fake_player_stop(p);
     g_main_loop_unref(p->loop);
     g_main_context_unref(p->context);
     g_mutex_clear(&p->lock);
@@ -191,17 +200,25 @@ static void fake_player_free(FakePlayer *p)
     g_free(p);
 }
 
-/* The player starts playing and tells it, as real players do */
-static void fake_player_start(FakePlayer *p)
+/* The player changes its status and tells it, as real players do; with_volume:
+ * another property changes in the same signal */
+static void fake_player_announce(FakePlayer *p, const char *status, bool with_volume)
 {
-    set_status(p, "Playing");
+    set_status(p, status);
     GVariantBuilder changed;
     g_variant_builder_init(&changed, G_VARIANT_TYPE("a{sv}"));
-    g_variant_builder_add(&changed, "{sv}", "PlaybackStatus", g_variant_new_string("Playing"));
+    g_variant_builder_add(&changed, "{sv}", "PlaybackStatus", g_variant_new_string(status));
+    if (with_volume)
+        g_variant_builder_add(&changed, "{sv}", "Volume", g_variant_new_double(0.5));
     g_dbus_connection_emit_signal(p->connection, NULL, MPRIS_PATH, "org.freedesktop.DBus.Properties",
                                   "PropertiesChanged",
                                   g_variant_new("(sa{sv}as)", PLAYER_INTERFACE, &changed, NULL),
                                   NULL);
+}
+
+static void fake_player_start(FakePlayer *p)
+{
+    fake_player_announce(p, "Playing", false);
 }
 
 static int plays(FakePlayer *p)
@@ -387,13 +404,34 @@ static void test_playback_started(void)
     media_control_set_playback_started_callback(mc, on_playback_started, &started);
 
     fake_player_start(player);
-    gint64 deadline = g_get_monotonic_time() + 2 * G_USEC_PER_SEC;
-    while (started == 0) {
-        g_assert_cmpint(g_get_monotonic_time(), <, deadline);
-        g_main_context_iteration(NULL, FALSE);
-        g_usleep(500);
-    }
+    WAIT_FOR(started >= 1);
     g_assert_cmpint(started, ==, 1);
+
+    media_control_free(mc);
+    fake_player_free(player);
+}
+
+/* Players say "Playing" again when the audio route changes: only a change
+ * to "Playing" is a start, or the AirPods are taken back from the phone */
+static void test_playing_again_is_not_a_start(void)
+{
+    FakePlayer *player = fake_player_new("again", "Stopped");
+    MediaControl *mc = media_control_new();
+    int started = 0;
+    media_control_set_playback_started_callback(mc, on_playback_started, &started);
+
+    fake_player_announce(player, "Playing", false);
+    WAIT_FOR(started >= 1);
+
+    fake_player_announce(player, "Playing", true);
+    run_for(100);
+    g_assert_cmpint(started, ==, 1);
+
+    fake_player_announce(player, "Paused", false);
+    fake_player_announce(player, "Playing", false);
+    WAIT_FOR(started >= 2);
+    run_for(100);
+    g_assert_cmpint(started, ==, 2);
 
     media_control_free(mc);
     fake_player_free(player);
@@ -488,6 +526,29 @@ static void test_handoff_resumed_during_pause(void)
     fake_player_free(slow);
 }
 
+/* Another instance of the same app took the player's name while paused:
+ * it was not paused here, it must not start playing */
+static void test_resume_goes_to_the_paused_owner(void)
+{
+    FakePlayer *first = fake_player_new("same", "Playing");
+    MediaControl *mc = media_control_new();
+
+    ears(mc, true, true);
+    ears(mc, false, true);
+    g_assert_cmpint(pauses(first), ==, 1);
+
+    fake_player_stop(first);
+    FakePlayer *second = fake_player_new("same", "Paused");
+    ears(mc, true, true);
+    run_for(100);
+    g_assert_cmpint(plays(second), ==, 0);
+    g_assert_cmpint(plays(first), ==, 0);
+
+    media_control_free(mc);
+    fake_player_free(second);
+    fake_player_free(first);
+}
+
 /* Freed with calls in flight: their answers must not reach it */
 static void test_free_with_pending_calls(void)
 {
@@ -540,12 +601,14 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/session-ended", test_session_ended);
     g_test_add_func("/media/pause-after-manual-resume", test_pause_after_manual_resume);
     g_test_add_func("/media/playback-started", test_playback_started);
+    g_test_add_func("/media/playing-again-is-not-a-start", test_playing_again_is_not_a_start);
     g_test_add_func("/media/frozen-player", test_frozen_player);
     g_test_add_func("/media/back-in-during-pause", test_back_in_during_pause);
     g_test_add_func("/media/handoff", test_handoff);
     g_test_add_func("/media/handoff-resumed-during-pause", test_handoff_resumed_during_pause);
     g_test_add_func("/media/free-with-pending-calls", test_free_with_pending_calls);
     g_test_add_func("/media/pause-for-sleep", test_pause_for_sleep);
+    g_test_add_func("/media/resume-goes-to-the-paused-owner", test_resume_goes_to_the_paused_owner);
 
     int result = g_test_run();
 
