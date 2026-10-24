@@ -83,7 +83,29 @@ The project consists of two components:
 EarPort has two parts: the GNOME Shell extension, and a small service
 (`earport-daemon`) that talks to the AirPods over Bluetooth. Both are needed.
 
-### Quick Install (Recommended)
+### Fedora, Debian and Ubuntu packages
+
+One package holds the service and the extension, and updates with the rest of
+your system. Built on the [openSUSE Build Service](https://build.opensuse.org/package/show/home:Anoryth:earport/earport)
+for Fedora 42, 43 and 44, Debian 13, Ubuntu 24.04, 25.10 and 26.04 (x86_64).
+
+```bash
+# Fedora
+sudo dnf config-manager addrepo --from-repofile="https://download.opensuse.org/repositories/home:/Anoryth:/earport/Fedora_$(rpm -E %fedora)/home:Anoryth:earport.repo"
+sudo dnf install earport
+
+# Debian 13 (Ubuntu: replace Debian_13 with xUbuntu_24.04, xUbuntu_25.10 or xUbuntu_26.04)
+repo=https://download.opensuse.org/repositories/home:/Anoryth:/earport/Debian_13
+curl -fsSL "$repo/Release.key" | gpg --dearmor | sudo tee /usr/share/keyrings/earport.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/earport.gpg] $repo/ /" | sudo tee /etc/apt/sources.list.d/earport.list
+sudo apt update && sudo apt install earport
+```
+
+Log out and back in, then enable EarPort in the Extensions app. The service
+starts by itself when the extension needs it. If you used the quick install
+below before, remove that copy first (`install-daemon.sh --uninstall`, see below).
+
+### Quick Install (any distribution)
 
 **1. The service**, prebuilt for x86_64 and ARM64: no compiler, no sudo, installed
 in your home directory. Run the same command again to update it.
