@@ -18,9 +18,9 @@
 #define TIPI_RECONNECT_TRIES 3
 
 /* The primary pod came out this recently: the AirPods drop a host while
- * switching pods, about 1 s later */
+ * switching pods, usually 0.2 s later, but seen up to 8.6 s */
 #ifndef TIPI_SWAP_WINDOW_MS
-#define TIPI_SWAP_WINDOW_MS 5000
+#define TIPI_SWAP_WINDOW_MS 10000
 #endif
 
 /* Dropped again this soon after coming back: let it be */
