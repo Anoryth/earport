@@ -8,6 +8,7 @@
 #include <gio/gio.h>
 #include <string.h>
 
+#include "bluetooth.h"
 #include "bluez_monitor.h"
 #include "fake_bluez.h"
 
@@ -119,6 +120,29 @@ static void test_connect_disconnect(void)
     set_connected(path_a, false);
     wait_for(&ev, 1, 1);
     g_assert_cmpstr(ev.last_path, ==, path_a);
+    events_stop(&ev);
+}
+
+/* First pairing: connected before BlueZ knows the services, the AirPods
+ * are recognised when the UUIDs come (issue #12), once */
+static void test_uuids_late(void)
+{
+    Events ev;
+    events_start(&ev);
+    const char *uuids[] = { "0000110b-0000-1000-8000-00805f9b34fb", AIRPODS_UUID, NULL };
+    fake_bluez_set(path_a, "UUIDs", g_variant_new_strv((const char *[]){ NULL }, -1), false);
+
+    set_connected(path_a, true);
+    wait_for(&ev, 0, 0);
+    fake_bluez_set(path_a, "UUIDs", g_variant_new_strv(uuids, -1), true);
+    wait_for(&ev, 1, 0);
+    g_assert_cmpstr(ev.last_path, ==, path_a);
+    fake_bluez_set(path_a, "UUIDs", g_variant_new_strv(uuids, -1), true);
+    wait_for(&ev, 1, 0);
+
+    /* Services resolved while not connected: nothing */
+    fake_bluez_set(path_b, "UUIDs", g_variant_new_strv(uuids, -1), true);
+    wait_for(&ev, 1, 0);
     events_stop(&ev);
 }
 
@@ -284,6 +308,7 @@ int main(int argc, char **argv)
     g_test_add_func("/bluez-monitor/existing", test_existing);
     g_test_add_func("/bluez-monitor/existing-two-pairs", test_existing_two_pairs);
     g_test_add_func("/bluez-monitor/connect-disconnect", test_connect_disconnect);
+    g_test_add_func("/bluez-monitor/uuids-late", test_uuids_late);
     g_test_add_func("/bluez-monitor/battery-removed", test_battery_removed);
     g_test_add_func("/bluez-monitor/other-pair", test_other_pair);
     g_test_add_func("/bluez-connect/connect", test_connect);

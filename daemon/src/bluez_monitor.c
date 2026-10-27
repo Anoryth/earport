@@ -213,16 +213,18 @@ static void on_properties_changed(GDBusConnection *connection,
         return;
     }
 
-    /* Check if Connected property changed */
     GVariant *connected_var = g_variant_lookup_value(changed_props, "Connected", G_VARIANT_TYPE_BOOLEAN);
-    if (connected_var == NULL) {
-        g_variant_unref(changed_props);
-        return;
-    }
-
-    bool connected = g_variant_get_boolean(connected_var);
-    g_variant_unref(connected_var);
+    /* On a first pairing, BlueZ reports the connection before the services:
+     * the AirPods are only recognised when their UUIDs come */
+    bool uuids_changed = g_variant_lookup(changed_props, "UUIDs", "@as", NULL);
     g_variant_unref(changed_props);
+    if (connected_var == NULL &&
+        (!uuids_changed || g_hash_table_contains(monitor->known_devices, object_path)))
+        return;
+
+    bool connected = connected_var == NULL || g_variant_get_boolean(connected_var);
+    if (connected_var != NULL)
+        g_variant_unref(connected_var);
 
     /* Check if this is an AirPods device */
     if (!device_is_airpods(connection, object_path)) {
@@ -231,6 +233,10 @@ static void on_properties_changed(GDBusConnection *connection,
 
     BluezDeviceInfo *info = get_device_info(connection, object_path);
     if (info == NULL) {
+        return;
+    }
+    if (connected_var == NULL && !info->connected) {
+        bluez_device_info_free(info);
         return;
     }
 
