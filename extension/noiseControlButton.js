@@ -20,7 +20,10 @@ class NoiseControlButton extends St.Button {
             accessible_name: accessibleName,
             accessible_role: Atk.Role.TOGGLE_BUTTON,
             child: new St.BoxLayout({
-                vertical: true,
+                // GNOME 46–47 only support the legacy vertical property.
+                ...('orientation' in St.BoxLayout.prototype
+                    ? {orientation: Clutter.Orientation.VERTICAL}
+                    : {vertical: true}),
                 x_align: Clutter.ActorAlign.CENTER,
             }),
         });

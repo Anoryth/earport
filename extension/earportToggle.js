@@ -124,7 +124,10 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         });
 
         const batteryColumn = new St.BoxLayout({
-            vertical: true,
+            // GNOME 46–47 only support the legacy vertical property.
+            ...('orientation' in St.BoxLayout.prototype
+                ? {orientation: Clutter.Orientation.VERTICAL}
+                : {vertical: true}),
             x_expand: true,
         });
         batteryColumn.add_child(this._batteryBox);

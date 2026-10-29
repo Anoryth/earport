@@ -25,7 +25,10 @@ class BatteryIndicator extends St.BoxLayout {
     constructor(type, label, gicon, chargingGicon) {
         super({
             style_class: 'earport-battery-indicator',
-            vertical: true,
+            // GNOME 46–47 only support the legacy vertical property.
+            ...('orientation' in St.BoxLayout.prototype
+                ? {orientation: Clutter.Orientation.VERTICAL}
+                : {vertical: true}),
             x_align: Clutter.ActorAlign.CENTER,
         });
 
