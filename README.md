@@ -105,6 +105,66 @@ Log out and back in, then enable EarPort in the Extensions app. The service
 starts by itself when the extension needs it. If you used the quick install
 below before, remove that copy first (`install-daemon.sh --uninstall`, see below).
 
+### Nix
+
+A [flake](https://nixos.wiki/wiki/Flakes) builds the service and the extension
+from source. Try the service without installing:
+
+```bash
+nix run github:Anoryth/earport#earport-daemon
+```
+
+To install both parts with [Home Manager](https://nix-community.github.io/home-manager/),
+add the flake as an input (and pass `inputs` through `extraSpecialArgs`), then
+define the service:
+
+```nix
+# flake.nix
+{
+  inputs.earport.url = "github:Anoryth/earport";
+  # ...
+}
+
+# home.nix  ({ config, pkgs, inputs, ... } :)
+{ config, pkgs, inputs, ... }:
+let
+  daemon = inputs.earport.packages.${pkgs.system}.earport-daemon;
+in
+{
+  home.packages = [
+    daemon
+    inputs.earport.packages.${pkgs.system}.earport-extension
+  ];
+
+  systemd.user.services.earport-daemon = {
+    Unit = {
+      Description = "EarPort AirPods daemon";
+      After = [ "bluetooth.target" ];
+    };
+    Service = {
+      Type = "dbus";
+      BusName = "io.github.anoryth.EarPort";
+      ExecStart = "${daemon}/bin/earport-daemon";
+      Restart = "on-failure";
+      RestartSec = 5;
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      ProtectHome = "read-only";
+      PrivateTmp = true;
+      ConfigurationDirectory = "earport";
+      ConfigurationDirectoryMode = "0700";
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+  };
+}
+```
+
+Log out and back in, then enable EarPort in the Extensions app. The package
+version follows `daemon/meson.build`, so it tracks the release the flake is
+pinned to.
+
 ### Quick Install (any distribution)
 
 **1. The service**, prebuilt for x86_64 and ARM64: no compiler, no sudo, installed
