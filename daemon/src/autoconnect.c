@@ -83,6 +83,7 @@ struct AutoConnect {
     bool playback_seen_busy;     /* Saw them in use while waiting */
     bool prev_in_ear_known;
     bool prev_in_ear;
+    gint64 pods_seen_us;         /* Last advert of the pods, or when they left here */
     gint64 last_attempt_us;
 };
 
@@ -218,6 +219,15 @@ static void on_ble_advert(const char *address, const uint8_t *data, size_t len, 
         if (ac->nearby_callback != NULL)
             ac->nearby_callback(&battery, &info, ac->nearby_user_data);
     }
+
+    /* Away for a while (in their case, closed, or out of range): back in
+     * the ears now is a put in */
+    gint64 now = g_get_monotonic_time();
+    if (now - ac->pods_seen_us > NEARBY_TIMEOUT_MS * (gint64)1000) {
+        ac->prev_in_ear = false;
+        ac->prev_in_ear_known = true;
+    }
+    ac->pods_seen_us = now;
 
     /* React to the pods being put in, not to them being in: after a manual
      * disconnection, AirPods still in the ears must stay disconnected. With
@@ -387,6 +397,8 @@ AutoConnect *autoconnect_new(bool enabled, AutoConnectNearbyCallback nearby_call
 
 void autoconnect_start(AutoConnect *ac)
 {
+    /* Maybe in the ears already, disconnected by hand: not a put in */
+    ac->pods_seen_us = g_get_monotonic_time();
     update(ac);
 }
 
@@ -420,6 +432,9 @@ void autoconnect_set_airpods_connected(AutoConnect *ac, bool connected,
                                        const char *adapter_path)
 {
     ac->airpods_connected = connected;
+    /* Just left: still in the ears if disconnected by hand */
+    if (!connected)
+        ac->pods_seen_us = g_get_monotonic_time();
     if (connected && adapter_path != NULL) {
         g_free(ac->adapter_path);
         ac->adapter_path = g_strdup(adapter_path);

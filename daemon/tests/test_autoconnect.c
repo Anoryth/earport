@@ -267,6 +267,32 @@ static void test_ears_in_use(void)
     autoconnect_free(ac);
 }
 
+/* Not seen while in their closed case, then first seen in the ears: put
+ * in. Seen in the ears right after leaving here: disconnected by hand. */
+static void test_back_after_away(void)
+{
+    AutoConnect *ac = autoconnect_ready(true);
+    autoconnect_set_in_use_callback(ac, computer_in_use, NULL);
+    in_use_answer = true;
+
+    autoconnect_set_airpods_connected(ac, true, NULL);
+    autoconnect_set_airpods_connected(ac, false, NULL);
+    wait_next_scan();
+    send_advert(STATUS_IN_EAR, PROXIMITY_CONN_IDLE);
+    fake_bluez_run(30);
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 0);
+
+    autoconnect_set_airpods_connected(ac, true, NULL);
+    autoconnect_set_airpods_connected(ac, false, NULL);
+    fake_bluez_run(2 * SCAN_INTERVAL + SCAN_INTERVAL / 2 + 100);
+    wait_next_scan();
+    send_advert(STATUS_IN_EAR, PROXIMITY_CONN_IDLE);
+    g_assert_cmpint(fake_bluez_wait_calls("Connect", 1), ==, 1);
+
+    in_use_answer = false;
+    autoconnect_free(ac);
+}
+
 /* In use: looked for at every tick (IN_USE_SCAN_INTERVAL) instead of
  * every SCAN_INTERVAL */
 static void test_scan_in_use(void)
@@ -478,6 +504,7 @@ int main(int argc, char **argv)
     g_test_add_func("/autoconnect/ears-left-alone", test_ears_left_alone);
     g_test_add_func("/autoconnect/ears-in-use", test_ears_in_use);
     g_test_add_func("/autoconnect/scan-in-use", test_scan_in_use);
+    g_test_add_func("/autoconnect/back-after-away", test_back_after_away);
     g_test_add_func("/autoconnect/playback", test_playback);
     g_test_add_func("/autoconnect/playback-busy", test_playback_busy);
     g_test_add_func("/autoconnect/playback-disabled", test_playback_disabled);
