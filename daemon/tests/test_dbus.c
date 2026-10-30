@@ -605,6 +605,59 @@ static void test_disconnection(Fixture *f, gconstpointer data)
     g_assert_null(get_setting(f, "OneBudANC"));
 }
 
+static void on_properties_changed(GDBusConnection *connection, const char *sender,
+                                  const char *path, const char *interface, const char *signal,
+                                  GVariant *parameters, gpointer user_data)
+{
+    (void)connection;
+    (void)sender;
+    (void)path;
+    (void)interface;
+    (void)signal;
+    Fixture *f = user_data;
+    g_autoptr(GVariant) changed = g_variant_get_child_value(parameters, 1);
+    GVariantIter iter;
+    const char *name;
+
+    g_variant_iter_init(&iter, changed);
+    while (g_variant_iter_next(&iter, "{&sv}", &name, NULL))
+        g_ptr_array_add(f->signals, g_strdup_printf("changed:%s", name));
+}
+
+/* A disconnect announces every value it resets, so clients other than the
+ * extension do not keep the old battery or mode as live */
+static void test_disconnect_announces_reset(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    guint id = g_dbus_connection_signal_subscribe(f->client, NULL,
+                                                  "org.freedesktop.DBus.Properties",
+                                                  "PropertiesChanged", OBJECT_PATH, NULL,
+                                                  G_DBUS_SIGNAL_FLAGS_NONE,
+                                                  on_properties_changed, f, NULL);
+
+    connect_airpods(f);
+    RUN_UNTIL(get_int(f, "BatteryLeft") == 83);
+
+    g_ptr_array_set_size(f->signals, 0);
+    aap_link_device_disconnected(f->link);
+    RUN_UNTIL(received(f, "DeviceDisconnected"));
+    static const char *const reset[] = {
+        "BatteryLeft", "BatteryRight", "BatteryCase", "ChargingLeft", "ChargingRight",
+        "ChargingCase", "LeftInEar", "RightInEar", "ListeningTimeRemaining",
+        "NoiseControlMode", "ConversationalAwareness", "AdaptiveNoiseLevel",
+        "ListeningModeOff", "ListeningModeTransparency", "ListeningModeANC",
+        "ListeningModeAdaptive", "DeviceModel", "IsHeadphones", "SupportsANC",
+        "SupportsAdaptive", "DisplayName",
+    };
+    for (gsize i = 0; i < G_N_ELEMENTS(reset); i++) {
+        g_autofree char *name = g_strdup_printf("changed:%s", reset[i]);
+        RUN_UNTIL(received(f, name));
+    }
+    g_assert_cmpint(get_int(f, "BatteryLeft"), ==, -1);
+
+    g_dbus_connection_signal_unsubscribe(f->client, id);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
@@ -633,6 +686,7 @@ int main(int argc, char *argv[])
     ADD("/dbus/listening-modes-remembered", test_listening_modes_remembered);
     ADD("/dbus/conversation-signals", test_conversation_signals);
     ADD("/dbus/disconnection", test_disconnection);
+    ADD("/dbus/disconnect-announces-reset", test_disconnect_announces_reset);
 
     int result = g_test_run();
 

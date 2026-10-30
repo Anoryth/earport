@@ -125,9 +125,18 @@ void device_session_ended(Device *dev)
         save_learned_drain_rate(dev);
 
     airpods_state_reset(dev->state);
-    dbus_service_emit_properties_changed(dev->dbus, "Connected");
-    dbus_service_emit_properties_changed(dev->dbus, "AudioSource");
-    dbus_service_emit_properties_changed(dev->dbus, "Settings");
+    /* Every value the reset changed, so clients do not keep the old ones as live */
+    static const char *const reset[] = {
+        "Connected", "AudioSource", "Settings", "DeviceName", "DeviceAddress",
+        "DisplayName", "DeviceModel", "IsHeadphones", "SupportsANC", "SupportsAdaptive",
+        "BatteryLeft", "BatteryRight", "BatteryCase", "ChargingLeft", "ChargingRight",
+        "ChargingCase", "LeftInEar", "RightInEar", "ListeningTimeRemaining",
+        "NoiseControlMode", "ConversationalAwareness", "AdaptiveNoiseLevel",
+        "ListeningModeOff", "ListeningModeTransparency", "ListeningModeANC",
+        "ListeningModeAdaptive",
+    };
+    for (gsize i = 0; i < G_N_ELEMENTS(reset); i++)
+        dbus_service_emit_properties_changed(dev->dbus, reset[i]);
 }
 
 /* ============================================================================
