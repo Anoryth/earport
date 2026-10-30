@@ -51,6 +51,10 @@ void media_control_set_playback_started_callback(MediaControl *mc,
                                                  MediaPlaybackStartedCallback callback,
                                                  void *user_data);
 
+/* Whether a player plays here, from the changes seen since the start
+ * (needs the playback started callback) */
+bool media_control_is_playing(MediaControl *mc);
+
 /* Pause the players playing because the user fell asleep: not resumed
  * when the AirPods go back in, and rewound by this many seconds */
 void media_control_pause_for_sleep(MediaControl *mc, int rewind_seconds);

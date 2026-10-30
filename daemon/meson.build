@@ -218,7 +218,8 @@ test_autoconnect = executable('test-autoconnect',
           'src/airpods_state.c', 'src/airpods_settings.c', 'src/bluez_monitor.c'),
     include_directories: include_directories('src'),
     c_args: ['-DSCAN_INTERVAL_MS=300', '-DSCAN_BURST_MS=100', '-DPLAYBACK_WINDOW_MS=150',
-             '-DAUTOCONNECT_COOLDOWN_MS=250', '-DCASE_REFRESH_MS=500'],
+             '-DAUTOCONNECT_COOLDOWN_MS=250', '-DCASE_REFRESH_MS=500',
+             '-DIN_USE_SCAN_INTERVAL_MS=150'],
     dependencies: [glib_dep, gio_dep, m_dep],
 )
 test('autoconnect', test_autoconnect)

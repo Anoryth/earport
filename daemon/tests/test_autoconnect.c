@@ -4,9 +4,9 @@
  *
  * Automatic connection from BLE adverts, against a fake org.bluez
  * (fake_bluez.c), with the delays shortened in meson.build (scan every
- * 300 ms for 100 ms, playback window 150 ms, cooldown 250 ms, case refresh
- * 500 ms). The keys are the Bluetooth spec's sample IRK and a made-up
- * encryption key (the real one is a secret).
+ * 300 ms for 100 ms, every 150 ms while in use, playback window 150 ms,
+ * cooldown 250 ms, case refresh 500 ms). The keys are the Bluetooth spec's
+ * sample IRK and a made-up encryption key (the real one is a secret).
  */
 
 #include <gio/gio.h>
@@ -225,6 +225,64 @@ static void test_ears_left_alone(void)
     autoconnect_free(ac);
 }
 
+static bool in_use_answer;
+
+static bool computer_in_use(void *user_data)
+{
+    (void)user_data;
+    return in_use_answer;
+}
+
+/* Put in while connected to an idle iPhone: taken only if this computer
+ * is in use (playing, or used just now), like on a Mac */
+static void test_ears_in_use(void)
+{
+    AutoConnect *ac = autoconnect_ready(true);
+    autoconnect_set_in_use_callback(ac, computer_in_use, NULL);
+
+    in_use_answer = false;
+    send_advert(STATUS_IN_CASE, PROXIMITY_CONN_IDLE);
+    wait_next_scan();
+    send_advert(STATUS_IN_EAR, PROXIMITY_CONN_IDLE);
+    fake_bluez_run(30);
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 0);
+
+    in_use_answer = true;
+    wait_next_scan();
+    send_advert(STATUS_IN_CASE, PROXIMITY_CONN_IDLE);
+    wait_next_scan();
+    send_advert(STATUS_IN_EAR, PROXIMITY_CONN_IDLE);
+    g_assert_cmpint(fake_bluez_wait_calls("Connect", 1), ==, 1);
+
+    /* Never from a device playing or in a call */
+    fake_bluez_run(COOLDOWN);
+    wait_next_scan();
+    send_advert(STATUS_IN_CASE, PROXIMITY_CONN_MUSIC);
+    wait_next_scan();
+    send_advert(STATUS_IN_EAR, PROXIMITY_CONN_MUSIC);
+    fake_bluez_run(30);
+    g_assert_cmpint(fake_bluez_calls("Connect"), ==, 1);
+
+    in_use_answer = false;
+    autoconnect_free(ac);
+}
+
+/* In use: looked for at every tick (IN_USE_SCAN_INTERVAL) instead of
+ * every SCAN_INTERVAL */
+static void test_scan_in_use(void)
+{
+    AutoConnect *ac = autoconnect_ready(true);
+    autoconnect_set_in_use_callback(ac, computer_in_use, NULL);
+
+    in_use_answer = true;
+    int starts = fake_bluez_calls("StartDiscovery");
+    fake_bluez_run(SCAN_INTERVAL - 50);
+    g_assert_cmpint(fake_bluez_calls("StartDiscovery"), >=, starts + 1);
+
+    in_use_answer = false;
+    autoconnect_free(ac);
+}
+
 /* Playback starts here, AirPods in the ears and idle: connected */
 static void test_playback(void)
 {
@@ -418,6 +476,8 @@ int main(int argc, char **argv)
     g_test_add_func("/autoconnect/scan-ends-early", test_scan_ends_early);
     g_test_add_func("/autoconnect/ears", test_ears);
     g_test_add_func("/autoconnect/ears-left-alone", test_ears_left_alone);
+    g_test_add_func("/autoconnect/ears-in-use", test_ears_in_use);
+    g_test_add_func("/autoconnect/scan-in-use", test_scan_in_use);
     g_test_add_func("/autoconnect/playback", test_playback);
     g_test_add_func("/autoconnect/playback-busy", test_playback_busy);
     g_test_add_func("/autoconnect/playback-disabled", test_playback_disabled);

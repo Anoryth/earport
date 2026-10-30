@@ -437,6 +437,29 @@ static void test_playing_again_is_not_a_start(void)
     fake_player_free(player);
 }
 
+/* Something plays here until it pauses, or quits while playing */
+static void test_is_playing(void)
+{
+    FakePlayer *player = fake_player_new("is-playing", "Stopped");
+    MediaControl *mc = media_control_new();
+    int started = 0;
+    media_control_set_playback_started_callback(mc, on_playback_started, &started);
+    g_assert_false(media_control_is_playing(mc));
+
+    fake_player_start(player);
+    WAIT_FOR(media_control_is_playing(mc));
+    fake_player_announce(player, "Paused", false);
+    WAIT_FOR(!media_control_is_playing(mc));
+
+    fake_player_start(player);
+    WAIT_FOR(media_control_is_playing(mc));
+    fake_player_stop(player);
+    WAIT_FOR(!media_control_is_playing(mc));
+
+    media_control_free(mc);
+    fake_player_free(player);
+}
+
 /* A frozen player must not hold the daemon nor the other players */
 static void test_frozen_player(void)
 {
@@ -602,6 +625,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/pause-after-manual-resume", test_pause_after_manual_resume);
     g_test_add_func("/media/playback-started", test_playback_started);
     g_test_add_func("/media/playing-again-is-not-a-start", test_playing_again_is_not_a_start);
+    g_test_add_func("/media/is-playing", test_is_playing);
     g_test_add_func("/media/frozen-player", test_frozen_player);
     g_test_add_func("/media/back-in-during-pause", test_back_in_during_pause);
     g_test_add_func("/media/handoff", test_handoff);

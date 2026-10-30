@@ -25,6 +25,10 @@
 #ifndef SCAN_BURST_MS
 #define SCAN_BURST_MS 3000
 #endif
+/* While the computer is in use, AirPods put in should come quickly */
+#ifndef IN_USE_SCAN_INTERVAL_MS
+#define IN_USE_SCAN_INTERVAL_MS 10000
+#endif
 /* Long enough for AirPods paused on another device to report it (2-3 s) */
 #ifndef PLAYBACK_WINDOW_MS
 #define PLAYBACK_WINDOW_MS 8000
@@ -68,7 +72,11 @@ struct AutoConnect {
     bool case_burst_active;      /* The current scan waits for the case */
     bool case_missed;            /* The last one did not see it */
 
+    AutoConnectInUseCallback in_use_callback;
+    void *in_use_user_data;
+
     guint scan_timer_id;         /* Periodic short scans */
+    gint64 pods_burst_us;        /* Last periodic scan for the pods */
     guint burst_timer_id;        /* End of the current short scan */
     guint playback_window_id;    /* Waiting for an advert after playback started */
     bool playback_pending;
@@ -104,6 +112,11 @@ static void try_connect(AutoConnect *ac, const char *reason)
     g_message("Connecting to the AirPods automatically (%s)", reason);
     bluez_device_connect(path, on_device_connect_done, NULL);
     g_free(path);
+}
+
+static bool in_use(AutoConnect *ac)
+{
+    return ac->in_use_callback != NULL && ac->in_use_callback(ac->in_use_user_data);
 }
 
 static bool case_wanted(AutoConnect *ac)
@@ -207,10 +220,18 @@ static void on_ble_advert(const char *address, const uint8_t *data, size_t len, 
     }
 
     /* React to the pods being put in, not to them being in: after a manual
-     * disconnection, AirPods still in the ears must stay disconnected */
-    if (ac->enabled && ac->prev_in_ear_known && !ac->prev_in_ear && info.in_ear &&
-        autoconnect_allowed(&info, AUTOCONNECT_TRIGGER_EARS))
-        try_connect(ac, "AirPods put in");
+     * disconnection, AirPods still in the ears must stay disconnected. With
+     * the computer in use, as explicit a choice as starting playback here. */
+    if (ac->enabled && ac->prev_in_ear_known && !ac->prev_in_ear && info.in_ear) {
+        bool here = in_use(ac);
+        if (autoconnect_allowed(&info, here ? AUTOCONNECT_TRIGGER_PLAYBACK
+                                            : AUTOCONNECT_TRIGGER_EARS))
+            try_connect(ac, here ? "AirPods put in, computer in use" : "AirPods put in");
+        else
+            g_message(info.connection_state == PROXIMITY_CONN_IDLE
+                          ? "Not connecting the AirPods put in: on another device, computer not in use"
+                          : "Not connecting the AirPods put in: in use by another device");
+    }
     ac->prev_in_ear = info.in_ear;
     ac->prev_in_ear_known = true;
 
@@ -244,6 +265,13 @@ void autoconnect_on_playback_started(AutoConnect *ac)
         g_source_remove(ac->playback_window_id);
     ac->playback_window_id = add_timeout(PLAYBACK_WINDOW_MS, playback_window_cb, ac);
     ble_scanner_start(ac->ble_scanner);
+}
+
+void autoconnect_set_in_use_callback(AutoConnect *ac, AutoConnectInUseCallback callback,
+                                     void *user_data)
+{
+    ac->in_use_callback = callback;
+    ac->in_use_user_data = user_data;
 }
 
 static gboolean burst_end_cb(gpointer user_data)
@@ -285,10 +313,18 @@ static gboolean scan_cycle_cb(gpointer user_data)
                       (ac->case_burst_us == 0 ||
                        now - ac->case_burst_us >= retry_ms * 1000);
 
-    /* Connected here: only the case is worth a scan */
-    if (ac->airpods_connected && !case_burst)
+    /* Connected here: only the case is worth a scan. Otherwise the pods
+     * every SCAN_INTERVAL_MS (half a tick early: timer jitter), at every
+     * tick while the computer is in use */
+    bool pods_due = !ac->airpods_connected &&
+                    (now - ac->pods_burst_us >=
+                         (SCAN_INTERVAL_MS - IN_USE_SCAN_INTERVAL_MS / 2) * (gint64)1000 ||
+                     in_use(ac));
+    if (!pods_due && !case_burst)
         return G_SOURCE_CONTINUE;
 
+    if (pods_due)
+        ac->pods_burst_us = now;
     if (case_burst)
         ac->case_burst_us = now;
     ac->case_burst_active = case_burst;
@@ -314,7 +350,7 @@ static void update(AutoConnect *ac)
     if (wanted && ac->scan_timer_id == 0 && ac->ble_scanner != NULL) {
         g_message("Watching for the AirPods nearby");
         scan_cycle_cb(ac);
-        ac->scan_timer_id = add_timeout(SCAN_INTERVAL_MS, scan_cycle_cb, ac);
+        ac->scan_timer_id = add_timeout(IN_USE_SCAN_INTERVAL_MS, scan_cycle_cb, ac);
     } else if (!wanted && ac->scan_timer_id > 0) {
         g_source_remove(ac->scan_timer_id);
         ac->scan_timer_id = 0;

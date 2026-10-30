@@ -336,6 +336,18 @@ static int64_t sleep_idle_ms(void *user_data)
     return (int64_t)idle;
 }
 
+/* Something plays here, or input in the last minute: the user is at this
+ * computer, AirPods put in come to it */
+#define IN_USE_IDLE_MS 60000
+
+static bool computer_in_use(void *user_data)
+{
+    if (app.media_control != NULL && media_control_is_playing(app.media_control))
+        return true;
+    int64_t idle = sleep_idle_ms(user_data);
+    return idle >= 0 && idle < IN_USE_IDLE_MS;
+}
+
 static bool sleep_pause_announced;
 
 static void sleep_pause_media(int rewind_seconds, void *user_data)
@@ -841,6 +853,7 @@ int main(int argc, char *argv[])
     device_init(&app.device, &app.state, app.dbus_service, app.media_control);
     app.autoconnect = autoconnect_new(app.config.auto_connect, on_nearby_battery,
                                      on_case_battery, NULL);
+    autoconnect_set_in_use_callback(app.autoconnect, computer_in_use, NULL);
     app.battery_provider = battery_provider_new();
     app.apple_identity = apple_identity_new();
     apple_identity_set_enabled(app.apple_identity, app.config.apple_handoff);

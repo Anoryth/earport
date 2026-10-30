@@ -38,9 +38,10 @@ struct MediaControl {
     /* Any MPRIS player starting to play */
     guint playback_subscription_id;
     /* Sender -> last PlaybackStatus, so that a repeated "Playing" is not a
-     * start. shortcut: players that quit stay in it (a few bytes each),
-     * drop them on NameOwnerChanged if it ever matters */
+     * start, and to know whether something plays here. Players that quit
+     * are dropped (NameOwnerChanged). */
     GHashTable *player_status;
+    guint name_owner_subscription_id;
     MediaPlaybackStartedCallback playback_started_callback;
     MediaPausedForSleepCallback paused_for_sleep_callback;
     void *paused_for_sleep_user_data;
@@ -73,6 +74,36 @@ static void on_player_properties_changed(GDBusConnection *connection G_GNUC_UNUS
             mc->playback_started_callback(mc->playback_started_user_data);
     }
     g_variant_unref(changed);
+}
+
+/* A player quit (its unique name lost its owner): it no longer plays */
+static void on_name_owner_changed(GDBusConnection *connection G_GNUC_UNUSED,
+                                  const gchar *sender_name G_GNUC_UNUSED,
+                                  const gchar *object_path G_GNUC_UNUSED,
+                                  const gchar *interface_name G_GNUC_UNUSED,
+                                  const gchar *signal_name G_GNUC_UNUSED,
+                                  GVariant *parameters,
+                                  gpointer user_data)
+{
+    MediaControl *mc = user_data;
+    const gchar *name, *new_owner;
+
+    g_variant_get(parameters, "(&s&s&s)", &name, NULL, &new_owner);
+    if (new_owner[0] == '\0')
+        g_hash_table_remove(mc->player_status, name);
+}
+
+bool media_control_is_playing(MediaControl *mc)
+{
+    GHashTableIter iter;
+    gpointer status;
+
+    g_hash_table_iter_init(&iter, mc->player_status);
+    while (g_hash_table_iter_next(&iter, NULL, &status)) {
+        if (g_strcmp0(status, "Playing") == 0)
+            return true;
+    }
+    return false;
 }
 
 /* ============================================================================
@@ -353,6 +384,10 @@ MediaControl *media_control_new(void)
         on_player_properties_changed,
         mc,
         NULL);
+    mc->name_owner_subscription_id = g_dbus_connection_signal_subscribe(
+        mc->connection, "org.freedesktop.DBus", "org.freedesktop.DBus", "NameOwnerChanged",
+        "/org/freedesktop/DBus", NULL, G_DBUS_SIGNAL_FLAGS_NONE, on_name_owner_changed, mc,
+        NULL);
 
     return mc;
 }
@@ -375,6 +410,8 @@ void media_control_free(MediaControl *mc)
     if (mc->connection) {
         if (mc->playback_subscription_id > 0)
             g_dbus_connection_signal_unsubscribe(mc->connection, mc->playback_subscription_id);
+        if (mc->name_owner_subscription_id > 0)
+            g_dbus_connection_signal_unsubscribe(mc->connection, mc->name_owner_subscription_id);
         g_object_unref(mc->connection);
     }
 

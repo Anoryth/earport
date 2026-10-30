@@ -53,6 +53,13 @@ const char *autoconnect_get_address(AutoConnect *ac);
 /* A player started on this computer */
 void autoconnect_on_playback_started(AutoConnect *ac);
 
+/* Whether this computer is in use (something plays, or used just now):
+ * AirPods put in then go to it even from an idle iPhone, like on a Mac,
+ * and they are looked for more often. Never in use without it. */
+typedef bool (*AutoConnectInUseCallback)(void *user_data);
+void autoconnect_set_in_use_callback(AutoConnect *ac, AutoConnectInUseCallback callback,
+                                     void *user_data);
+
 /* Model of the connected AirPods (AirPodsModel), also learned from their
  * adverts: the case is only looked for when it advertises */
 void autoconnect_set_model(AutoConnect *ac, uint16_t model);
