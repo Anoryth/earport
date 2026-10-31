@@ -309,14 +309,14 @@ msgstr "Призупиняти відтворення, коли навушник
 
 #: extension/prefs.js:223
 msgid "HD Microphone"
-msgstr ""
+msgstr "HD-мікрофон"
 
 #: extension/prefs.js:224
 msgid ""
 "Experimental. Adds a high-quality microphone input, named after your AirPods "
 "with “(HD)”, that keeps playback in high quality while recording. Choose it "
 "in the Sound settings."
-msgstr ""
+msgstr "Експериментально. Додає високоякісний вхід мікрофона з назвою ваших AirPods і позначкою «(HD)», за якого відтворення лишається високоякісним під час запису. Виберіть його в налаштуваннях звуку."
 
 #: extension/prefs.js:236
 msgid "Automatic Connection"

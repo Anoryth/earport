@@ -316,14 +316,14 @@ msgstr "Wiedergabe anhalten, wenn die Ohrhörer entfernt werden"
 
 #: extension/prefs.js:223
 msgid "HD Microphone"
-msgstr ""
+msgstr "HD-Mikrofon"
 
 #: extension/prefs.js:224
 msgid ""
 "Experimental. Adds a high-quality microphone input, named after your AirPods "
 "with “(HD)”, that keeps playback in high quality while recording. Choose it "
 "in the Sound settings."
-msgstr ""
+msgstr "Experimentell. Fügt einen hochwertigen Mikrofoneingang hinzu, benannt nach Ihren AirPods mit „(HD)“, der die Wiedergabe während der Aufnahme in hoher Qualität hält. Wählen Sie ihn in den Audio-Einstellungen."
 
 #: extension/prefs.js:236
 msgid "Automatic Connection"

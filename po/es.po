@@ -311,14 +311,14 @@ msgstr "Pausar la reproducción al quitarse los auriculares"
 
 #: extension/prefs.js:223
 msgid "HD Microphone"
-msgstr ""
+msgstr "Micrófono HD"
 
 #: extension/prefs.js:224
 msgid ""
 "Experimental. Adds a high-quality microphone input, named after your AirPods "
 "with “(HD)”, that keeps playback in high quality while recording. Choose it "
 "in the Sound settings."
-msgstr ""
+msgstr "Experimental. Añade una entrada de micrófono de alta calidad, con el nombre de los AirPods seguido de «(HD)», que mantiene la reproducción en alta calidad durante la grabación. Se elige en la configuración de Sonido."
 
 #: extension/prefs.js:236
 msgid "Automatic Connection"
