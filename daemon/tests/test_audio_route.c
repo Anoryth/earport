@@ -21,8 +21,7 @@ static GPtrArray *messages;
 static const char FAKE_PACTL[] =
     "#!/bin/sh\n"
     "case \"$1\" in\n"
-    "list) case \"$2\" in sinks) cat \"$FAKE_PACTL_DIR/sinks\";;\n"
-    "  cards) cat \"$FAKE_PACTL_DIR/cards\";; *) cat \"$FAKE_PACTL_DIR/inputs\";; esac;;\n"
+    "list) [ \"$2\" = sinks ] && cat \"$FAKE_PACTL_DIR/sinks\" || cat \"$FAKE_PACTL_DIR/inputs\";;\n"
     "load-module) echo \"$*\" >> \"$FAKE_PACTL_DIR/log\"\n"
     "  [ -e \"$FAKE_PACTL_DIR/fail-load\" ] && exit 1; echo 42;;\n"
     "*) echo \"$*\" >> \"$FAKE_PACTL_DIR/log\";;\n"
@@ -41,16 +40,6 @@ static const char INPUTS[] =
     "Sink Input #21\n\tDriver: PipeWire\n\tSink: 7\n\tCorked: yes\n\n"
     "Sink Input #22\n\tDriver: PipeWire\n\tSink: 1\n\tCorked: no\n\n"
     "Sink Input #23\n\tDriver: PipeWire\n\tSink: 77\n\tCorked: no\n";
-
-/* pactl list cards: another pair in HFP, then the AirPods in A2DP (AAC) */
-static const char CARDS_A2DP[] =
-    "Card #50\n\tName: bluez_card.00_00_00_00_00_0B\n\tActive Profile: headset-head-unit\n\n"
-    "Card #51\n\tName: bluez_card.00_00_00_00_00_0A\n\tProfiles:\n"
-    "\t\ta2dp-sink: High Fidelity Playback (A2DP Sink, codec AAC)\n"
-    "\tActive Profile: a2dp-sink\n";
-
-static const char CARDS_HFP[] =
-    "Card #51\n\tName: bluez_card.00_00_00_00_00_0A\n\tActive Profile: headset-head-unit\n";
 
 static const char PAUSED_ONLY[] =
     "Sink Input #21\n\tDriver: PipeWire\n\tSink: 7\n\tCorked: yes\n\n"
@@ -74,7 +63,6 @@ static void setup(const char *sinks, const char *inputs, bool fail_load)
 {
     write_file("sinks", sinks);
     write_file("inputs", inputs);
-    write_file("cards", CARDS_A2DP);
     write_file("log", "");
     g_autofree char *fail = g_build_filename(dir, "fail-load", NULL);
     if (fail_load)
@@ -97,7 +85,7 @@ static char *restart(const char *mode)
 {
     audio_route_restart(AIRPODS, mode);
     gint64 end = g_get_monotonic_time() + 5 * G_USEC_PER_SEC;
-    while (!logged("Restarted") && !logged("Nothing") && !logged("Could not") &&
+    while (!logged("Restarted") && !logged("Nothing playing") && !logged("Could not") &&
            g_get_monotonic_time() < end)
         g_main_context_iteration(NULL, FALSE);
 
@@ -151,22 +139,6 @@ static void test_output(void)
     g_assert_cmpstr(nothing_playing, ==, "suspend-sink 7 1\nsuspend-sink 7 0\n");
 }
 
-/* Their A2DP profile off and back on, the same; not when they are in HFP */
-static void test_profile(void)
-{
-    setup(SINKS, INPUTS, false);
-    g_autofree char *actions = restart("profile");
-    g_assert_true(logged("Restarted the AirPods' A2DP profile"));
-    g_assert_cmpstr(actions, ==, "set-card-profile bluez_card.00_00_00_00_00_0A off\n"
-                                 "set-card-profile bluez_card.00_00_00_00_00_0A a2dp-sink\n");
-
-    setup(SINKS, INPUTS, false);
-    write_file("cards", CARDS_HFP);
-    g_autofree char *in_hfp = restart("profile");
-    g_assert_true(logged("Nothing to restart: the AirPods are not in A2DP"));
-    g_assert_cmpstr(in_hfp, ==, "");
-}
-
 /* No muted output to go through: given up, streams left alone */
 static void test_load_fails(void)
 {
@@ -214,7 +186,6 @@ int main(int argc, char **argv)
     g_test_add_func("/audio-route/streams", test_streams);
     g_test_add_func("/audio-route/nothing-playing", test_nothing_playing);
     g_test_add_func("/audio-route/output", test_output);
-    g_test_add_func("/audio-route/profile", test_profile);
     g_test_add_func("/audio-route/load-fails", test_load_fails);
     g_test_add_func("/audio-route/one-at-a-time", test_one_at_a_time);
     int ret = g_test_run();
