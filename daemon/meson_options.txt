@@ -1,0 +1,2 @@
+option('hd_mic', type: 'feature', value: 'auto',
+       description: 'HD microphone (needs libavcodec and libpipewire)')

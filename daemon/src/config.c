@@ -107,6 +107,7 @@ void config_get_defaults(EarPortConfig *config)
     config->ear_pause_mode = 1;  /* EAR_PAUSE_ONE_OUT */
     config->auto_connect = false;
     config->apple_handoff = false;
+    config->hd_mic = false;
     config->research_log = false;
 }
 
@@ -150,11 +151,14 @@ bool config_load(EarPortConfig *config)
     if (g_key_file_has_key(keyfile, CONFIG_GROUP, "apple_handoff", NULL))
         config->apple_handoff = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "apple_handoff", NULL);
 
+    if (g_key_file_has_key(keyfile, CONFIG_GROUP, "hd_mic", NULL))
+        config->hd_mic = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "hd_mic", NULL);
+
     if (g_key_file_has_key(keyfile, CONFIG_GROUP, "research_log", NULL))
         config->research_log = g_key_file_get_boolean(keyfile, CONFIG_GROUP, "research_log", NULL);
 
-    g_message("Config loaded: ear_pause_mode=%d auto_connect=%d apple_handoff=%d",
-              config->ear_pause_mode, config->auto_connect, config->apple_handoff);
+    g_message("Config loaded: ear_pause_mode=%d auto_connect=%d apple_handoff=%d hd_mic=%d",
+              config->ear_pause_mode, config->auto_connect, config->apple_handoff, config->hd_mic);
 
     g_key_file_free(keyfile);
     g_free(config_path);
@@ -173,6 +177,7 @@ bool config_save(const EarPortConfig *config)
     g_key_file_set_integer(keyfile, CONFIG_GROUP, "ear_pause_mode", config->ear_pause_mode);
     g_key_file_set_boolean(keyfile, CONFIG_GROUP, "auto_connect", config->auto_connect);
     g_key_file_set_boolean(keyfile, CONFIG_GROUP, "apple_handoff", config->apple_handoff);
+    g_key_file_set_boolean(keyfile, CONFIG_GROUP, "hd_mic", config->hd_mic);
     /* Hidden option: only kept when set */
     if (config->research_log)
         g_key_file_set_boolean(keyfile, CONFIG_GROUP, "research_log", true);
@@ -183,7 +188,8 @@ bool config_save(const EarPortConfig *config)
                            "ear_pause_mode: 0=disabled, 1=pause when one removed, 2=pause when both removed\n"
                            "auto_connect: connect when the AirPods are put in or playback starts\n"
                            "apple_handoff: present this computer as an Apple device, so that the\n"
-                           "  AirPods switch between it and your Apple devices",
+                           "  AirPods switch between it and your Apple devices\n"
+                           "hd_mic: an \"AirPods (HD microphone)\" input, without leaving A2DP",
                            NULL);
 
     gchar *config_path = get_config_path();

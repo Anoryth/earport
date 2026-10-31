@@ -26,6 +26,7 @@
 #include "handoff.h"
 #include "link_trace.h"
 #include "device.h"
+#include "hd_mic.h"
 #include "media_control.h"
 #include "relink.h"
 #include "research.h"
@@ -55,6 +56,9 @@ typedef struct {
     char *device_path;          /* AirPods' BlueZ object, kept after they left */
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
+    HdMic *hd_mic;
+    bool hd_mic_ca_off;          /* Conversation Awareness off while recording */
+    guint hd_mic_profile_id;
 } AppContext;
 
 static AppContext app = {0};
@@ -251,10 +255,47 @@ static void on_setting_sent(uint8_t id, uint8_t value, void *user_data)
         sleep_pause_setting_changed(app.sleep_pause, value == 0x01);
 }
 
-static void sleep_send(const uint8_t *data, size_t len, void *user_data)
+static void link_send(const uint8_t *data, size_t len, void *user_data)
 {
     (void)user_data;
     aap_link_send(app.link, data, len);
+}
+
+/* The HD microphone stream started or stopped: A2DP then plays in one ear
+ * until its profile restarts, and Conversation Awareness would lower the
+ * volume at each word said into the microphone (not saved: the AirPods
+ * don't echo it, the setting shown stays) */
+static gboolean hd_mic_restart_profile(gpointer user_data)
+{
+    (void)user_data;
+    app.hd_mic_profile_id = 0;
+    audio_route_restart(app.state.device_address, "profile");
+    return G_SOURCE_REMOVE;
+}
+
+static void hd_mic_capture_changed(bool capturing, void *user_data)
+{
+    (void)user_data;
+    if (!app.state.connected) {
+        app.hd_mic_ca_off = false;
+        return;
+    }
+
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    if (capturing && app.state.conversational_awareness) {
+        aap_build_conv_awareness_cmd(false, packet);
+        aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
+        app.hd_mic_ca_off = true;
+    } else if (!capturing && app.hd_mic_ca_off) {
+        aap_build_conv_awareness_cmd(true, packet);
+        aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
+        app.hd_mic_ca_off = false;
+    }
+
+    /* Once the AirPods took the command (LibrePods waits 800 ms too) */
+    if (app.hd_mic_profile_id > 0)
+        g_source_remove(app.hd_mic_profile_id);
+    app.hd_mic_profile_id = g_timeout_add(800, hd_mic_restart_profile, NULL);
 }
 
 static bool sleep_is_enabled(void *user_data)
@@ -395,6 +436,10 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         sleep_pause_handle(app.sleep_pause, &pkt->data.sleep_detection);
         return;
     }
+    if (pkt->type == AAP_PKT_TYPE_MIC_AUDIO) {
+        hd_mic_audio(app.hd_mic, &pkt->data.mic_audio);
+        return;
+    }
 
     /* The AirPods announce the setting on connection */
     if (pkt->type == AAP_PKT_TYPE_CONTROL_SETTING &&
@@ -428,6 +473,7 @@ static void on_link_disconnected(void *user_data)
     (void)user_data;
     battery_provider_update(app.battery_provider, NULL, NULL, -1);
     sleep_pause_session_ended(app.sleep_pause);
+    hd_mic_set_connected(app.hd_mic, false);
     media_control_session_ended(app.media_control);
     handoff_source_changed(app.handoff, NULL, false);
     tipi_source_changed(app.tipi, NULL);
@@ -442,6 +488,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
     tipi_link_opened(app.tipi);
     relink_link_opened(app.relink);
     controls_send_saved_settings(&app.controls, address);
+    hd_mic_set_connected(app.hd_mic, true);
     /* Not the case of these AirPods */
     if (!connected_are_watched())
         on_case_battery(-1, false, NULL);
@@ -754,6 +801,10 @@ static void cleanup(void)
     g_free(app.adapter_path);
     sleep_pause_free(app.sleep_pause);
     app.sleep_pause = NULL;
+    hd_mic_free(app.hd_mic);
+    app.hd_mic = NULL;
+    if (app.hd_mic_profile_id > 0)
+        g_source_remove(app.hd_mic_profile_id);
     autoconnect_free(app.autoconnect);
     app.autoconnect = NULL;
 
@@ -893,12 +944,18 @@ int main(int argc, char *argv[])
     app.controls.setting_sent = on_setting_sent;
 
     static const SleepPauseCallbacks sleep_callbacks = {
-        .send = sleep_send,
+        .send = link_send,
         .is_enabled = sleep_is_enabled,
         .idle_ms = sleep_idle_ms,
         .pause_media = sleep_pause_media,
     };
     app.sleep_pause = sleep_pause_new(&sleep_callbacks, NULL);
+    static const HdMicCallbacks hd_mic_callbacks = {
+        .send = link_send,
+        .capture_changed = hd_mic_capture_changed,
+    };
+    app.hd_mic = hd_mic_new(&hd_mic_callbacks, NULL);
+    hd_mic_set_enabled(app.hd_mic, app.config.hd_mic);
 
     /* Create BlueZ monitor */
     app.bluez_monitor = bluez_monitor_new();

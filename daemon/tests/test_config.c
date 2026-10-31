@@ -64,6 +64,7 @@ static void test_defaults(void)
     g_assert_true(config_load(&config));
     g_assert_cmpint(config.ear_pause_mode, ==, 1);
     g_assert_false(config.auto_connect);
+    g_assert_false(config.hd_mic);
     g_assert_false(config.research_log);
 
     /* Written on first start, without the hidden option */
@@ -74,13 +75,14 @@ static void test_defaults(void)
 
 static void test_save_load(void)
 {
-    EarPortConfig config = { .ear_pause_mode = 2, .auto_connect = true };
+    EarPortConfig config = { .ear_pause_mode = 2, .auto_connect = true, .hd_mic = true };
     EarPortConfig loaded;
 
     g_assert_true(config_save(&config));
     g_assert_true(config_load(&loaded));
     g_assert_cmpint(loaded.ear_pause_mode, ==, 2);
     g_assert_true(loaded.auto_connect);
+    g_assert_true(loaded.hd_mic);
 }
 
 /* Set by hand, it must survive the preferences saving the file */

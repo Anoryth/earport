@@ -32,6 +32,17 @@ else
     bluetooth_dep = declare_dependency()
 endif
 
+# HD microphone: FFmpeg's AAC decoder (the system's) and a PipeWire source
+avcodec_dep = dependency('libavcodec', required: get_option('hd_mic'))
+avutil_dep = dependency('libavutil', required: get_option('hd_mic'))
+pipewire_dep = dependency('libpipewire-0.3', required: get_option('hd_mic'))
+hd_mic_deps = []
+if avcodec_dep.found() and avutil_dep.found() and pipewire_dep.found()
+    hd_mic_deps = [avcodec_dep, avutil_dep, pipewire_dep,
+                   declare_dependency(compile_args: '-DHAVE_HD_MIC')]
+endif
+summary('HD microphone', hd_mic_deps.length() > 0, bool_yn: true)
+
 # BlueZ battery provider interface (GNOME shows the battery natively)
 gnome = import('gnome')
 battery_provider_gen = gnome.gdbus_codegen('bluez-battery-provider',
@@ -62,6 +73,7 @@ sources = files(
     'src/device.c',
     'src/dbus_service.c',
     'src/handoff.c',
+    'src/hd_mic.c',
     'src/link_trace.c',
     'src/relink.c',
     'src/tipi.c',
@@ -73,7 +85,7 @@ sources = files(
 # Build executable
 executable('earport-daemon',
     sources, battery_provider_gen,
-    dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep, m_dep],
+    dependencies: [glib_dep, gio_dep, gio_unix_dep, bluetooth_dep, m_dep, hd_mic_deps],
     install: true,
     install_dir: get_option('bindir'),
 )
