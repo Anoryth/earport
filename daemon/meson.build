@@ -1,5 +1,5 @@
 project('earport-daemon', 'c',
-    version: '0.6.2',
+    version: '0.6.3',
     license: 'GPL-3.0-or-later',
     default_options: [
         'c_std=c11',
