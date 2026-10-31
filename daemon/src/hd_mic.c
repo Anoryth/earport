@@ -19,6 +19,7 @@ HdMic *hd_mic_new(const HdMicCallbacks *callbacks, void *user_data)
 
 void hd_mic_free(HdMic *mic) { (void)mic; }
 void hd_mic_set_enabled(HdMic *mic, bool enabled) { (void)mic; (void)enabled; }
+void hd_mic_set_name(HdMic *mic, const char *name) { (void)mic; (void)name; }
 void hd_mic_set_connected(HdMic *mic, bool connected) { (void)mic; (void)connected; }
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio) { (void)mic; (void)audio; }
 
@@ -56,6 +57,7 @@ struct HdMic {
     void *user_data;
     bool enabled;
     bool connected;
+    char *description;      /* "<AirPods' name> (HD)" */
 
     AVCodecContext *codec;
     AVPacket *packet;
@@ -307,7 +309,7 @@ static bool pipewire_open(HdMic *mic)
         pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio",
                           PW_KEY_MEDIA_CLASS, "Audio/Source",
                           PW_KEY_NODE_NAME, "earport_hd_mic",
-                          PW_KEY_NODE_DESCRIPTION, "AirPods (HD microphone)",
+                          PW_KEY_NODE_DESCRIPTION, mic->description,
                           PW_KEY_MEDIA_ICON_NAME, "audio-headset",
                           NULL));
     pw_stream_add_listener(mic->stream, &mic->stream_listener, &stream_events, mic);
@@ -377,6 +379,7 @@ HdMic *hd_mic_new(const HdMicCallbacks *callbacks, void *user_data)
     mic->callbacks = *callbacks;
     mic->user_data = user_data;
     mic->links = g_hash_table_new(NULL, NULL);
+    mic->description = g_strdup("AirPods (HD)");
 
     if (!open_decoder(mic)) {
         g_message("HD microphone unavailable: no AAC-ELD decoder in FFmpeg");
@@ -418,7 +421,25 @@ void hd_mic_free(HdMic *mic)
     av_packet_free(&mic->packet);
     av_frame_free(&mic->frame);
     g_hash_table_unref(mic->links);
+    g_free(mic->description);
     g_free(mic);
+}
+
+void hd_mic_set_name(HdMic *mic, const char *name)
+{
+    if (mic == NULL)
+        return;
+    char *description = g_strdup_printf("%s (HD)", name != NULL && name[0] != '\0' ? name : "AirPods");
+    if (g_strcmp0(description, mic->description) == 0) {
+        g_free(description);
+        return;
+    }
+    g_free(mic->description);
+    mic->description = description;
+    if (mic->stream != NULL) {
+        const struct spa_dict_item item = SPA_DICT_ITEM_INIT(PW_KEY_NODE_DESCRIPTION, description);
+        pw_stream_update_properties(mic->stream, &SPA_DICT_INIT(&item, 1));
+    }
 }
 
 void hd_mic_set_enabled(HdMic *mic, bool enabled)

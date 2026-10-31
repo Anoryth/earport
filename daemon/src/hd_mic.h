@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * HD microphone: while the AirPods are connected and the option is on, a
- * PipeWire source "AirPods (HD microphone)". Their AAC-ELD stream (64 kHz,
+ * PipeWire source "<their name> (HD)". Their AAC-ELD stream (64 kHz,
  * sent over AAP alongside A2DP, unlike the HFP microphone that degrades
  * playback) runs only while an application records from it: the links
  * leaving the source are counted in the PipeWire registry, the stream's own
@@ -37,6 +37,9 @@ HdMic *hd_mic_new(const HdMicCallbacks *callbacks, void *user_data);
 void hd_mic_free(HdMic *mic);
 
 void hd_mic_set_enabled(HdMic *mic, bool enabled);
+
+/* The AirPods' name: the source is called "<name> (HD)" */
+void hd_mic_set_name(HdMic *mic, const char *name);
 
 /* The AAP link to the AirPods opened or closed */
 void hd_mic_set_connected(HdMic *mic, bool connected);

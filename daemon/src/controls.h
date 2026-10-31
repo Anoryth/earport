@@ -24,6 +24,8 @@ typedef struct {
     bool adaptive_resent;        /* Features and request sent again once */
     /* A setting was sent to the AirPods (they don't echo it), optional */
     void (*setting_sent)(uint8_t id, uint8_t value, void *user_data);
+    /* The display name was changed, optional */
+    void (*display_name_changed)(void *user_data);
     void *user_data;
 } Controls;
 

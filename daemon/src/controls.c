@@ -286,6 +286,8 @@ static void on_set_display_name(const char *name, void *user_data)
 
     /* Notify property change */
     dbus_service_emit_properties_changed(c->device->dbus, "DisplayName");
+    if (c->display_name_changed != NULL)
+        c->display_name_changed(c->user_data);
 }
 
 void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus)

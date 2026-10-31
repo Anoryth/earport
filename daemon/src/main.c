@@ -294,6 +294,12 @@ static gboolean hd_mic_restart_output(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
+static void hd_mic_name_changed(void *user_data)
+{
+    (void)user_data;
+    hd_mic_set_name(app.hd_mic, airpods_state_get_display_name(&app.state));
+}
+
 static void hd_mic_capture_changed(bool capturing, void *user_data)
 {
     (void)user_data;
@@ -469,6 +475,8 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
     else if (pkt->type == AAP_PKT_TYPE_METADATA) {
         if (app.state.model != AIRPODS_MODEL_UNKNOWN)
             autoconnect_set_model(app.autoconnect, app.state.model);
+        /* Without a name of its own, the display name is now the model's */
+        hd_mic_name_changed(NULL);
         /* The AirPods answered: tell them about this computer, as a Mac */
         send_smart_routing_info();
     }
@@ -506,6 +514,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
     controls_send_saved_settings(&app.controls, address);
     /* Before the source is back: a recording going on turns it off again */
     hd_mic_restore_ca();
+    hd_mic_name_changed(NULL);
     hd_mic_set_connected(app.hd_mic, true);
     /* Not the case of these AirPods */
     if (!connected_are_watched())
@@ -961,6 +970,7 @@ int main(int argc, char *argv[])
     app.link = aap_link_new(&link_callbacks, NULL);
     controls_init(&app.controls, &app.device, app.link, app.dbus_service);
     app.controls.setting_sent = on_setting_sent;
+    app.controls.display_name_changed = hd_mic_name_changed;
 
     static const SleepPauseCallbacks sleep_callbacks = {
         .send = link_send,
