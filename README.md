@@ -285,8 +285,7 @@ paused meanwhile.
 It needs EarPort built with FFmpeg's AAC decoder and PipeWire: the Fedora,
 Debian and Ubuntu packages have it, and so does a build from source when
 `libavcodec` and `libpipewire` are installed. The prebuilt service of the
-quick install doesn't (the switch is then not shown). EarPort ships no
-decoder of its own: it uses the one of your distribution.
+quick install doesn't (the switch is then not shown).
 
 ### Battery Elsewhere
 
