@@ -23,7 +23,9 @@
  * one at a time). mode: "streams" restarts the streams playing to them, if
  * any; "output" suspends and resumes their output (after an early restart,
  * PipeWire may take it for playing while the AirPods still play from
- * elsewhere); "any": the streams, or the output when nothing plays */
+ * elsewhere); "any": the streams, or the output when nothing plays;
+ * "profile" turns their A2DP profile off and on (the HD microphone stream
+ * leaves A2DP playing in one ear only) */
 void audio_route_restart(const char *airpods_address, const char *mode);
 
 #endif /* AUDIO_ROUTE_H */
