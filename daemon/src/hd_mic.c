@@ -28,6 +28,7 @@ void hd_mic_audio(HdMic *mic, const AapMicAudio *audio) { (void)mic; (void)audio
 #include <glib.h>
 #include <glib-unix.h>
 #include <libavcodec/avcodec.h>
+#include <math.h>
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
 #include <stdlib.h>
@@ -38,9 +39,12 @@ void hd_mic_audio(HdMic *mic, const AapMicAudio *audio) { (void)mic; (void)audio
  * samples a frame. The decoder's rate doesn't matter: the AirPods send a
  * frame every 7.5 ms, so the samples are 64 kHz. */
 static const uint8_t ELD_ASC[] = { 0xF8, 0xE6, 0x30, 0x00 };
-/* shortcut: fixed gain, the raw stream is quiet (speech around -45 dBFS);
- * an automatic gain if levels vary between users or models */
-#define GAIN 16.0f          /* +24 dB */
+/* The raw stream is quiet (soft speech around -45 dBFS): automatic gain up
+ * to +24 dB, aiming the peaks at -6 dBFS. Lowered at once on a frame that
+ * would clip (measured before amplifying it), raised back over ~2 s. */
+#define MAX_GAIN 16.0f
+#define TARGET_PEAK 0.5f
+#define GAIN_RELEASE 1.0105f   /* A frame (7.5 ms) each: x16 in 2 s */
 /* The packets come in bursts (4 frames every 30 ms): keep some ahead */
 #define RING_SIZE (RATE / 2)
 #define PRIME_SAMPLES (RATE * 40 / 1000)
@@ -75,6 +79,7 @@ struct HdMic {
     size_t ring_read;
     size_t ring_fill;
     bool primed;
+    float gain;
 };
 
 static void update(HdMic *mic);
@@ -88,6 +93,7 @@ static void start_capture(HdMic *mic)
     mic->capturing = true;
     mic->ring_fill = 0;
     mic->primed = false;
+    mic->gain = MAX_GAIN;
     avcodec_flush_buffers(mic->codec);
     g_message("HD microphone: recording, starting the AirPods' stream");
     mic->callbacks.send(AAP_PKT_MIC_START, AAP_MIC_START_SIZE, mic->user_data);
@@ -105,14 +111,27 @@ static void stop_capture(HdMic *mic)
     mic->callbacks.capture_changed(false, mic->user_data);
 }
 
+float hd_mic_next_gain(float gain, float peak)
+{
+    float wanted = peak > TARGET_PEAK / MAX_GAIN ? TARGET_PEAK / peak : MAX_GAIN;
+    if (wanted < 1.0f)
+        wanted = 1.0f;
+    return wanted < gain ? wanted : MIN(wanted, gain * GAIN_RELEASE);
+}
+
 static void ring_push(HdMic *mic, const float *samples, size_t n)
 {
+    float peak = 0;
+    for (size_t i = 0; i < n; i++)
+        peak = MAX(peak, fabsf(samples[i]));
+    mic->gain = hd_mic_next_gain(mic->gain, peak);
+
     for (size_t i = 0; i < n; i++) {
         if (mic->ring_fill == RING_SIZE) {
             mic->ring_read = (mic->ring_read + 1) % RING_SIZE;
             mic->ring_fill--;
         }
-        float s = samples[i] * GAIN;
+        float s = samples[i] * mic->gain;
         mic->ring[(mic->ring_read + mic->ring_fill) % RING_SIZE] = s > 1 ? 1 : s < -1 ? -1 : s;
         mic->ring_fill++;
     }

@@ -44,4 +44,8 @@ void hd_mic_set_connected(HdMic *mic, bool connected);
 /* A microphone audio packet from the AirPods */
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio);
 
+/* The gain for a frame with this peak (0-1) after one with 'gain' (exposed
+ * for the tests; only built with the HD microphone) */
+float hd_mic_next_gain(float gain, float peak);
+
 #endif /* HD_MIC_H */
