@@ -115,51 +115,37 @@ nix run github:Anoryth/earport#earport-daemon
 ```
 
 To install both parts with [Home Manager](https://nix-community.github.io/home-manager/),
-add the flake as an input (and pass `inputs` through `extraSpecialArgs`), then
-define the service:
+add the flake as an input and the module to your Home Manager configuration:
 
 ```nix
 # flake.nix
 {
   inputs.earport.url = "github:Anoryth/earport";
+  inputs.home-manager.url = "github:nix-community/home-manager";
   # ...
-}
 
-# home.nix  ({ config, pkgs, inputs, ... } :)
-{ config, pkgs, inputs, ... }:
-let
-  daemon = inputs.earport.packages.${pkgs.system}.earport-daemon;
-in
-{
-  home.packages = [
-    daemon
-    inputs.earport.packages.${pkgs.system}.earport-extension
-  ];
-
-  systemd.user.services.earport-daemon = {
-    Unit = {
-      Description = "EarPort AirPods daemon";
-      After = [ "bluetooth.target" ];
-    };
-    Service = {
-      Type = "dbus";
-      BusName = "io.github.anoryth.EarPort";
-      ExecStart = "${daemon}/bin/earport-daemon";
-      Restart = "on-failure";
-      RestartSec = 5;
-      NoNewPrivileges = true;
-      ProtectSystem = "strict";
-      ProtectHome = "read-only";
-      PrivateTmp = true;
-      ConfigurationDirectory = "earport";
-      ConfigurationDirectoryMode = "0700";
-    };
-    Install = {
-      WantedBy = [ "default.target" ];
+  outputs = { nixpkgs, home-manager, earport, ... }: {
+    homeConfigurations."you" = home-manager.lib.homeManagerConfiguration {
+      pkgs = nixpkgs.legacyPackages.x86_64-linux;
+      modules = [
+        earport.homeManagerModules.default
+        ./home.nix
+      ];
     };
   };
 }
+
+# home.nix
+{ ... }:
+{
+  services.earport.enable = true;
+}
 ```
+
+The module installs the daemon and the extension and runs the daemon as a
+`systemd` user service. It also puts the tools the daemon needs to restart
+AirPods audio after switching devices (`pactl`, `awk`, `sleep`) on the
+service's `PATH`.
 
 Log out and back in, then enable EarPort in the Extensions app. The package
 version follows `daemon/meson.build`, so it tracks the release the flake is
