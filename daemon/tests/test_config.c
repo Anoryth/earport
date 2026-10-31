@@ -128,6 +128,18 @@ static void test_profile(void)
     g_assert_true(loaded.conversational_awareness);
     g_assert_cmpint(loaded.adaptive_noise_level, ==, 30);
     g_assert_true(loaded.listening_modes_set);
+    g_assert_false(loaded.ca_off_for_mic);
+
+    /* Turned off by the HD microphone: kept until turned back on, then gone
+     * from the file */
+    loaded.ca_off_for_mic = true;
+    g_assert_true(config_save_device_profile(ADDRESS, &loaded));
+    g_assert_true(config_load_device_profile(ADDRESS, &loaded));
+    g_assert_true(loaded.ca_off_for_mic);
+    loaded.ca_off_for_mic = false;
+    g_assert_true(config_save_device_profile(ADDRESS, &loaded));
+    g_autofree char *devices = read_config_file("devices.conf");
+    g_assert_null(strstr(devices, "ca_off_for_mic"));
 
     /* Other AirPods keep their own profile */
     g_assert_false(config_load_device_profile(OTHER_ADDRESS, &loaded));

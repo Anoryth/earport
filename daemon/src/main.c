@@ -57,7 +57,8 @@ typedef struct {
     char *adapter_path;          /* Adapter the AirPods are connected through */
     SleepPause *sleep_pause;
     HdMic *hd_mic;
-    bool hd_mic_ca_off;          /* Conversation Awareness off while recording */
+    guint hd_mic_output_id;
+    bool stopping;               /* Packets queued now would not leave */
 } AppContext;
 
 static AppContext app = {0};
@@ -260,27 +261,57 @@ static void link_send(const uint8_t *data, size_t len, void *user_data)
     aap_link_send(app.link, data, len);
 }
 
-/* The HD microphone stream started or stopped: Conversation Awareness would
- * lower the volume at each word said into the microphone, so it is off
- * meanwhile (not saved: the AirPods don't echo it, the setting shown stays) */
+/* Conversation Awareness would lower the volume at each word said into the
+ * HD microphone: off while recording. The AirPods keep it off through a
+ * disconnection or a daemon restart, so the profile remembers to turn it
+ * back on. */
+static void hd_mic_set_ca_off(bool off)
+{
+    DeviceProfile profile;
+    config_load_device_profile(app.state.device_address, &profile);
+    profile.ca_off_for_mic = off;
+    config_save_device_profile(app.state.device_address, &profile);
+
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    aap_build_conv_awareness_cmd(!off, packet);
+    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
+    airpods_state_set_conversational_awareness(&app.state, !off);
+    dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
+}
+
+static void hd_mic_restore_ca(void)
+{
+    DeviceProfile profile;
+    if (config_load_device_profile(app.state.device_address, &profile) && profile.ca_off_for_mic)
+        hd_mic_set_ca_off(false);
+}
+
+static gboolean hd_mic_restart_output(gpointer user_data)
+{
+    (void)user_data;
+    app.hd_mic_output_id = 0;
+    audio_route_restart(app.state.device_address, "output");
+    return G_SOURCE_REMOVE;
+}
+
 static void hd_mic_capture_changed(bool capturing, void *user_data)
 {
     (void)user_data;
-    if (!app.state.connected) {
-        app.hd_mic_ca_off = false;
+    if (!app.state.connected || app.stopping)
+        return;   /* The profile remembers, for the next connection */
+
+    if (capturing) {
+        if (app.state.conversational_awareness)
+            hd_mic_set_ca_off(true);
         return;
     }
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    if (capturing && app.state.conversational_awareness) {
-        aap_build_conv_awareness_cmd(false, packet);
-        aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-        app.hd_mic_ca_off = true;
-    } else if (!capturing && app.hd_mic_ca_off) {
-        aap_build_conv_awareness_cmd(true, packet);
-        aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-        app.hd_mic_ca_off = false;
-    }
+    hd_mic_restore_ca();
+    /* The stream's stop sometimes leaves A2DP playing in one ear; suspending
+     * and resuming the output fixes it without pausing the players (turning
+     * the profile off removes the output, and browsers pause) */
+    if (app.hd_mic_output_id > 0)
+        g_source_remove(app.hd_mic_output_id);
+    app.hd_mic_output_id = g_timeout_add(800, hd_mic_restart_output, NULL);
 }
 
 static bool sleep_is_enabled(void *user_data)
@@ -473,6 +504,8 @@ static void on_link_connected(const char *address, const char *name, void *user_
     tipi_link_opened(app.tipi);
     relink_link_opened(app.relink);
     controls_send_saved_settings(&app.controls, address);
+    /* Before the source is back: a recording going on turns it off again */
+    hd_mic_restore_ca();
     hd_mic_set_connected(app.hd_mic, true);
     /* Not the case of these AirPods */
     if (!connected_are_watched())
@@ -768,6 +801,7 @@ static gboolean on_sigterm(gpointer user_data)
 
 static void cleanup(void)
 {
+    app.stopping = true;
     g_message("Cleaning up...");
 
     battery_provider_free(app.battery_provider);
@@ -788,6 +822,8 @@ static void cleanup(void)
     app.sleep_pause = NULL;
     hd_mic_free(app.hd_mic);
     app.hd_mic = NULL;
+    if (app.hd_mic_output_id > 0)
+        g_source_remove(app.hd_mic_output_id);
     autoconnect_free(app.autoconnect);
     app.autoconnect = NULL;
 

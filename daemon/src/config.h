@@ -55,6 +55,10 @@ typedef struct {
     /* Long-press modes set in EarPort: the AirPods don't announce them, so
      * they are sent back on connection, but only then (not the defaults) */
     bool listening_modes_set;
+    /* Conversation Awareness turned off by the HD microphone while
+     * recording: turned back on at the next connection if still set (the
+     * AirPods keep it, through a disconnection or a daemon restart) */
+    bool ca_off_for_mic;
 } DeviceProfile;
 
 /**
