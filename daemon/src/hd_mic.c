@@ -311,6 +311,10 @@ static bool pipewire_open(HdMic *mic)
                           PW_KEY_NODE_NAME, "earport_hd_mic",
                           PW_KEY_NODE_DESCRIPTION, mic->description,
                           PW_KEY_MEDIA_ICON_NAME, "audio-headset",
+                          /* Above the AirPods' own (HFP) input, 2010: when
+                           * WirePlumber picks the default input itself, it
+                           * must not switch the AirPods to call mode */
+                          PW_KEY_PRIORITY_SESSION, "2020",
                           NULL));
     pw_stream_add_listener(mic->stream, &mic->stream_listener, &stream_events, mic);
 
