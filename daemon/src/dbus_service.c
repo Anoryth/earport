@@ -41,6 +41,8 @@ static const gchar introspection_xml[] =
     "    <property name='NearbyBattery' type='a{sv}' access='read'/>"
     "    <property name='AutoConnect' type='b' access='read'/>"
     "    <property name='AppleHandoff' type='b' access='read'/>"
+    "    <property name='HdMic' type='b' access='read'/>"
+    "    <property name='HdMicAvailable' type='b' access='read'/>"
     "    <property name='AudioSource' type='s' access='read'/>"
     "    <property name='Reconnecting' type='b' access='read'/>"
     "    <method name='SetNoiseControlMode'>"
@@ -70,6 +72,9 @@ static const gchar introspection_xml[] =
     "      <arg type='ay' name='packet' direction='in'/>"
     "    </method>"
     "    <method name='SetAppleHandoff'>"
+    "      <arg type='b' name='enabled' direction='in'/>"
+    "    </method>"
+    "    <method name='SetHdMic'>"
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
     "    <method name='SetAutoConnect'>"
@@ -144,6 +149,10 @@ struct DbusService {
     DbusAutoConnectCallback apple_handoff_callback;
     void *apple_handoff_user_data;
     bool apple_handoff;
+    DbusAutoConnectCallback hd_mic_callback;
+    void *hd_mic_user_data;
+    bool hd_mic;
+    bool hd_mic_available;
     bool reconnecting;
 };
 
@@ -319,6 +328,10 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(service->auto_connect);
     } else if (g_strcmp0(property_name, "AppleHandoff") == 0) {
         result = g_variant_new_boolean(service->apple_handoff);
+    } else if (g_strcmp0(property_name, "HdMic") == 0) {
+        result = g_variant_new_boolean(service->hd_mic);
+    } else if (g_strcmp0(property_name, "HdMicAvailable") == 0) {
+        result = g_variant_new_boolean(service->hd_mic_available);
     } else if (g_strcmp0(property_name, "Reconnecting") == 0) {
         result = g_variant_new_boolean(service->reconnecting);
     } else if (g_strcmp0(property_name, "AudioSource") == 0) {
@@ -475,6 +488,20 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
         if (service->apple_handoff_callback)
             service->apple_handoff_callback(enabled, service->apple_handoff_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
+
+    } else if (g_strcmp0(method_name, "SetHdMic") == 0) {
+        gboolean enabled = FALSE;
+        g_variant_get(parameters, "(b)", &enabled);
+        g_message("D-Bus: SetHdMic(%s)", enabled ? "true" : "false");
+
+        if (!service->hd_mic_available)
+            g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_NOT_SUPPORTED,
+                                                  "Built without the HD microphone");
+        else {
+            if (service->hd_mic_callback)
+                service->hd_mic_callback(enabled, service->hd_mic_user_data);
+            g_dbus_method_invocation_return_value(invocation, NULL);
+        }
 
     } else if (g_strcmp0(method_name, "SetSetting") == 0) {
         handle_set_setting(service, parameters, invocation);
@@ -718,6 +745,21 @@ void dbus_service_set_apple_handoff(DbusService *service, bool enabled)
 {
     service->apple_handoff = enabled;
     dbus_service_emit_properties_changed(service, "AppleHandoff");
+}
+
+void dbus_service_set_hd_mic_callback(DbusService *service, DbusAutoConnectCallback callback,
+                                      void *user_data)
+{
+    service->hd_mic_callback = callback;
+    service->hd_mic_user_data = user_data;
+}
+
+void dbus_service_set_hd_mic(DbusService *service, bool available, bool enabled)
+{
+    service->hd_mic_available = available;
+    service->hd_mic = enabled;
+    dbus_service_emit_properties_changed(service, "HdMicAvailable");
+    dbus_service_emit_properties_changed(service, "HdMic");
 }
 
 static void emit_signal(DbusService *service,

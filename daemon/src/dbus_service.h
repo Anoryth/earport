@@ -131,6 +131,12 @@ void dbus_service_set_apple_handoff_callback(DbusService *service,
                                              void *user_data);
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled);
 
+/* HD microphone option (same callback shape); available: built with it
+ * and the AAC-ELD decoder opens, SetHdMic fails otherwise */
+void dbus_service_set_hd_mic_callback(DbusService *service, DbusAutoConnectCallback callback,
+                                      void *user_data);
+void dbus_service_set_hd_mic(DbusService *service, bool available, bool enabled);
+
 /* Connecting the AirPods again after an Apple device took them: clients
  * keep quiet about the disconnection meanwhile */
 void dbus_service_set_reconnecting(DbusService *service, bool reconnecting);

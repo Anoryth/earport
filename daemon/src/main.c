@@ -763,6 +763,15 @@ static void handoff_restart_audio(HandoffRestart how, void *user_data)
     audio_route_restart(app.state.device_address, modes[how]);
 }
 
+static void on_set_hd_mic(bool enabled, void *user_data)
+{
+    (void)user_data;
+    app.config.hd_mic = enabled;
+    config_save(&app.config);
+    hd_mic_set_enabled(app.hd_mic, enabled);
+    dbus_service_set_hd_mic(app.dbus_service, app.hd_mic != NULL, enabled);
+}
+
 static void on_set_apple_handoff(bool enabled, void *user_data)
 {
     (void)user_data;
@@ -985,6 +994,8 @@ int main(int argc, char *argv[])
     };
     app.hd_mic = hd_mic_new(&hd_mic_callbacks, NULL);
     hd_mic_set_enabled(app.hd_mic, app.config.hd_mic);
+    dbus_service_set_hd_mic_callback(app.dbus_service, on_set_hd_mic, NULL);
+    dbus_service_set_hd_mic(app.dbus_service, app.hd_mic != NULL, app.config.hd_mic);
 
     /* Create BlueZ monitor */
     app.bluez_monitor = bluez_monitor_new();

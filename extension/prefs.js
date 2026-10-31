@@ -219,6 +219,13 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         mediaGroup.add(this._earPauseRow);
 
+        this._hdMicRow = new Adw.SwitchRow({
+            title: _('HD Microphone'),
+            subtitle: _('Experimental. Adds a high-quality microphone input, named after your AirPods with “(HD)”, that keeps playback in high quality while recording. Choose it in the Sound settings.'),
+            visible: false,
+        });
+        mediaGroup.add(this._hdMicRow);
+
         /* Connection group */
         const connectionGroup = new Adw.PreferencesGroup({
             title: _('Connection'),
@@ -375,6 +382,12 @@ export default class EarPortPreferences extends ExtensionPreferences {
             if (this._updatingFromProxy)
                 return;
             this._proxy?.SetAppleHandoffRemote(this._appleHandoffRow.active, () => {});
+        });
+
+        this._hdMicRow.connect('notify::active', () => {
+            if (this._updatingFromProxy)
+                return;
+            this._proxy?.SetHdMicRemote(this._hdMicRow.active, () => {});
         });
 
         this._earPauseRow.connect('notify::selected', () => {
@@ -662,6 +675,11 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._appleHandoffRow.visible = typeof handoff === 'boolean';
         if (this._appleHandoffRow.visible)
             this._appleHandoffRow.active = handoff;
+
+        /* Only when the daemon was built with it and can decode it */
+        this._hdMicRow.visible = this._proxy?.HdMicAvailable === true;
+        if (this._hdMicRow.visible)
+            this._hdMicRow.active = this._proxy.HdMic;
     }
 
     _setSensitive(sensitive) {

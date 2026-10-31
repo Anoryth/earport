@@ -629,6 +629,30 @@ static void test_conversation_signals(Fixture *f, gconstpointer data)
     RUN_UNTIL(!f->speaking);
 }
 
+static void on_hd_mic(bool enabled, void *user_data)
+{
+    *(int *)user_data = enabled ? 1 : 0;
+}
+
+/* The HD microphone option: refused when the daemon can't provide it,
+ * given to the daemon otherwise */
+static void test_hd_mic_option(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    int asked = -1;
+    dbus_service_set_hd_mic_callback(f->dbus, on_hd_mic, &asked);
+
+    g_assert_false(get_bool(f, "HdMicAvailable"));
+    call_fails(f, "SetHdMic", g_variant_new("(b)", TRUE), G_DBUS_ERROR_NOT_SUPPORTED);
+    g_assert_cmpint(asked, ==, -1);
+
+    dbus_service_set_hd_mic(f->dbus, true, false);
+    g_assert_true(get_bool(f, "HdMicAvailable"));
+    g_assert_false(get_bool(f, "HdMic"));
+    call_ok(f, "SetHdMic", g_variant_new("(b)", TRUE));
+    g_assert_cmpint(asked, ==, 1);
+}
+
 /* Lost while speaking: clients get the volume back */
 static void test_disconnection(Fixture *f, gconstpointer data)
 {
@@ -728,6 +752,7 @@ int main(int argc, char *argv[])
     ADD("/dbus/disconnection", test_disconnection);
     ADD("/dbus/adaptive-resent-when-refused", test_adaptive_resent_when_refused);
     ADD("/dbus/adaptive-not-resent-when-reported", test_adaptive_not_resent_when_reported);
+    ADD("/dbus/hd-mic-option", test_hd_mic_option);
     ADD("/dbus/disconnect-announces-reset", test_disconnect_announces_reset);
 
     int result = g_test_run();
