@@ -98,6 +98,14 @@ check_dependencies() {
     fi
 
     print_success "All dependencies found"
+
+    # Optional: without them, the HD microphone is left out
+    if ! pkg-config --exists libavcodec libavutil libpipewire-0.3 2>/dev/null; then
+        print_warning "Building without the HD microphone (optional). To have it, install:"
+        echo "    Debian/Ubuntu: sudo apt install libavcodec-dev libpipewire-0.3-dev"
+        echo "    Fedora:        sudo dnf install libavcodec-free-devel pipewire-devel"
+        echo "    Arch Linux:    sudo pacman -S ffmpeg pipewire"
+    fi
 }
 
 build_daemon() {

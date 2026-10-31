@@ -23,6 +23,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Noise control modes** - Switch between Off, ANC, Transparency, and Adaptive modes
 - **Long press customization** - Configure which noise control modes cycle on stem long press
 - **AirPods settings** - Change the settings stored on the AirPods (noise cancellation with one AirPod, personalized volume, press speed, press and hold duration, volume swipe); only the settings your model reports are shown
+- **HD microphone** (optional, experimental) - An extra input, named after your AirPods with "(HD)", that records in high quality while playback stays in high quality, unlike the usual Bluetooth headset microphone (distribution packages, or built from source with FFmpeg and PipeWire)
 - **Conversation Awareness** - Lowers the volume while you speak, as on an iPhone, to the level you choose, with a smooth fade
 - **Quiet conversations** - Notification banners and their sounds wait until you stop speaking (can be turned off)
 - **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
@@ -260,7 +261,7 @@ documented anywhere. EarPort's behavior was worked out by watching how a Mac
 and an iPhone handle the AirPods, then checked in many live tests (switching
 pods, calls, notifications, a third device), until the computer was treated as
 the Mac is. The idea of presenting the computer as an Apple device comes from
-[LibrePods](https://github.com/kavishdevar/librepods). Reports of how it works
+[LibrePods](https://github.com/librepods-org/librepods). Reports of how it works
 with your AirPods and devices are very welcome.
 
 Limitations: tested with AirPods Pro 2 and an iPhone so far. With more than two
@@ -269,6 +270,23 @@ reconnection needs BlueZ 5.73 or later. While the option is on, other Apple
 accessories nearby may also take the computer for an Apple device. Turning it
 off stops EarPort's part (pausing, resuming, reconnecting); the AirPods may
 keep the computer next to your iPhone until they next go back in their case.
+
+### HD Microphone (Experimental)
+
+The usual Bluetooth microphone switches the AirPods to the headset profile:
+the sound drops to call quality while it is open. With **HD Microphone** on in
+the preferences, EarPort adds an input named after your AirPods with "(HD)"
+(for example "My AirPods (HD)"): their microphone arrives over EarPort's own
+channel, in high quality, and playback stays in high quality. Choose it in
+Settings › Sound, or in your call or recording app. The AirPods send their
+microphone only while an app records from it, and Conversation Awareness is
+paused meanwhile.
+
+It needs EarPort built with FFmpeg's AAC decoder and PipeWire: the Fedora,
+Debian and Ubuntu packages have it, and so does a build from source when
+`libavcodec` and `libpipewire` are installed. The prebuilt service of the
+quick install doesn't (the switch is then not shown). EarPort ships no
+decoder of its own: it uses the one of your distribution.
 
 ### Battery Elsewhere
 
@@ -400,7 +418,9 @@ msgfmt --check -o /dev/null po/pl.po
 
 ## Credits
 
-This project is based on the protocol reverse-engineering work from the [LibrePods](https://github.com/kavishdevar/librepods) project by Kavish Devar. EarPort is an independent project and is not affiliated with LibrePods.
+This project is based on the protocol reverse-engineering work from the [LibrePods](https://github.com/librepods-org/librepods) project by Kavish Devar. EarPort is an independent project and is not affiliated with LibrePods.
+
+The HD microphone stream was worked out in LibrePods: protocol found by Kavish Devar and the LibrePods reverse-engineering community, first implemented by LuanAdemi ([LibrePods PR #655](https://github.com/librepods-org/librepods/pull/655)).
 
 AirPods is a trademark of Apple Inc. This project is not affiliated with or endorsed by Apple.
 

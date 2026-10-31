@@ -13,8 +13,16 @@ jobs:
     name: Build and test daemon (${{ matrix.runner }})
     strategy:
       matrix:
-        # 22.04: the base the release builds on (older GLib layout)
-        runner: [ubuntu-latest, ubuntu-22.04]
+        include:
+          # With the HD microphone, as in the distribution packages
+          - runner: ubuntu-latest
+            hd_mic: enabled
+            hd_mic_deps: libavcodec-dev libpipewire-0.3-dev
+          # 22.04: the base the release builds on (older GLib layout), and
+          # without the HD microphone, as the prebuilt binary
+          - runner: ubuntu-22.04
+            hd_mic: disabled
+            hd_mic_deps: ""
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -22,11 +30,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build pkg-config libglib2.0-dev libbluetooth-dev
+          sudo apt-get install -y meson ninja-build pkg-config libglib2.0-dev libbluetooth-dev \
+            ${{ matrix.hd_mic_deps }}
 
       - name: Build
         run: |
-          meson setup daemon/build daemon
+          meson setup daemon/build daemon -Dhd_mic=${{ matrix.hd_mic }}
           ninja -C daemon/build
 
       - name: Test
@@ -36,7 +45,8 @@ jobs:
       # catch them before a release does
       - name: Test with sanitizers
         run: |
-          meson setup daemon/build-asan daemon -Db_sanitize=address,undefined
+          meson setup daemon/build-asan daemon -Db_sanitize=address,undefined \
+            -Dhd_mic=${{ matrix.hd_mic }}
           ninja -C daemon/build-asan
           ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
             meson test -C daemon/build-asan --print-errorlogs
