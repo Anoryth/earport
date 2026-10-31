@@ -10,6 +10,7 @@
 
 #include "aap_protocol.h"
 #include "airpods_state.h"
+#include "mic_audio_fixture.h"
 
 #define PARSE(pkt, result) aap_parse_packet((pkt), sizeof(pkt), (result))
 
@@ -190,6 +191,33 @@ static void test_adaptive_level(void)
 
 /* Captured from AirPods Pro 2 USB-C (2026-10-01): asleep at night, then a
  * false "asleep" while sitting still, then awake */
+/* HD microphone audio: the frames after the header, a truncated one left
+ * out; the stream's other subtypes are not audio */
+static void test_mic_audio(void)
+{
+    AapParsedPacket p;
+    g_assert_cmpint(PARSE(mic_fixture_packet, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_MIC_AUDIO);
+
+    size_t offset = 0, len;
+    const uint8_t *frame;
+    for (int i = 0; i < MIC_FIXTURE_FRAMES; i++) {
+        g_assert_true(aap_mic_audio_next_frame(&p.data.mic_audio, &offset, &frame, &len));
+        g_assert_cmpuint(len, ==, mic_fixture_frame_len[i]);
+    }
+    g_assert_false(aap_mic_audio_next_frame(&p.data.mic_audio, &offset, &frame, &len));
+
+    p.data.mic_audio.len -= 10;
+    offset = 0;
+    int frames = 0;
+    while (aap_mic_audio_next_frame(&p.data.mic_audio, &offset, &frame, &len))
+        frames++;
+    g_assert_cmpint(frames, ==, MIC_FIXTURE_FRAMES - 1);
+
+    g_assert_cmpint(aap_parse_packet(AAP_PKT_MIC_STOP, AAP_MIC_STOP_SIZE, &p), ==,
+                    AAP_PARSE_UNKNOWN_OPCODE);
+}
+
 static void test_sleep_detection(void)
 {
     const uint8_t night[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x07, 0x00,
@@ -558,6 +586,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/priority-list", test_priority_list);
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
+    g_test_add_func("/aap/mic-audio", test_mic_audio);
     g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);
     g_test_add_func("/aap/debug-hides-keys", test_debug_hides_keys);
     g_test_add_func("/model/from-number", test_model_from_number);

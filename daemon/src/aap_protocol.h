@@ -41,6 +41,7 @@
 #define AAP_OPCODE_PROXIMITY_KEYS_REQ 0x30
 #define AAP_OPCODE_PROXIMITY_KEYS_RSP 0x31
 #define AAP_OPCODE_SLEEP_DETECTION 0x57
+#define AAP_OPCODE_MIC_STREAM     0x58
 
 /* Proximity key types (opcode 0x31) */
 #define AAP_PROXIMITY_KEY_IRK 0x01  /* Resolves the BLE random address */
@@ -109,6 +110,7 @@ typedef enum {
     AAP_PKT_TYPE_SLEEP_DETECTION,
     AAP_PKT_TYPE_AUDIO_SOURCE,
     AAP_PKT_TYPE_HOSTS,
+    AAP_PKT_TYPE_MIC_AUDIO,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -213,6 +215,14 @@ typedef struct {
     AapHost hosts[AAP_MAX_HOSTS];
 } AapHosts;
 
+/* HD microphone audio (opcode 0x58, subtype 0x0001): AAC-ELD frames, each
+ * [timestamp u32 LE][length u8][frame], after a 22-byte header. Points into
+ * the received packet: only valid during the packet callback. */
+typedef struct {
+    const uint8_t *frames;
+    size_t len;
+} AapMicAudio;
+
 /* Parse result union */
 typedef struct {
     AapPacketType type;
@@ -230,6 +240,7 @@ typedef struct {
         AapSleepDetection sleep_detection;
         AapAudioSource audio_source;
         AapHosts hosts;
+        AapMicAudio mic_audio;
     } data;
 } AapParsedPacket;
 
@@ -271,6 +282,25 @@ AapParseResult aap_parse_noise_control(const uint8_t *data, size_t len, NoiseCon
 /* Proximity keys request: 04 00 04 00 30 00 05 00 */
 #define AAP_PROXIMITY_KEYS_REQ_SIZE 8
 extern const uint8_t AAP_PKT_REQUEST_PROXIMITY_KEYS[AAP_PROXIMITY_KEYS_REQ_SIZE];
+
+/* HD microphone stream (LibrePods PR #655): AAC-ELD mono, 64 kHz, 480
+ * samples per frame, sent alongside A2DP playback */
+#define AAP_MIC_START_SIZE 19
+#define AAP_MIC_STOP_SIZE 12
+extern const uint8_t AAP_PKT_MIC_START[AAP_MIC_START_SIZE];
+extern const uint8_t AAP_PKT_MIC_STOP[AAP_MIC_STOP_SIZE];
+
+/**
+ * Next AAC-ELD frame of a microphone audio packet
+ *
+ * @param audio The packet's frames
+ * @param offset Where to read, 0 for the first frame; advanced past it
+ * @param frame Set to the frame
+ * @param frame_len Set to its length
+ * @return false when there is no complete frame left
+ */
+bool aap_mic_audio_next_frame(const AapMicAudio *audio, size_t *offset, const uint8_t **frame,
+                              size_t *frame_len);
 
 /**
  * Interpret a conversation awareness event level (opcode 0x4B)

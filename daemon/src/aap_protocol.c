@@ -27,6 +27,33 @@ const uint8_t AAP_PKT_REQUEST_PROXIMITY_KEYS[AAP_PROXIMITY_KEYS_REQ_SIZE] = {
     0x04, 0x00, 0x04, 0x00, AAP_OPCODE_PROXIMITY_KEYS_REQ, 0x00, 0x05, 0x00
 };
 
+const uint8_t AAP_PKT_MIC_START[AAP_MIC_START_SIZE] = {
+    0x04, 0x00, 0x04, 0x00, AAP_OPCODE_MIC_STREAM, 0x00, 0x00, 0x00, 0x09, 0x00,
+    0x00, 0x01, 0x82, 0x00, 0x00, 0x00, 0x04, 0x96, 0x00
+};
+
+const uint8_t AAP_PKT_MIC_STOP[AAP_MIC_STOP_SIZE] = {
+    0x04, 0x00, 0x04, 0x00, AAP_OPCODE_MIC_STREAM, 0x00, 0x00, 0x00, 0x02, 0x00, 0x03, 0x01
+};
+
+#define MIC_AUDIO_HEADER_SIZE 22
+#define MIC_FRAME_HEADER_SIZE 5   /* Timestamp (4), length (1) */
+
+bool aap_mic_audio_next_frame(const AapMicAudio *audio, size_t *offset, const uint8_t **frame,
+                              size_t *frame_len)
+{
+    if (*offset + MIC_FRAME_HEADER_SIZE > audio->len)
+        return false;
+    size_t len = audio->frames[*offset + 4];
+    size_t start = *offset + MIC_FRAME_HEADER_SIZE;
+    if (len == 0 || start + len > audio->len)
+        return false;
+    *frame = audio->frames + start;
+    *frame_len = len;
+    *offset = start + len;
+    return true;
+}
+
 bool aap_has_valid_header(const uint8_t *data, size_t len)
 {
     if (data == NULL || len < AAP_HEADER_SIZE)
@@ -422,6 +449,15 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
         result->type = AAP_PKT_TYPE_METADATA;
         return aap_parse_metadata(data, len, &result->data.metadata);
 
+    case AAP_OPCODE_MIC_STREAM:
+        /* 04 00 04 00 58 00 01 00 ...: audio; other subtypes not understood */
+        if (len < MIC_AUDIO_HEADER_SIZE || data[6] != 0x01 || data[7] != 0x00)
+            return AAP_PARSE_UNKNOWN_OPCODE;
+        result->type = AAP_PKT_TYPE_MIC_AUDIO;
+        result->data.mic_audio.frames = data + MIC_AUDIO_HEADER_SIZE;
+        result->data.mic_audio.len = len - MIC_AUDIO_HEADER_SIZE;
+        return AAP_PARSE_OK;
+
     default:
         return AAP_PARSE_UNKNOWN_OPCODE;
     }
@@ -540,6 +576,8 @@ void aap_build_listening_modes_cmd(uint8_t modes, uint8_t *buffer)
 void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)
 {
     /* Raw packet dumps are verbose: only shown with G_MESSAGES_DEBUG set */
+    if (len > 7 && data[0] == 0x04 && data[4] == AAP_OPCODE_MIC_STREAM && data[6] == 0x01)
+        return;   /* Microphone audio: 30 packets a second */
     if (len > 4 && data[0] == 0x04 && data[4] == AAP_OPCODE_PROXIMITY_KEYS_RSP) {
         /* Debug logs get pasted in issues: never the IRK and encryption key */
         g_debug("%s: proximity keys (%zu bytes, not shown)", prefix, len);

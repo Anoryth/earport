@@ -18,8 +18,9 @@
 /* AirPods Service UUID */
 #define AIRPODS_UUID "74ec2172-0bad-4d01-8f77-997b2be0722a"
 
-/* Maximum packet size */
-#define BT_MAX_PACKET_SIZE 1024
+/* Maximum packet size: the HD microphone's audio packets can pass 1 KB, and
+ * a smaller buffer silently truncates them (SOCK_SEQPACKET) */
+#define BT_MAX_PACKET_SIZE 4096
 
 /* Connection states */
 typedef enum {
