@@ -15,6 +15,10 @@ BuildRequires:  gcc
 BuildRequires:  meson
 BuildRequires:  pkgconfig(gio-unix-2.0)
 BuildRequires:  bluez-libs-devel
+# HD microphone: FFmpeg's AAC decoder (libavcodec-free) and a PipeWire source
+BuildRequires:  pkgconfig(libavcodec)
+BuildRequires:  pkgconfig(libavutil)
+BuildRequires:  pkgconfig(libpipewire-0.3)
 BuildRequires:  systemd-rpm-macros
 # Extension: translations and schema check
 BuildRequires:  gettext
@@ -36,7 +40,7 @@ Shell extension shows it.
 %autosetup
 
 %build
-%meson
+%meson -Dhd_mic=enabled
 %meson_build
 
 %install

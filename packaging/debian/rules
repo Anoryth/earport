@@ -7,6 +7,10 @@ EXTDIR = $(CURDIR)/debian/earport/usr/share/gnome-shell/extensions/earport@anory
 %:
 	dh $@ --sourcedirectory=daemon --buildsystem=meson
 
+# HD microphone (FFmpeg's AAC decoder, PipeWire): fail rather than build without
+override_dh_auto_configure:
+	dh_auto_configure -- -Dhd_mic=enabled
+
 override_dh_auto_install:
 	dh_auto_install
 	tools/pack-extension.sh --dir $(EXTDIR)
