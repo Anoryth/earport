@@ -362,3 +362,104 @@ void device_finish(Device *dev)
     if (battery_estimator_finish(&dev->battery_estimator))
         save_learned_drain_rate(dev);
 }
+
+/* What the AirPods do with the device they are connected to */
+static const char *nearby_host(uint8_t connection_state)
+{
+    switch (connection_state) {
+    case PROXIMITY_CONN_DISCONNECTED:
+        return "none";
+    case PROXIMITY_CONN_MUSIC:
+        return "music";
+    case PROXIMITY_CONN_CALL:
+    case PROXIMITY_CONN_RINGING:
+    case PROXIMITY_CONN_HANGING_UP:
+        return "call";
+    default:
+        return "idle";
+    }
+}
+
+bool device_nearby_battery(Device *dev, const char *address, const ProximityBattery *battery,
+                           const ProximityInfo *info)
+{
+    AirPodsState *s = dev->state;
+    bool was_valid = s->nearby_valid;
+    bool ask_name = false;
+
+    s->nearby_valid = battery != NULL;
+    if (battery == NULL) {
+        if (was_valid)
+            dbus_service_emit_properties_changed(dev->dbus, "NearbyBattery");
+        return false;
+    }
+
+    const char *host = nearby_host(info->connection_state);
+    bool headphones = airpods_model_is_headphones(info->model);
+    bool changed = !was_valid || s->nearby_left != battery->left ||
+                   s->nearby_right != battery->right || s->nearby_case != battery->case_level ||
+                   s->nearby_left_charging != battery->left_charging ||
+                   s->nearby_right_charging != battery->right_charging ||
+                   s->nearby_case_charging != battery->case_charging ||
+                   s->nearby_headphones != headphones || g_strcmp0(s->nearby_host, host) != 0;
+    s->nearby_left = battery->left;
+    s->nearby_right = battery->right;
+    s->nearby_case = battery->case_level;
+    s->nearby_left_charging = battery->left_charging;
+    s->nearby_right_charging = battery->right_charging;
+    s->nearby_case_charging = battery->case_charging;
+    s->nearby_headphones = headphones;
+    s->nearby_host = host;
+
+    /* Once per appearance: the name may have changed in between */
+    if (!was_valid) {
+        DeviceProfile profile;
+        g_free(s->nearby_name);
+        if (address == NULL) {
+            s->nearby_name = g_strdup("AirPods");
+        } else if (config_load_device_profile(address, &profile) &&
+                   profile.display_name[0] != '\0') {
+            s->nearby_name = g_strdup(profile.display_name);
+        } else {
+            s->nearby_name = g_strdup(info->model != 0
+                                          ? airpods_model_to_string((AirPodsModel)info->model)
+                                          : "AirPods");
+            ask_name = true;
+        }
+    }
+
+    if (changed) {
+        g_message("Nearby AirPods: L=%d%% R=%d%% Case=%d%% (%s)",
+                  battery->left, battery->right, battery->case_level, host);
+        dbus_service_emit_properties_changed(dev->dbus, "NearbyBattery");
+    }
+    return ask_name;
+}
+
+void device_case_battery(Device *dev, int level, bool charging)
+{
+    AirPodsState *s = dev->state;
+    if (s->case_advert_level == level && s->case_advert_charging == charging)
+        return;
+    s->case_advert_level = level;
+    s->case_advert_charging = charging;
+    g_message("Case: %d%%%s", level, charging ? " (charging)" : "");
+
+    dbus_service_emit_properties_changed(dev->dbus, "BatteryCase");
+    dbus_service_emit_properties_changed(dev->dbus, "ChargingCase");
+    if (s->nearby_valid)
+        dbus_service_emit_properties_changed(dev->dbus, "NearbyBattery");
+}
+
+int device_battery_level(const Device *dev)
+{
+    const AirPodsState *s = dev->state;
+    int left = s->battery.left.level;
+    int right = s->battery.right.level;
+
+    if (!s->connected)
+        return -1;
+    if (!airpods_model_is_headphones(s->model) && (left < 0 || (right >= 0 && right < left)))
+        return right;
+    return left;
+}

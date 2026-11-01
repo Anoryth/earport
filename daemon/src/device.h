@@ -17,6 +17,7 @@
 #include "aap_protocol.h"
 #include "airpods_state.h"
 #include "battery_estimator.h"
+#include "ble_proximity.h"
 #include "dbus_service.h"
 #include "media_control.h"
 
@@ -41,6 +42,19 @@ void device_session_started(Device *dev, const char *address, const char *name);
 void device_session_ended(Device *dev);
 
 void device_handle_packet(Device *dev, const AapParsedPacket *pkt);
+
+/* AirPods seen nearby over BLE (battery NULL: gone). On appearance the name
+ * is the one given in the preferences, else the model's; returns true when
+ * none was given, for the caller to ask BlueZ for their Bluetooth name. */
+bool device_nearby_battery(Device *dev, const char *address, const ProximityBattery *battery,
+                           const ProximityInfo *info);
+
+/* Case battery from the adverts, -1 if unknown */
+void device_case_battery(Device *dev, int level, bool charging);
+
+/* The level GNOME shows: the lowest pod, the only battery for headphones;
+ * -1 when disconnected or unknown */
+int device_battery_level(const Device *dev);
 
 /* Shutting down: keep what was learned during the current session */
 void device_finish(Device *dev);

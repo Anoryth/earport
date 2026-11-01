@@ -76,23 +76,6 @@ static void on_proximity_keys(const AapProximityKeys *keys)
         autoconnect_set_enc(app.autoconnect, app.state.device_address, keys->enc);
 }
 
-/* What the AirPods do with the device they are connected to */
-static const char *nearby_host(uint8_t connection_state)
-{
-    switch (connection_state) {
-    case PROXIMITY_CONN_DISCONNECTED:
-        return "none";
-    case PROXIMITY_CONN_MUSIC:
-        return "music";
-    case PROXIMITY_CONN_CALL:
-    case PROXIMITY_CONN_RINGING:
-    case PROXIMITY_CONN_HANGING_UP:
-        return "call";
-    default:
-        return "idle";
-    }
-}
-
 /* Bluetooth name of the AirPods, when they have no custom one */
 static void on_alias_ready(GObject *source, GAsyncResult *res, gpointer user_data)
 {
@@ -114,68 +97,28 @@ static void on_alias_ready(GObject *source, GAsyncResult *res, gpointer user_dat
     g_variant_unref(result);
 }
 
-/* Name to show for the AirPods while they are not connected here: the
- * one given in the preferences, else their Bluetooth name (asked to BlueZ,
- * the model name meanwhile) */
-static char *nearby_name(const char *address, uint16_t model)
+/* Their Bluetooth name, while the model's is shown */
+static void request_nearby_alias(const char *address)
 {
-    DeviceProfile profile;
-    if (address == NULL)
-        return g_strdup("AirPods");
-    if (config_load_device_profile(address, &profile) && profile.display_name[0] != '\0')
-        return g_strdup(profile.display_name);
-
     GDBusConnection *bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, NULL);
-    if (bus != NULL) {
-        char *path = bluez_device_path(app.adapter_path ? app.adapter_path : "/org/bluez/hci0",
-                                       address);
-        g_dbus_connection_call(bus, "org.bluez", path, "org.freedesktop.DBus.Properties", "Get",
-                               g_variant_new("(ss)", "org.bluez.Device1", "Alias"),
-                               G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE, 1000, NULL,
-                               on_alias_ready, NULL);
-        g_free(path);
-        g_object_unref(bus);
-    }
-    return g_strdup(model != 0 ? airpods_model_to_string((AirPodsModel)model) : "AirPods");
+    if (bus == NULL)
+        return;
+    char *path = bluez_device_path(app.adapter_path ? app.adapter_path : "/org/bluez/hci0", address);
+    g_dbus_connection_call(bus, "org.bluez", path, "org.freedesktop.DBus.Properties", "Get",
+                           g_variant_new("(ss)", "org.bluez.Device1", "Alias"),
+                           G_VARIANT_TYPE("(v)"), G_DBUS_CALL_FLAGS_NONE, 1000, NULL,
+                           on_alias_ready, NULL);
+    g_free(path);
+    g_object_unref(bus);
 }
 
 static void on_nearby_battery(const ProximityBattery *battery, const ProximityInfo *info,
                               void *user_data)
 {
     (void)user_data;
-    AirPodsState *s = &app.state;
-    bool was_valid = s->nearby_valid;
-
-    s->nearby_valid = battery != NULL;
-    if (battery != NULL) {
-        bool changed = !was_valid || s->nearby_left != battery->left ||
-                       s->nearby_right != battery->right || s->nearby_case != battery->case_level ||
-                       s->nearby_left_charging != battery->left_charging ||
-                       s->nearby_right_charging != battery->right_charging ||
-                       s->nearby_case_charging != battery->case_charging ||
-                       s->nearby_headphones != airpods_model_is_headphones(info->model) ||
-                       g_strcmp0(s->nearby_host, nearby_host(info->connection_state)) != 0;
-        s->nearby_left = battery->left;
-        s->nearby_right = battery->right;
-        s->nearby_case = battery->case_level;
-        s->nearby_left_charging = battery->left_charging;
-        s->nearby_right_charging = battery->right_charging;
-        s->nearby_case_charging = battery->case_charging;
-        s->nearby_headphones = airpods_model_is_headphones(info->model);
-        /* Once per appearance: the name may have changed in between */
-        if (!was_valid) {
-            g_free(s->nearby_name);
-            s->nearby_name = nearby_name(autoconnect_get_address(app.autoconnect), info->model);
-        }
-        s->nearby_host = nearby_host(info->connection_state);
-        if (!changed)
-            return;
-        g_message("Nearby AirPods: L=%d%% R=%d%% Case=%d%% (%s)",
-                  battery->left, battery->right, battery->case_level, s->nearby_host);
-    } else if (!was_valid) {
-        return;
-    }
-    dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
+    const char *address = autoconnect_get_address(app.autoconnect);
+    if (device_nearby_battery(&app.device, address, battery, info))
+        request_nearby_alias(address);
 }
 
 /* Whether the AirPods connected here are the ones watched over BLE (the
@@ -190,24 +133,12 @@ static bool connected_are_watched(void)
 static void on_case_battery(int level, bool charging, void *user_data)
 {
     (void)user_data;
-    AirPodsState *s = &app.state;
-
     /* Other AirPods connected, until they give their keys */
-    if (s->connected && !connected_are_watched()) {
+    if (app.state.connected && !connected_are_watched()) {
         level = -1;
         charging = false;
     }
-
-    if (s->case_advert_level == level && s->case_advert_charging == charging)
-        return;
-    s->case_advert_level = level;
-    s->case_advert_charging = charging;
-    g_message("Case: %d%%%s", level, charging ? " (charging)" : "");
-
-    dbus_service_emit_properties_changed(app.dbus_service, "BatteryCase");
-    dbus_service_emit_properties_changed(app.dbus_service, "ChargingCase");
-    if (s->nearby_valid)
-        dbus_service_emit_properties_changed(app.dbus_service, "NearbyBattery");
+    device_case_battery(&app.device, level, charging);
 }
 
 static void on_playback_started(void *user_data)
@@ -219,24 +150,13 @@ static void on_playback_started(void *user_data)
 }
 
 /* ============================================================================
- * AirPods link
- * ========================================================================== */
-
-/* ============================================================================
  * Battery in GNOME (through BlueZ)
  * ========================================================================== */
 
-/* The lowest pod, as the panel shows; the only battery for headphones */
 static void publish_battery(void)
 {
-    int left = app.state.battery.left.level;
-    int right = app.state.battery.right.level;
-    int level = left;
-
-    if (!airpods_model_is_headphones(app.state.model) && (left < 0 || (right >= 0 && right < left)))
-        level = right;
-    battery_provider_update(app.battery_provider, app.adapter_path,
-                            app.state.device_address, app.state.connected ? level : -1);
+    battery_provider_update(app.battery_provider, app.adapter_path, app.state.device_address,
+                            device_battery_level(&app.device));
 }
 
 /* ============================================================================

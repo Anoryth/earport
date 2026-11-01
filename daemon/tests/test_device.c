@@ -10,6 +10,7 @@
 #include <glib.h>
 #include <string.h>
 
+#include "config.h"
 #include "device.h"
 
 typedef struct {
@@ -219,6 +220,85 @@ static void test_audio_source(Fixture *f, gconstpointer data)
     g_assert_null(f->state.audio_source);
 }
 
+/* AirPods seen nearby: the model's name until BlueZ gives theirs, the one
+ * given in the preferences when there is one */
+static void test_nearby(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const char *address = "00:11:22:33:44:55";
+    ProximityInfo info = { .model = AIRPODS_MODEL_PRO_2_USBC,
+                           .connection_state = PROXIMITY_CONN_MUSIC };
+    ProximityBattery battery = { .left = 80, .right = 70, .case_level = 50 };
+
+    g_assert_true(device_nearby_battery(&f->device, address, &battery, &info));
+    g_assert_true(f->state.nearby_valid);
+    g_assert_cmpstr(f->state.nearby_name, ==, "AirPods Pro 2 (USB-C)");
+    g_assert_cmpstr(f->state.nearby_host, ==, "music");
+    g_assert_cmpint(f->state.nearby_right, ==, 70);
+
+    /* Still there: the name, maybe from BlueZ by now, stays */
+    g_free(f->state.nearby_name);
+    f->state.nearby_name = g_strdup("Kitchen");
+    info.connection_state = PROXIMITY_CONN_CALL;
+    g_assert_false(device_nearby_battery(&f->device, address, &battery, &info));
+    g_assert_cmpstr(f->state.nearby_name, ==, "Kitchen");
+    g_assert_cmpstr(f->state.nearby_host, ==, "call");
+
+    g_assert_false(device_nearby_battery(&f->device, address, NULL, NULL));
+    g_assert_false(f->state.nearby_valid);
+
+    /* Back, renamed in the preferences meanwhile */
+    DeviceProfile profile;
+    config_load_device_profile(address, &profile);
+    g_strlcpy(profile.display_name, "Desk", sizeof(profile.display_name));
+    config_save_device_profile(address, &profile);
+    g_assert_false(device_nearby_battery(&f->device, address, &battery, &info));
+    g_assert_cmpstr(f->state.nearby_name, ==, "Desk");
+
+    /* Address not known yet: nothing to ask BlueZ */
+    device_nearby_battery(&f->device, address, NULL, NULL);
+    g_assert_false(device_nearby_battery(&f->device, NULL, &battery, &info));
+    g_assert_cmpstr(f->state.nearby_name, ==, "AirPods");
+}
+
+static void test_case_battery(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    device_case_battery(&f->device, 40, true);
+    g_assert_cmpint(f->state.case_advert_level, ==, 40);
+    g_assert_true(f->state.case_advert_charging);
+    device_case_battery(&f->device, -1, false);
+    g_assert_cmpint(f->state.case_advert_level, ==, -1);
+    g_assert_false(f->state.case_advert_charging);
+}
+
+/* GNOME shows the lowest pod */
+static void test_battery_level(Fixture *f, gconstpointer data)
+{
+    (void)data;
+
+    g_assert_cmpint(device_battery_level(&f->device), ==, -1);
+    replay_connection(f);
+    g_assert_cmpint(device_battery_level(&f->device), ==, 83);
+
+    f->state.battery.right.level = 82;
+    g_assert_cmpint(device_battery_level(&f->device), ==, 82);
+    f->state.battery.left.level = -1;
+    g_assert_cmpint(device_battery_level(&f->device), ==, 82);
+    f->state.battery.left.level = 60;
+    f->state.battery.right.level = -1;
+    g_assert_cmpint(device_battery_level(&f->device), ==, 60);
+
+    /* Headphones: one battery, reported as the left one */
+    f->state.model = AIRPODS_MODEL_MAX;
+    f->state.battery.right.level = 10;
+    g_assert_cmpint(device_battery_level(&f->device), ==, 60);
+
+    device_session_ended(&f->device);
+    g_assert_cmpint(device_battery_level(&f->device), ==, -1);
+}
+
 int main(int argc, char *argv[])
 {
     /* The device profile and learned discharge rate go to a temporary
@@ -235,6 +315,9 @@ int main(int argc, char *argv[])
     ADD("/device/conversation", test_conversation);
     ADD("/device/disconnection", test_disconnection);
     ADD("/device/audio-source", test_audio_source);
+    ADD("/device/nearby", test_nearby);
+    ADD("/device/case-battery", test_case_battery);
+    ADD("/device/battery-level", test_battery_level);
 
     return g_test_run();
 }
