@@ -74,6 +74,7 @@ sources = files(
     'src/dbus_service.c',
     'src/handoff.c',
     'src/hd_mic.c',
+    'src/idle.c',
     'src/link_trace.c',
     'src/relink.c',
     'src/tipi.c',
@@ -184,6 +185,13 @@ test_media_control = executable('test-media-control',
     dependencies: [glib_dep, gio_dep],
 )
 test('media-control', test_media_control)
+
+test_idle = executable('test-idle',
+    files('tests/test_idle.c', 'src/idle.c'),
+    include_directories: include_directories('src'),
+    dependencies: [glib_dep, gio_dep],
+)
+test('idle', test_idle)
 
 # BlueZ monitoring against a fake org.bluez (tests/fake_bluez.c)
 test_bluez_monitor = executable('test-bluez-monitor',
