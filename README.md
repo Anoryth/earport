@@ -282,8 +282,8 @@ Settings › Sound, or in your call or recording app. The AirPods send their
 microphone only while an app records from it, and Conversation Awareness is
 paused meanwhile.
 
-It needs EarPort built with FFmpeg's AAC decoder and PipeWire: the Fedora,
-Debian and Ubuntu packages have it, and so does a build from source when
+It needs EarPort built with FFmpeg's AAC decoder and PipeWire: the Fedora (43
+and later), Debian and Ubuntu packages have it, and so does a build from source when
 `libavcodec` and `libpipewire` are installed. The prebuilt service of the
 quick install doesn't (the switch is then not shown).
 
