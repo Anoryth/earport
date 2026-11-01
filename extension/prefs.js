@@ -83,7 +83,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         window.add(page);
 
-        /* Device status group */
         const statusGroup = new Adw.PreferencesGroup({
             title: _('Device Status'),
             description: _('Current AirPods connection status'),
@@ -104,7 +103,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         statusGroup.add(this._earDetectionRow);
 
-        /* Device Profile group */
         const profileGroup = new Adw.PreferencesGroup({
             title: _('Device Profile'),
             description: _('Customize your AirPods. Leave the name empty to use the device model name'),
@@ -118,7 +116,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         profileGroup.add(this._displayNameRow);
 
-        /* Features group */
         const featuresGroup = new Adw.PreferencesGroup({
             title: _('AirPods Features'),
             description: _('Advanced features for your AirPods'),
@@ -169,7 +166,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         featuresGroup.add(this._adaptiveRow);
 
-        /* Long Press Actions group */
         const longPressGroup = new Adw.PreferencesGroup({
             title: _('Long Press Actions'),
             description: _('Configure which modes are cycled when pressing and holding the stem'),
@@ -200,7 +196,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         longPressGroup.add(this._lpAdaptiveRow);
 
-        /* Media Control group */
         const mediaGroup = new Adw.PreferencesGroup({
             title: _('Media Control'),
             description: _('Configure media playback behavior'),
@@ -226,7 +221,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         mediaGroup.add(this._hdMicRow);
 
-        /* Connection group */
         const connectionGroup = new Adw.PreferencesGroup({
             title: _('Connection'),
         });
@@ -244,7 +238,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         connectionGroup.add(this._appleHandoffRow);
 
-        /* Notifications group */
         const notificationsGroup = new Adw.PreferencesGroup({
             title: _('Notifications'),
             description: _('Configure notification preferences'),
@@ -275,7 +268,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         notificationsGroup.add(this._batteryThresholdRow);
 
-        /* Shortcuts group */
         const shortcutsGroup = new Adw.PreferencesGroup({
             title: _('Keyboard Shortcuts'),
         });
@@ -301,7 +293,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         shortcutsGroup.add(shortcutRow);
 
-        /* About group */
         const aboutGroup = new Adw.PreferencesGroup({
             title: _('About'),
         });
@@ -335,10 +326,8 @@ export default class EarPortPreferences extends ExtensionPreferences {
         const shortcuts = this._settings.get_strv('cycle-noise-mode-shortcut');
         this._shortcutLabel.accelerator = shortcuts.length > 0 ? shortcuts[0] : '';
 
-        /* Connect to daemon */
         this._connectProxy();
 
-        /* Connect settings signals */
         this._connectionNotifRow.connect('notify::active', () => {
             this._settings.set_boolean('enable-connection-notifications', this._connectionNotifRow.active);
         });
@@ -355,7 +344,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
             this._settings.set_int('conversation-volume', this._conversationVolumeRow.value);
         });
 
-        /* Connect UI signals for daemon settings */
         this._caRow.connect('notify::active', () => {
             if (this._updatingFromProxy)
                 return;
@@ -398,7 +386,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
             }
         });
 
-        /* Long press modes change handlers */
         const onListeningModeChanged = () => {
             if (this._proxy?.Connected && !this._updatingListeningModes) {
                 /* Ensure at least 2 modes are enabled */
@@ -437,7 +424,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._lpANCRow.connect('notify::active', onListeningModeChanged);
         this._lpAdaptiveRow.connect('notify::active', onListeningModeChanged);
 
-        /* Custom name change handler */
         this._displayNameRow.connect('apply', () => {
             if (this._proxy?.Connected) {
                 const newName = this._displayNameRow.text.trim();
@@ -473,7 +459,7 @@ export default class EarPortPreferences extends ExtensionPreferences {
             this._updateState();
         });
 
-        /* Initialize ear pause mode (available even when AirPods are not connected) */
+        /* Available even when the AirPods are not connected */
         this._updatingFromProxy = true;
         this._earPauseRow.selected = this._proxy.EarPauseMode;
         this._updateAutoConnect();
@@ -691,6 +677,6 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._lpTransparencyRow.sensitive = sensitive;
         this._lpANCRow.sensitive = sensitive;
         this._lpAdaptiveRow.sensitive = sensitive;
-        /* Ear pause mode is always available (doesn't require AirPods connection) */
+        /* Available without the AirPods too */
     }
 }

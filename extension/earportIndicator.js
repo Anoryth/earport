@@ -17,7 +17,6 @@ import {EarPortToggle} from './earportToggle.js';
 
 const AirPodsProxy = Gio.DBusProxy.makeProxyWrapper(AirPodsInterface);
 
-/* Quick Settings indicator */
 export const EarPortIndicator = GObject.registerClass(
 class EarPortIndicator extends QuickSettings.SystemIndicator {
     constructor(extensionObject) {
@@ -46,18 +45,16 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
         this._batteryPill.add_child(this._chargingIcon);
         this._batteryPill.add_child(this._batteryLabel);
 
-        /* Add pill after indicator icon */
         this.add_child(this._batteryPill);
 
         this._proxy = null;
         this._propertiesChangedId = 0;
         this._extensionObject = extensionObject;
 
-        /* Create toggle immediately so it's available for addExternalIndicator */
+        /* Created now: addExternalIndicator() needs it right away */
         this._toggle = new EarPortToggle(extensionObject);
         this.quickSettingsItems.push(this._toggle);
 
-        /* Create proxy asynchronously */
         this._createProxy();
     }
 
@@ -89,10 +86,8 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
     }
 
     _onProxyReady() {
-        /* Pass proxy to toggle */
         this._toggle.setProxy(this._proxy);
 
-        /* Connect to property changes for panel indicator */
         this._propertiesChangedId = this._proxy.connect('g-properties-changed', () => {
             this._updateIndicator();
         });
@@ -119,7 +114,6 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
             const left = this._proxy.BatteryLeft;
             const right = this._proxy.BatteryRight;
 
-            /* Get the lowest battery level */
             let lowestBattery = -1;
             if (isHeadphones) {
                 lowestBattery = left;
@@ -142,7 +136,6 @@ class EarPortIndicator extends QuickSettings.SystemIndicator {
 
                 this._chargingIcon.visible = charging;
 
-                /* Update style based on battery level */
                 this._batteryPill.remove_style_class_name('low');
                 this._batteryPill.remove_style_class_name('critical');
                 this._batteryPill.remove_style_class_name('charging');

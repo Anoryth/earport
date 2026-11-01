@@ -10,7 +10,6 @@ import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
-/* Noise control mode button */
 export const NoiseControlButton = GObject.registerClass(
 class NoiseControlButton extends St.Button {
     constructor(mode, label, accessibleName, gicon) {
@@ -20,7 +19,7 @@ class NoiseControlButton extends St.Button {
             accessible_name: accessibleName,
             accessible_role: Atk.Role.TOGGLE_BUTTON,
             child: new St.BoxLayout({
-                // GNOME 46–47 only support the legacy vertical property.
+                /* GNOME 46 and 47 only have the legacy vertical property */
                 ...('orientation' in St.BoxLayout.prototype
                     ? {orientation: Clutter.Orientation.VERTICAL}
                     : {vertical: true}),

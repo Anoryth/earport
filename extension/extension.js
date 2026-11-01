@@ -14,7 +14,6 @@ import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {EarPortIndicator} from './earportIndicator.js';
 
-/* Extension class */
 export default class EarPortExtension extends Extension {
     enable() {
         this._indicator = new EarPortIndicator(this);

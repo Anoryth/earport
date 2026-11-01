@@ -91,7 +91,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _createMenu() {
-        /* Header - will be updated when connected */
         this.menu.setHeader('audio-headphones-symbolic', 'AirPods');
 
         /* Battery section */
@@ -124,7 +123,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         });
 
         const batteryColumn = new St.BoxLayout({
-            // GNOME 46–47 only support the legacy vertical property.
+            /* GNOME 46 and 47 only have the legacy vertical property */
             ...('orientation' in St.BoxLayout.prototype
                 ? {orientation: Clutter.Orientation.VERTICAL}
                 : {vertical: true}),
@@ -226,7 +225,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._updateServiceItem.visible = false;
         this.menu.addMenuItem(this._updateServiceItem);
 
-        /* Set initial disconnected state */
         this._updateDisconnectedState();
     }
 
@@ -234,13 +232,11 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         if (!this._proxy)
             return;
 
-        /* Connect to property changes */
         this._propertiesChangedId = this._proxy.connect(
             'g-properties-changed',
             this._onPropertiesChanged.bind(this)
         );
 
-        /* Connect to signals */
         this._signalIds.push(
             this._proxy.connectSignal('DeviceConnected', this._onDeviceConnected.bind(this))
         );
@@ -260,7 +256,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             this._proxy.connectSignal('PausedForSleep', () => this._notifications.pausedForSleep())
         );
 
-        /* Initial state update */
         this._updateState();
     }
 
@@ -323,7 +318,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._caseBattery.setLevel(caseBattery, this._proxy.ChargingCase);
         this._updateBatteryAccessibleName();
 
-        /* Check for low battery notifications */
         this._checkLowBattery(left, right);
     }
 
@@ -360,15 +354,12 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             this._batteryBox.opacity = 255;
             this._ncBox.opacity = 255;
 
-            /* Update menu header with display name */
             this.menu.setHeader('audio-headphones-symbolic', displayName);
 
-            /* Update layout based on device type */
             this._leftBattery.setHeadphonesMode(isHeadphones, deviceModel);
             this._rightBattery.setHeadphonesMode(isHeadphones);
             this._caseBattery.setHeadphonesMode(isHeadphones);
 
-            /* Update battery */
             const batteryLeft = this._proxy.BatteryLeft;
             const batteryRight = this._proxy.BatteryRight;
             this._leftBattery.setLevel(batteryLeft, this._proxy.ChargingLeft);
@@ -380,13 +371,10 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             this._updateListeningTime(this._proxy.ListeningTimeRemaining);
             this._updateBatteryAccessibleName();
 
-            /* Check for low battery on state update */
             this._checkLowBattery(batteryLeft, batteryRight);
 
-            /* Update noise control buttons visibility based on features */
             this._updateNoiseControlVisibility(supportsANC, supportsAdaptive);
 
-            /* Update noise control */
             this._setNoiseControlSensitive(true);
             this._updateNoiseControlButtons(this._proxy.NoiseControlMode);
         } else {
@@ -428,10 +416,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._batteryBox.opacity = 128;
         this._ncBox.opacity = 128;
 
-        /* Reset menu header to default */
         this.menu.setHeader('audio-headphones-symbolic', 'AirPods');
 
-        /* Reset to earbuds mode (show all indicators) */
         this._leftBattery.setHeadphonesMode(false);
         this._rightBattery.setHeadphonesMode(false);
         this._caseBattery.setHeadphonesMode(false);
@@ -442,7 +428,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._updateListeningTime(-1);
         this._batteryItem.accessible_name = _('Disconnected');
 
-        /* Show all noise control buttons and section when disconnected */
         this._ncBox.visible = true;
         for (const button of Object.values(this._ncButtons)) {
             button.visible = true;
