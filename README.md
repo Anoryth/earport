@@ -8,11 +8,13 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 <img src="extension.png" width="384" alt="The EarPort menu in GNOME Shell Quick Settings: AirPods Pro at 85 % and 82 %, case charging at 64 %, about 4:30 of listening left, noise cancellation on">
 
-> **New in 0.6: switch with your Apple devices (experimental).** Your AirPods
-> stay connected to the computer and to your iPhone, iPad or Mac at the same
-> time, and follow you from one to the other on their own, as with a Mac, with
-> no change to your Bluetooth configuration and no pairing again.
-> [How it works](#switching-with-your-apple-devices-experimental)
+> **New in 0.7: HD microphone (experimental).** Record with your AirPods in
+> high quality while your music or call keeps playing in high quality, instead
+> of the usual Bluetooth headset microphone that drops everything to call
+> quality. [How it works](#hd-microphone-experimental)
+>
+> Since 0.6, your AirPods can also [switch with your Apple devices](#switching-with-your-apple-devices-experimental)
+> on their own, as with a Mac (experimental).
 
 ## Features
 
@@ -78,6 +80,7 @@ The project consists of two components:
 - GNOME Shell 46 or later
 - BlueZ (Bluetooth stack)
 - AirPods paired via Bluetooth settings
+- For the HD microphone: PipeWire, and FFmpeg's AAC decoder (see [HD Microphone](#hd-microphone-experimental))
 
 ## Installation
 
@@ -201,6 +204,19 @@ sudo dnf install meson ninja-build glib2-devel bluez-libs-devel
 sudo pacman -S meson ninja glib2 bluez-libs
 ```
 
+Optional, for the HD microphone:
+
+```bash
+# Debian/Ubuntu
+sudo apt install libavcodec-dev libpipewire-0.3-dev
+
+# Fedora
+sudo dnf install libavcodec-free-devel pipewire-devel
+
+# Arch Linux
+sudo pacman -S ffmpeg pipewire
+```
+
 Then, as your regular user:
 
 ```bash
@@ -224,7 +240,9 @@ to remove it (the only step asking for sudo).
 2. Install the extension:
 
    ```bash
-   cp -r extension ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
+   # Never write over the installed copy: GNOME Shell has its files open
+   rm -rf ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
+   tools/pack-extension.sh --dir ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io
    glib-compile-schemas ~/.local/share/gnome-shell/extensions/earport@anoryth.github.io/schemas
    gnome-extensions enable earport@anoryth.github.io
    ```
