@@ -47,8 +47,10 @@ void hd_mic_set_connected(HdMic *mic, bool connected);
 /* A microphone audio packet from the AirPods */
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio);
 
-/* The gain for a frame with this peak (0-1) after one with 'gain' (exposed
- * for the tests; only built with the HD microphone) */
+/* Exposed for the tests, only built with the HD microphone: the gain for a
+ * frame with this peak (0-1) after one with 'gain'; whether FFmpeg opens
+ * the AAC-ELD decoder (without PipeWire, absent from package builders) */
 float hd_mic_next_gain(float gain, float peak);
+bool hd_mic_can_decode(void);
 
 #endif /* HD_MIC_H */

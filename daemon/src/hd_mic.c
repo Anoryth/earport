@@ -377,6 +377,17 @@ static bool open_decoder(HdMic *mic)
            mic->codec->sample_fmt == AV_SAMPLE_FMT_FLTP;
 }
 
+bool hd_mic_can_decode(void)
+{
+    HdMic *mic = g_new0(HdMic, 1);
+    bool ok = open_decoder(mic);
+    avcodec_free_context(&mic->codec);
+    av_packet_free(&mic->packet);
+    av_frame_free(&mic->frame);
+    g_free(mic);
+    return ok;
+}
+
 HdMic *hd_mic_new(const HdMicCallbacks *callbacks, void *user_data)
 {
     HdMic *mic = g_new0(HdMic, 1);

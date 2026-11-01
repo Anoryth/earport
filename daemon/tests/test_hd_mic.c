@@ -3,7 +3,8 @@
  * SPDX-FileCopyrightText: 2024 EarPort Contributors
  *
  * HD microphone: the automatic gain, and the system's FFmpeg opening the
- * AAC-ELD decoder (a distribution package fails here, not on users).
+ * AAC-ELD decoder (a distribution package fails here, not on users). No
+ * PipeWire: package builders don't run it.
  */
 
 #include <glib.h>
@@ -33,25 +34,9 @@ static void test_gain(void)
     g_assert_cmpint(frames, <, 250);
 }
 
-static void capture_changed(bool capturing, void *user_data)
-{
-    (void)capturing;
-    (void)user_data;
-}
-
-static void send(const uint8_t *data, size_t len, void *user_data)
-{
-    (void)data;
-    (void)len;
-    (void)user_data;
-}
-
 static void test_decoder(void)
 {
-    const HdMicCallbacks callbacks = { .send = send, .capture_changed = capture_changed };
-    HdMic *mic = hd_mic_new(&callbacks, NULL);
-    g_assert_nonnull(mic);
-    hd_mic_free(mic);
+    g_assert_true(hd_mic_can_decode());
 }
 
 int main(int argc, char *argv[])
