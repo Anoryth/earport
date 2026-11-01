@@ -15,10 +15,16 @@ BuildRequires:  gcc
 BuildRequires:  meson
 BuildRequires:  pkgconfig(gio-unix-2.0)
 BuildRequires:  bluez-libs-devel
-# HD microphone: FFmpeg's AAC decoder (libavcodec-free) and a PipeWire source
+# HD microphone: FFmpeg's AAC decoder (libavcodec-free) and a PipeWire source.
+# Fedora 42's libavcodec-free can't open AAC-ELD: built without it there.
+%if 0%{?fedora} >= 43
+%global hd_mic enabled
 BuildRequires:  pkgconfig(libavcodec)
 BuildRequires:  pkgconfig(libavutil)
 BuildRequires:  pkgconfig(libpipewire-0.3)
+%else
+%global hd_mic disabled
+%endif
 BuildRequires:  systemd-rpm-macros
 # Extension: translations and schema check
 BuildRequires:  gettext
@@ -40,7 +46,7 @@ Shell extension shows it.
 %autosetup
 
 %build
-%meson -Dhd_mic=enabled
+%meson -Dhd_mic=%{hd_mic}
 %meson_build
 
 %install
