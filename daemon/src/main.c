@@ -262,31 +262,6 @@ static void link_send(const uint8_t *data, size_t len, void *user_data)
     aap_link_send(app.link, data, len);
 }
 
-/* Conversation Awareness would lower the volume at each word said into the
- * HD microphone: off while recording. The AirPods keep it off through a
- * disconnection or a daemon restart, so the profile remembers to turn it
- * back on. */
-static void hd_mic_set_ca_off(bool off)
-{
-    DeviceProfile profile;
-    config_load_device_profile(app.state.device_address, &profile);
-    profile.ca_off_for_mic = off;
-    config_save_device_profile(app.state.device_address, &profile);
-
-    uint8_t packet[AAP_CONTROL_CMD_SIZE];
-    aap_build_conv_awareness_cmd(!off, packet);
-    aap_link_send(app.link, packet, AAP_CONTROL_CMD_SIZE);
-    airpods_state_set_conversational_awareness(&app.state, !off);
-    dbus_service_emit_properties_changed(app.dbus_service, "ConversationalAwareness");
-}
-
-static void hd_mic_restore_ca(void)
-{
-    DeviceProfile profile;
-    if (config_load_device_profile(app.state.device_address, &profile) && profile.ca_off_for_mic)
-        hd_mic_set_ca_off(false);
-}
-
 static gboolean hd_mic_restart_output(gpointer user_data)
 {
     (void)user_data;
@@ -307,12 +282,9 @@ static void hd_mic_capture_changed(bool capturing, void *user_data)
     if (!app.state.connected || app.stopping)
         return;   /* The profile remembers, for the next connection */
 
-    if (capturing) {
-        if (app.state.conversational_awareness)
-            hd_mic_set_ca_off(true);
+    controls_mic_capture_changed(&app.controls, capturing);
+    if (capturing)
         return;
-    }
-    hd_mic_restore_ca();
     /* The stream's stop sometimes leaves A2DP playing in one ear; suspending
      * and resuming the output fixes it without pausing the players (turning
      * the profile off removes the output, and browsers pause) */
@@ -449,7 +421,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
     relink_link_opened(app.relink);
     controls_send_saved_settings(&app.controls, address);
     /* Before the source is back: a recording going on turns it off again */
-    hd_mic_restore_ca();
+    controls_restore_ca(&app.controls);
     hd_mic_name_changed(NULL);
     hd_mic_set_connected(app.hd_mic, true);
     /* Not the case of these AirPods */

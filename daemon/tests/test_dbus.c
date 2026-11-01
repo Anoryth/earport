@@ -50,6 +50,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
     Fixture *f = user_data;
     device_session_started(&f->device, address, name);
     controls_send_saved_settings(&f->controls, address);
+    controls_restore_ca(&f->controls);
 }
 
 static void on_link_disconnected(void *user_data)
@@ -722,6 +723,75 @@ static void test_disconnect_announces_reset(Fixture *f, gconstpointer data)
     g_dbus_connection_signal_unsubscribe(f->client, id);
 }
 
+/* Conversation Awareness off while the HD microphone records, back on after */
+static void test_mic_turns_ca_off(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t ca_off[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x02, 0x00, 0x00, 0x00 };
+    const uint8_t ca_on[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x01, 0x00, 0x00, 0x00 };
+    DeviceProfile profile;
+
+    connect_airpods(f);
+    RUN_UNTIL(get_bool(f, "ConversationalAwareness"));
+    config_load_device_profile(ADDRESS, &profile);
+    bool chosen = profile.conversational_awareness;
+    controls_mic_capture_changed(&f->controls, true);
+    assert_sent(ca_off, sizeof(ca_off));
+    g_assert_false(get_bool(f, "ConversationalAwareness"));
+    g_assert_true(config_load_device_profile(ADDRESS, &profile));
+    g_assert_true(profile.ca_off_for_mic);
+    /* The user's own choice is untouched */
+    g_assert_cmpint(profile.conversational_awareness, ==, chosen);
+
+    controls_mic_capture_changed(&f->controls, false);
+    assert_sent(ca_on, sizeof(ca_on));
+    g_assert_true(get_bool(f, "ConversationalAwareness"));
+    g_assert_true(config_load_device_profile(ADDRESS, &profile));
+    g_assert_false(profile.ca_off_for_mic);
+
+    /* Stopped again: nothing left to restore */
+    controls_mic_capture_changed(&f->controls, false);
+    run_for(50);
+    g_assert_cmpuint(fake_bt_count_sent(ca_on, sizeof(ca_on)), ==, 1);
+}
+
+/* Off already: recording leaves it off, stopping doesn't turn it on */
+static void test_mic_keeps_ca_off(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t ca[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28 };
+
+    connect_airpods(f);
+    RECEIVE(0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x02, 0x00, 0x00, 0x00);
+    RUN_UNTIL(!get_bool(f, "ConversationalAwareness"));
+
+    controls_mic_capture_changed(&f->controls, true);
+    controls_mic_capture_changed(&f->controls, false);
+    run_for(50);
+    g_assert_cmpuint(fake_bt_count_sent(ca, sizeof(ca)), ==, 0);
+    g_assert_false(get_bool(f, "ConversationalAwareness"));
+}
+
+/* Disconnected while recording: turned back on at the next connection */
+static void test_mic_ca_restored_on_connection(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    const uint8_t ca_on[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x28, 0x01, 0x00, 0x00, 0x00 };
+    DeviceProfile profile;
+
+    connect_airpods(f);
+    RUN_UNTIL(get_bool(f, "ConversationalAwareness"));
+    controls_mic_capture_changed(&f->controls, true);
+    aap_link_device_disconnected(f->link);
+    RUN_UNTIL(received(f, "DeviceDisconnected"));
+    g_assert_cmpuint(fake_bt_count_sent(ca_on, sizeof(ca_on)), ==, 0);
+
+    connect_airpods(f);
+    assert_sent(ca_on, sizeof(ca_on));
+    g_assert_true(config_load_device_profile(ADDRESS, &profile));
+    g_assert_false(profile.ca_off_for_mic);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
@@ -754,6 +824,9 @@ int main(int argc, char *argv[])
     ADD("/dbus/adaptive-not-resent-when-reported", test_adaptive_not_resent_when_reported);
     ADD("/dbus/hd-mic-option", test_hd_mic_option);
     ADD("/dbus/disconnect-announces-reset", test_disconnect_announces_reset);
+    ADD("/dbus/mic-turns-ca-off", test_mic_turns_ca_off);
+    ADD("/dbus/mic-keeps-ca-off", test_mic_keeps_ca_off);
+    ADD("/dbus/mic-ca-restored-on-connection", test_mic_ca_restored_on_connection);
 
     int result = g_test_run();
 

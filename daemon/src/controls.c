@@ -290,6 +290,40 @@ static void on_set_display_name(const char *name, void *user_data)
         c->display_name_changed(c->user_data);
 }
 
+static void set_ca_off_for_mic(Controls *c, const char *address, bool off)
+{
+    DeviceProfile profile;
+    config_load_device_profile(address, &profile);
+    profile.ca_off_for_mic = off;
+    config_save_device_profile(address, &profile);
+
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    aap_build_conv_awareness_cmd(!off, packet);
+    aap_link_send(c->link, packet, AAP_CONTROL_CMD_SIZE);
+    airpods_state_set_conversational_awareness(c->device->state, !off);
+    dbus_service_emit_properties_changed(c->device->dbus, "ConversationalAwareness");
+}
+
+void controls_restore_ca(Controls *c)
+{
+    const char *address = c->device->state->device_address;
+    DeviceProfile profile;
+    if (address != NULL && address[0] != '\0' && config_load_device_profile(address, &profile) &&
+        profile.ca_off_for_mic)
+        set_ca_off_for_mic(c, address, false);
+}
+
+void controls_mic_capture_changed(Controls *c, bool capturing)
+{
+    const char *address = c->device->state->device_address;
+    if (!capturing) {
+        controls_restore_ca(c);
+        return;
+    }
+    if (c->device->state->conversational_awareness && address != NULL && address[0] != '\0')
+        set_ca_off_for_mic(c, address, true);
+}
+
 void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus)
 {
     c->device = device;

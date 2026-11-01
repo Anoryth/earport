@@ -35,6 +35,13 @@ void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus
 /* Send the long-press modes set in EarPort to the AirPods shortly */
 void controls_send_saved_settings(Controls *c, const char *address);
 
+/* Conversation Awareness would lower the volume at each word said into the
+ * HD microphone: turned off while it records, back on when it stops. The
+ * AirPods keep it off through a disconnection or a daemon restart, so the
+ * profile remembers to turn it back on (controls_restore_ca on connection). */
+void controls_mic_capture_changed(Controls *c, bool capturing);
+void controls_restore_ca(Controls *c);
+
 /* Cancel what is still pending */
 void controls_cleanup(Controls *c);
 
