@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-11-01 14:01+0100\n"
+"POT-Creation-Date: 2026-11-01 14:05+0100\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Brazilian Portuguese\n"
@@ -30,8 +30,8 @@ msgstr "indisponível"
 msgid "charging"
 msgstr "carregando"
 
-#: extension/earportToggle.js:45 extension/earportToggle.js:413
-#: extension/earportToggle.js:429 extension/prefs.js:524
+#: extension/earportToggle.js:45 extension/earportToggle.js:399
+#: extension/earportToggle.js:415 extension/prefs.js:524
 msgid "Disconnected"
 msgstr "Desconectado"
 
@@ -97,33 +97,29 @@ msgstr "Configurações avançadas"
 msgid "How to Install the EarPort Service"
 msgstr "Como instalar o serviço EarPort"
 
-#: extension/earportToggle.js:211
-msgid "Copy the Installation Command"
-msgstr "Copiar o comando de instalação"
-
-#: extension/earportToggle.js:221
+#: extension/earportToggle.js:208
 msgid "Update the EarPort Service"
 msgstr "Atualizar o serviço EarPort"
 
-#: extension/earportToggle.js:351 extension/earportToggle.js:452
+#: extension/earportToggle.js:338 extension/earportToggle.js:438
 msgid "Other device"
 msgstr "Outro dispositivo"
 
-#: extension/earportToggle.js:413
+#: extension/earportToggle.js:399
 msgid "Service not running"
 msgstr "Serviço não está em execução"
 
-#: extension/earportToggle.js:490
+#: extension/earportToggle.js:476
 msgid "Less than 5 min of listening left"
 msgstr "Menos de 5 min de reprodução restantes"
 
-#: extension/earportToggle.js:492
+#: extension/earportToggle.js:478
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Cerca de %d min de reprodução restantes"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:497
+#: extension/earportToggle.js:483
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Cerca de %d∶%02d de reprodução restantes"
@@ -154,18 +150,6 @@ msgstr "Reprodução pausada"
 #: extension/notifications.js:75
 msgid "You seemed to have fallen asleep, so playback was paused."
 msgstr "Parecia que você estava dormindo: a reprodução foi pausada."
-
-#: extension/notifications.js:80
-msgid "Command Copied"
-msgstr "Comando copiado"
-
-#: extension/notifications.js:82
-msgid "Paste it in a terminal to update the EarPort service."
-msgstr "Cole-o em um terminal para atualizar o serviço EarPort."
-
-#: extension/notifications.js:83
-msgid "Paste it in a terminal to install the EarPort service."
-msgstr "Cole-o em um terminal para instalar o serviço EarPort."
 
 #: extension/prefs.js:29
 msgid "Set Shortcut"

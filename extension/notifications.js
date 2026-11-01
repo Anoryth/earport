@@ -75,14 +75,6 @@ export class Notifications {
             _('You seemed to have fallen asleep, so playback was paused.'));
     }
 
-    /* The installation command was copied to the clipboard */
-    commandCopied(update) {
-        this._show(_('Command Copied'),
-            update
-                ? _('Paste it in a terminal to update the EarPort service.')
-                : _('Paste it in a terminal to install the EarPort service.'));
-    }
-
     /* While the user speaks, banners (and their sounds) wait in the queue
      * and show up afterwards, like when a panel menu is open */
     holdForConversation(speaking) {

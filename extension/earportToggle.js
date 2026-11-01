@@ -198,22 +198,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             _('How to Install the EarPort Service'),
             'help-browser-symbolic'
         );
-        this._installItem.connect('activate', () => {
-            const url = `${this._extensionObject.metadata.url}#installation`;
-            Gio.AppInfo.launch_default_for_uri(url, null);
-        });
+        this._installItem.connect('activate', () => this._openInstallation());
         this._installItem.visible = false;
         this.menu.addMenuItem(this._installItem);
-
-        /* The same command installs and updates the service: copy it, to be
-         * pasted in a terminal (nothing is run from here) */
-        this._copyInstallItem = new PopupMenu.PopupImageMenuItem(
-            _('Copy the Installation Command'),
-            'edit-copy-symbolic'
-        );
-        this._copyInstallItem.connect('activate', () => this._copyInstallCommand(false));
-        this._copyInstallItem.visible = false;
-        this.menu.addMenuItem(this._copyInstallItem);
 
         /* The extension is updated by extensions.gnome.org, the service is
          * not: say when it is too old for this version */
@@ -221,7 +208,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             _('Update the EarPort Service'),
             'software-update-available-symbolic'
         );
-        this._updateServiceItem.connect('activate', () => this._copyInstallCommand(true));
+        this._updateServiceItem.connect('activate', () => this._openInstallation());
         this._updateServiceItem.visible = false;
         this.menu.addMenuItem(this._updateServiceItem);
 
@@ -385,7 +372,6 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     setServiceMissing(missing) {
         this._serviceMissing = missing;
         this._installItem.visible = missing;
-        this._copyInstallItem.visible = missing;
         this._settingsItem.visible = !missing;
         this._updateServiceVersion();
         if (missing) {
@@ -403,10 +389,10 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._updateServiceItem.visible = outdated;
     }
 
-    _copyInstallCommand(update) {
-        const script = `${this._extensionObject.metadata.url}/releases/latest/download/install-daemon.sh`;
-        St.Clipboard.get_default().set_text(St.ClipboardType.CLIPBOARD, `curl -fsSL ${script} | bash`);
-        this._notifications.commandCopied(update);
+    /* Packages, quick install or Nix: the README tells them all, and the
+     * same steps install and update the service */
+    _openInstallation() {
+        Gio.AppInfo.launch_default_for_uri(`${this._extensionObject.metadata.url}#installation`, null);
     }
 
     _updateDisconnectedState() {
