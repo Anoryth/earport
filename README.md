@@ -4,7 +4,7 @@
 
 AirPods integration for GNOME Shell on Linux. This project provides full support for Apple AirPods features including battery status, noise control modes, and automatic media pause on ear detection.
 
-![GNOME 46+](https://img.shields.io/badge/GNOME-46%2B-blue)![License](https://img.shields.io/badge/license-GPL--3.0-green)
+[![GNOME Extensions](https://img.shields.io/badge/GNOME_Extensions-EarPort-4a86cf?logo=gnome&logoColor=white)](https://extensions.gnome.org/extension/11097/earport/) ![GNOME 46+](https://img.shields.io/badge/GNOME-46%2B-blue)![License](https://img.shields.io/badge/license-GPL--3.0-green)
 
 <img src="extension.png" width="384" alt="The EarPort menu in GNOME Shell Quick Settings: AirPods Pro at 85 % and 82 %, case charging at 64 %, about 4:30 of listening left, noise cancellation on">
 
@@ -86,6 +86,8 @@ The project consists of two components:
 
 EarPort has two parts: the GNOME Shell extension, and a small service
 (`earport-daemon`) that talks to the AirPods over Bluetooth. Both are needed.
+
+The extension is on [extensions.gnome.org](https://extensions.gnome.org/extension/11097/earport/).
 
 ### Fedora, Debian and Ubuntu packages
 
@@ -180,7 +182,9 @@ bash install-daemon.sh --from-file "earport-daemon-linux-$(uname -m).tar.gz"
 ```
 
 </details>
-**2. The extension**: download `earport@anoryth.github.io.shell-extension.zip` from the
+**2. The extension**: install it from [extensions.gnome.org](https://extensions.gnome.org/extension/11097/earport/).
+
+Or download `earport@anoryth.github.io.shell-extension.zip` from the
 [latest release](https://github.com/Anoryth/earport/releases/latest), then:
 
 ```bash
