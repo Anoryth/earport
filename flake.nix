@@ -18,13 +18,16 @@
       packages = forAllSystems (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          inherit (pkgs) stdenv meson ninja pkg-config glib bluez gettext;
+          inherit (pkgs) stdenv meson ninja pkg-config glib bluez gettext ffmpeg pipewire;
 
           earport-daemon = stdenv.mkDerivation {
             pname = "earport-daemon";
             inherit version src;
             nativeBuildInputs = [ meson ninja pkg-config glib ]; # glib: gdbus-codegen
-            buildInputs = [ glib bluez ];                       # bluez: l2cap.h header only
+            # bluez: l2cap.h header only. ffmpeg/pipewire are non-optional:
+            # nixpkgs passes -Dauto_features=enabled, turning meson's
+            # default hd_mic=auto into "required".
+            buildInputs = [ glib bluez ffmpeg pipewire ];
             preConfigure = "cd daemon";                         # meson.build lives in daemon/
             meta = with lib; {
               description = "EarPort AirPods integration daemon";
