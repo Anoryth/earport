@@ -146,6 +146,8 @@ static void test_model_ids(void)
     g_assert_true(airpods_model_has_ble_case(AIRPODS_MODEL_PRO_3));
     g_assert_true(airpods_model_is_headphones(AIRPODS_MODEL_MAX_2));
     g_assert_false(airpods_model_has_ble_case(AIRPODS_MODEL_MAX_2));
+    /* Its case adverts don't decrypt with the encryption key (#17) */
+    g_assert_false(airpods_model_has_ble_case(AIRPODS_MODEL_5_WIRELESS_CHARGING));
 }
 
 /* An advert encrypted here with a made-up key (the real ENC key is a

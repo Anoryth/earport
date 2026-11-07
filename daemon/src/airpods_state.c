@@ -357,13 +357,13 @@ bool airpods_model_supports_adaptive(AirPodsModel model)
 
 bool airpods_model_has_ble_case(AirPodsModel model)
 {
-    /* Find My cases, with their own radio */
+    /* Find My cases, with their own radio, whose adverts decrypt with the
+     * encryption key. Not the AirPods 5 with Wireless Charging Case (#17). */
     switch (model) {
     case AIRPODS_MODEL_PRO_2:
     case AIRPODS_MODEL_PRO_2_USBC:
     case AIRPODS_MODEL_PRO_3:
     case AIRPODS_MODEL_4_ANC:
-    case AIRPODS_MODEL_5_WIRELESS_CHARGING:
         return true;
     default:
         return false;
