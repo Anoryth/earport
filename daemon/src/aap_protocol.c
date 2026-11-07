@@ -583,6 +583,11 @@ void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)
         g_debug("%s: proximity keys (%zu bytes, not shown)", prefix, len);
         return;
     }
+    if (len > 4 && data[0] == 0x04 && data[4] == AAP_OPCODE_METADATA) {
+        /* Nor the serial numbers, after the name and model logged once parsed */
+        g_debug("%s: metadata (%zu bytes, not shown)", prefix, len);
+        return;
+    }
     GString *hex = g_string_sized_new(3 * 64 + 32);
     for (size_t i = 0; i < len && i < 64; i++) {
         g_string_append_printf(hex, "%02X ", data[i]);

@@ -384,7 +384,7 @@ static void test_proximity_keys(void)
 static void test_metadata(void)
 {
     const uint8_t header[] = { 0x04, 0x00, 0x04, 0x00, 0x1D, 0x00, 0x02, 0xDD, 0x00, 0x04, 0x00 };
-    const char strings[] = "CrazyMole\0A3047\0Apple Inc.\0H2FD9M6M95";
+    const char strings[] = "CrazyMole\0A3047\0Apple Inc.\0XXXXXXXXXX";
     uint8_t pkt[sizeof(header) + sizeof(strings)];
     AapParsedPacket p;
 
