@@ -551,10 +551,17 @@ static void test_model_from_number(void)
 /* The proximity keys never reach the debug logs, other packets do */
 static void test_debug_hides_keys(void)
 {
-    const uint8_t keys[] = { 0x04, 0x00, 0x04, 0x00, 0x31, 0x00, 0x01, 0xAB, 0xCD };
+    /* IRK (type 1) then ENC (type 4), 16 bytes each: only types and sizes shown */
+    uint8_t keys[7 + 2 * 20] = { 0x04, 0x00, 0x04, 0x00, 0x31, 0x00, 0x02 };
+    keys[7] = 0x01;
+    keys[9] = 16;
+    memset(keys + 11, 0xAB, 16);
+    keys[27] = 0x04;
+    keys[29] = 16;
+    memset(keys + 31, 0xCD, 16);
     const uint8_t other[] = { 0x04, 0x00, 0x04, 0x00, 0x09, 0x00, 0x0D, 0x02 };
 
-    g_test_expect_message(NULL, G_LOG_LEVEL_DEBUG, "RX: proximity keys (9 bytes, not shown)");
+    g_test_expect_message(NULL, G_LOG_LEVEL_DEBUG, "RX: proximity keys, not shown: 0x01(16) 0x04(16)");
     aap_debug_print_packet("RX", keys, sizeof(keys));
     g_test_expect_message(NULL, G_LOG_LEVEL_DEBUG, "TX: 04 00 04 00 09 00 0D 02 ");
     aap_debug_print_packet("TX", other, sizeof(other));

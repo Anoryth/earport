@@ -580,7 +580,12 @@ void aap_debug_print_packet(const char *prefix, const uint8_t *data, size_t len)
         return;   /* Microphone audio: 30 packets a second */
     if (len > 4 && data[0] == 0x04 && data[4] == AAP_OPCODE_PROXIMITY_KEYS_RSP) {
         /* Debug logs get pasted in issues: never the IRK and encryption key */
-        g_debug("%s: proximity keys (%zu bytes, not shown)", prefix, len);
+        /* Only their types and sizes: 04 00 04 00 31 00 [count] [type] 00 [size] 00 [key]... */
+        GString *types = g_string_new(NULL);
+        for (size_t i = 7; i + 4 <= len; i += 4 + data[i + 2])
+            g_string_append_printf(types, " 0x%02X(%u)", data[i], data[i + 2]);
+        g_debug("%s: proximity keys, not shown:%s", prefix, types->str);
+        g_string_free(types, TRUE);
         return;
     }
     if (len > 4 && data[0] == 0x04 && data[4] == AAP_OPCODE_METADATA) {

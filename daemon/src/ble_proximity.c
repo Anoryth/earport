@@ -5,6 +5,7 @@
 
 #include "ble_proximity.h"
 #include "aes128.h"
+#include <glib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -95,8 +96,17 @@ bool proximity_decrypt_case(const uint8_t *enc_key, const uint8_t *data, size_t 
         static const uint8_t zeros[4] = { 0 };
         if (memcmp(plain + 8, zeros, sizeof(zeros)) != 0 ||
             !level_byte_valid(plain[3]) || !level_byte_valid(plain[4]) ||
-            !level_byte_valid(plain[5]))
+            !level_byte_valid(plain[5])) {
+            /* Debug for new models: the decrypted block holds only levels and
+             * flags (noise for another device's case), never the key */
+            char enc[3 * ENCRYPTED_SIZE + 1], hex[3 * ENCRYPTED_SIZE + 1];
+            for (int j = 0; j < ENCRYPTED_SIZE; j++) {
+                snprintf(enc + 3 * j, 4, "%02X ", data[i + 3 + j]);
+                snprintf(hex + 3 * j, 4, "%02X ", plain[j]);
+            }
+            g_debug("Case advert rejected: %s-> %s", enc, hex);
             return false;
+        }
 
         read_level(plain[3], level, charging);
         return true;
