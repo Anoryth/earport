@@ -50,7 +50,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 | AirPods 4th Gen                     | ✓       | \-  | \-           | \-       | \-                        | \-     |
 | AirPods 4th Gen (ANC)               | ✓       | ✓   | ✓            | ✓        | ✓                         | \-     |
 | AirPods 5                           | ✓       | ✓   | ✓            | ✓        | \-                        | \-     |
-| AirPods 5 (Wireless Charging Case)  | ✓       | ✓   | ✓            | ✓        | ✓                         | \-     |
+| AirPods 5 (Wireless Charging Case)  | ✓       | ✓   | ✓            | ✓        | \-                        | \-     |
 | AirPods Pro                         | ✓       | ✓   | ✓            | \-       | \-                        | \-     |
 | AirPods Pro 2 (Lightning and USB-C) | ✓       | ✓   | ✓            | ✓        | ✓                         | USB-C  |
 | AirPods Pro 3                       | ✓       | ✓   | ✓            | ✓        | ✓                         | \-     |
