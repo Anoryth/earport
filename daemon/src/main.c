@@ -298,9 +298,10 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
 
     device_handle_packet(&app.device, pkt);
 
-    if (pkt->type == AAP_PKT_TYPE_BATTERY)
+    if (pkt->type == AAP_PKT_TYPE_BATTERY) {
         publish_battery();
-    else if (pkt->type == AAP_PKT_TYPE_METADATA) {
+        hd_mic_set_ready(app.hd_mic);
+    } else if (pkt->type == AAP_PKT_TYPE_METADATA) {
         if (app.state.model != AIRPODS_MODEL_UNKNOWN)
             autoconnect_set_model(app.autoconnect, app.state.model);
         /* Without a name of its own, the display name is now the model's */

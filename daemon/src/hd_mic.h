@@ -44,6 +44,10 @@ void hd_mic_set_name(HdMic *mic, const char *name);
 /* The AAP link to the AirPods opened or closed */
 void hd_mic_set_connected(HdMic *mic, bool connected);
 
+/* The AirPods answer the notification request (first battery packet): a
+ * MIC_START sent before is ignored, and stalls the AirPods for a while */
+void hd_mic_set_ready(HdMic *mic);
+
 /* A microphone audio packet from the AirPods */
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio);
 

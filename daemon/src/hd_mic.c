@@ -21,6 +21,7 @@ void hd_mic_free(HdMic *mic) { (void)mic; }
 void hd_mic_set_enabled(HdMic *mic, bool enabled) { (void)mic; (void)enabled; }
 void hd_mic_set_name(HdMic *mic, const char *name) { (void)mic; (void)name; }
 void hd_mic_set_connected(HdMic *mic, bool connected) { (void)mic; (void)connected; }
+void hd_mic_set_ready(HdMic *mic) { (void)mic; }
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio) { (void)mic; (void)audio; }
 
 #else
@@ -57,6 +58,7 @@ struct HdMic {
     void *user_data;
     bool enabled;
     bool connected;
+    bool ready;             /* The AirPods take commands: notifications on */
     char *description;      /* "<AirPods' name> (HD)" */
 
     AVCodecContext *codec;
@@ -97,8 +99,12 @@ static void start_capture(HdMic *mic)
     mic->primed = false;
     mic->gain = MAX_GAIN;
     avcodec_flush_buffers(mic->codec);
-    g_message("HD microphone: recording, starting the AirPods' stream");
-    mic->callbacks.send(AAP_PKT_MIC_START, AAP_MIC_START_SIZE, mic->user_data);
+    if (mic->ready) {
+        g_message("HD microphone: recording, starting the AirPods' stream");
+        mic->callbacks.send(AAP_PKT_MIC_START, AAP_MIC_START_SIZE, mic->user_data);
+    } else {
+        g_message("HD microphone: recording, waiting for the AirPods to be ready");
+    }
     mic->callbacks.capture_changed(true, mic->user_data);
 }
 
@@ -108,7 +114,7 @@ static void stop_capture(HdMic *mic)
         return;
     mic->capturing = false;
     g_message("HD microphone: no more recording, stopping the AirPods' stream");
-    if (mic->connected)
+    if (mic->connected && mic->ready)
         mic->callbacks.send(AAP_PKT_MIC_STOP, AAP_MIC_STOP_SIZE, mic->user_data);
     mic->callbacks.capture_changed(false, mic->user_data);
 }
@@ -470,7 +476,19 @@ void hd_mic_set_connected(HdMic *mic, bool connected)
     if (mic == NULL)
         return;
     mic->connected = connected;
+    mic->ready = false;
     update(mic);
+}
+
+void hd_mic_set_ready(HdMic *mic)
+{
+    if (mic == NULL || mic->ready)
+        return;
+    mic->ready = true;
+    if (mic->capturing) {
+        g_message("HD microphone: AirPods ready, starting their stream");
+        mic->callbacks.send(AAP_PKT_MIC_START, AAP_MIC_START_SIZE, mic->user_data);
+    }
 }
 
 #endif /* HAVE_HD_MIC */
