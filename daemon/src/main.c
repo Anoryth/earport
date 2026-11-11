@@ -740,12 +740,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    dbus_service_set_ear_pause_mode_callback(app.dbus_service, on_set_ear_pause_mode, NULL);
-    dbus_service_set_auto_connect_callback(app.dbus_service, on_set_auto_connect, NULL);
+    const DbusServiceCallbacks service_callbacks = {
+        .ear_pause_mode = on_set_ear_pause_mode,
+        .auto_connect = on_set_auto_connect,
+        .apple_handoff = on_set_apple_handoff,
+        .hd_mic = on_set_hd_mic,
+        .claim_audio = claim_audio,
+        .research_send = research_send,
+    };
+    dbus_service_set_service_callbacks(app.dbus_service, &service_callbacks, NULL);
     dbus_service_set_auto_connect(app.dbus_service, app.config.auto_connect);
-    dbus_service_set_apple_handoff_callback(app.dbus_service, on_set_apple_handoff, NULL);
-    dbus_service_set_claim_audio_callback(app.dbus_service, claim_audio, NULL);
-    dbus_service_set_research_send_callback(app.dbus_service, research_send, NULL);
     dbus_service_set_apple_handoff(app.dbus_service, app.config.apple_handoff);
 
     if (!dbus_service_start(app.dbus_service)) {
@@ -823,7 +827,6 @@ int main(int argc, char *argv[])
     };
     app.hd_mic = hd_mic_new(&hd_mic_callbacks, NULL);
     hd_mic_set_enabled(app.hd_mic, app.config.hd_mic);
-    dbus_service_set_hd_mic_callback(app.dbus_service, on_set_hd_mic, NULL);
     dbus_service_set_hd_mic(app.dbus_service, app.hd_mic != NULL, app.config.hd_mic);
 
     /* Create BlueZ monitor */

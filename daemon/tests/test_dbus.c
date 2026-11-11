@@ -641,7 +641,8 @@ static void test_hd_mic_option(Fixture *f, gconstpointer data)
 {
     (void)data;
     int asked = -1;
-    dbus_service_set_hd_mic_callback(f->dbus, on_hd_mic, &asked);
+    const DbusServiceCallbacks callbacks = { .hd_mic = on_hd_mic };
+    dbus_service_set_service_callbacks(f->dbus, &callbacks, &asked);
 
     g_assert_false(get_bool(f, "HdMicAvailable"));
     call_fails(f, "SetHdMic", g_variant_new("(b)", TRUE), G_DBUS_ERROR_NOT_SUPPORTED);

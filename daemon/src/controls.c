@@ -332,10 +332,13 @@ void controls_init(Controls *c, Device *device, AapLink *link, DbusService *dbus
     c->adaptive_check_id = 0;
     c->adaptive_resent = false;
 
-    dbus_service_set_noise_control_callback(dbus, on_set_noise_control, c);
-    dbus_service_set_conv_awareness_callback(dbus, on_set_conv_awareness, c);
-    dbus_service_set_adaptive_level_callback(dbus, on_set_adaptive_level, c);
-    dbus_service_set_listening_modes_callback(dbus, on_set_listening_modes, c);
-    dbus_service_set_display_name_callback(dbus, on_set_display_name, c);
-    dbus_service_set_setting_callback(dbus, on_set_setting, c);
+    const DbusDeviceCallbacks callbacks = {
+        .noise_control = on_set_noise_control,
+        .conv_awareness = on_set_conv_awareness,
+        .adaptive_level = on_set_adaptive_level,
+        .listening_modes = on_set_listening_modes,
+        .setting = on_set_setting,
+        .display_name = on_set_display_name,
+    };
+    dbus_service_set_device_callbacks(dbus, &callbacks, c);
 }

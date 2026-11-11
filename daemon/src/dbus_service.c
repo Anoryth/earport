@@ -118,39 +118,13 @@ struct DbusService {
 
     AirPodsState *state;
 
-    DbusNoiseControlCallback noise_control_callback;
-    void *noise_control_user_data;
+    DbusDeviceCallbacks device;
+    void *device_user_data;
+    DbusServiceCallbacks options;
+    void *options_user_data;
 
-    DbusConvAwarenessCallback conv_awareness_callback;
-    void *conv_awareness_user_data;
-
-    DbusAdaptiveLevelCallback adaptive_level_callback;
-    void *adaptive_level_user_data;
-
-    DbusEarPauseModeCallback ear_pause_mode_callback;
-    void *ear_pause_mode_user_data;
-
-    DbusListeningModesCallback listening_modes_callback;
-    void *listening_modes_user_data;
-
-    DbusDisplayNameCallback display_name_callback;
-    void *display_name_user_data;
-
-    DbusSettingCallback setting_callback;
-    void *setting_user_data;
-
-    DbusAutoConnectCallback auto_connect_callback;
-    void *auto_connect_user_data;
     bool auto_connect;
-    DbusRawCallback research_send_callback;
-    void *research_send_user_data;
-    DbusActionCallback claim_audio_callback;
-    void *claim_audio_user_data;
-    DbusAutoConnectCallback apple_handoff_callback;
-    void *apple_handoff_user_data;
     bool apple_handoff;
-    DbusAutoConnectCallback hd_mic_callback;
-    void *hd_mic_user_data;
     bool hd_mic;
     bool hd_mic_available;
     bool reconnecting;
@@ -225,8 +199,8 @@ static void handle_set_setting(DbusService *service,
 
     g_message("D-Bus: SetSetting(%s, %d)", key, int_value);
 
-    if (service->setting_callback == NULL ||
-        !service->setting_callback(def, byte, service->setting_user_data)) {
+    if (service->device.setting == NULL ||
+        !service->device.setting(def, byte, service->device_user_data)) {
         g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
                                               "AirPods not connected");
         goto out;
@@ -390,8 +364,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
         }
         g_message("D-Bus: SetNoiseControlMode(%s) -> %d", mode_str, mode);
 
-        return_command_result(invocation, service->noise_control_callback &&
-                              service->noise_control_callback(mode, service->noise_control_user_data));
+        return_command_result(invocation, service->device.noise_control &&
+                              service->device.noise_control(mode, service->device_user_data));
 
     } else if (g_strcmp0(method_name, "SetConversationalAwareness") == 0) {
         gboolean enabled = FALSE;
@@ -399,8 +373,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         g_message("D-Bus: SetConversationalAwareness(%s)", enabled ? "true" : "false");
 
-        return_command_result(invocation, service->conv_awareness_callback &&
-                              service->conv_awareness_callback(enabled, service->conv_awareness_user_data));
+        return_command_result(invocation, service->device.conv_awareness &&
+                              service->device.conv_awareness(enabled, service->device_user_data));
 
     } else if (g_strcmp0(method_name, "SetAdaptiveNoiseLevel") == 0) {
         gint32 level = 0;
@@ -412,8 +386,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             return_invalid(invocation, "The adaptive noise level goes from 0 to 100");
             return;
         }
-        return_command_result(invocation, service->adaptive_level_callback &&
-                              service->adaptive_level_callback(level, service->adaptive_level_user_data));
+        return_command_result(invocation, service->device.adaptive_level &&
+                              service->device.adaptive_level(level, service->device_user_data));
 
     } else if (g_strcmp0(method_name, "SetEarPauseMode") == 0) {
         gint32 mode = 0;
@@ -425,9 +399,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             return_invalid(invocation, "Ear pause mode: 0 (off), 1 (one out) or 2 (both out)");
             return;
         }
-        if (service->ear_pause_mode_callback) {
-            service->ear_pause_mode_callback(mode, service->ear_pause_mode_user_data);
-        }
+        if (service->options.ear_pause_mode)
+            service->options.ear_pause_mode(mode, service->options_user_data);
 
         g_dbus_method_invocation_return_value(invocation, NULL);
 
@@ -446,25 +419,25 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             return_invalid(invocation, "At least two listening modes must be enabled");
             return;
         }
-        return_command_result(invocation, service->listening_modes_callback &&
-                              service->listening_modes_callback(off, transparency, anc, adaptive,
-                                                                service->listening_modes_user_data));
+        return_command_result(invocation, service->device.listening_modes &&
+                              service->device.listening_modes(off, transparency, anc, adaptive,
+                                                              service->device_user_data));
 
     } else if (g_strcmp0(method_name, "SetAutoConnect") == 0) {
         gboolean enabled = FALSE;
         g_variant_get(parameters, "(b)", &enabled);
         g_message("D-Bus: SetAutoConnect(%s)", enabled ? "true" : "false");
 
-        if (service->auto_connect_callback)
-            service->auto_connect_callback(enabled, service->auto_connect_user_data);
+        if (service->options.auto_connect)
+            service->options.auto_connect(enabled, service->options_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
     } else if (g_strcmp0(method_name, "ResearchSend") == 0) {
         gsize len = 0;
         GVariant *bytes = g_variant_get_child_value(parameters, 0);
         const guint8 *data = g_variant_get_fixed_array(bytes, &len, 1);
-        if (service->research_send_callback &&
-            service->research_send_callback(data, len, service->research_send_user_data))
+        if (service->options.research_send &&
+            service->options.research_send(data, len, service->options_user_data))
             g_dbus_method_invocation_return_value(invocation, NULL);
         else
             g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
@@ -473,8 +446,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
     } else if (g_strcmp0(method_name, "ClaimAudio") == 0) {
         g_message("D-Bus: ClaimAudio()");
-        if (service->claim_audio_callback &&
-            service->claim_audio_callback(service->claim_audio_user_data))
+        if (service->options.claim_audio &&
+            service->options.claim_audio(service->options_user_data))
             g_dbus_method_invocation_return_value(invocation, NULL);
         else
             g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
@@ -485,8 +458,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
         g_variant_get(parameters, "(b)", &enabled);
         g_message("D-Bus: SetAppleHandoff(%s)", enabled ? "true" : "false");
 
-        if (service->apple_handoff_callback)
-            service->apple_handoff_callback(enabled, service->apple_handoff_user_data);
+        if (service->options.apple_handoff)
+            service->options.apple_handoff(enabled, service->options_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
     } else if (g_strcmp0(method_name, "SetHdMic") == 0) {
@@ -498,8 +471,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_NOT_SUPPORTED,
                                                   "Built without the HD microphone");
         else {
-            if (service->hd_mic_callback)
-                service->hd_mic_callback(enabled, service->hd_mic_user_data);
+            if (service->options.hd_mic)
+                service->options.hd_mic(enabled, service->options_user_data);
             g_dbus_method_invocation_return_value(invocation, NULL);
         }
 
@@ -512,9 +485,8 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         g_message("D-Bus: SetDisplayName('%s')", name ? name : "");
 
-        if (service->display_name_callback) {
-            service->display_name_callback(name, service->display_name_user_data);
-        }
+        if (service->device.display_name)
+            service->device.display_name(name, service->device_user_data);
 
         g_dbus_method_invocation_return_value(invocation, NULL);
 
@@ -641,98 +613,24 @@ void dbus_service_stop(DbusService *service)
     }
 }
 
-void dbus_service_set_noise_control_callback(DbusService *service,
-                                              DbusNoiseControlCallback callback,
-                                              void *user_data)
+void dbus_service_set_device_callbacks(DbusService *service, const DbusDeviceCallbacks *callbacks,
+                                       void *user_data)
 {
-    service->noise_control_callback = callback;
-    service->noise_control_user_data = user_data;
+    service->device = *callbacks;
+    service->device_user_data = user_data;
 }
 
-void dbus_service_set_conv_awareness_callback(DbusService *service,
-                                               DbusConvAwarenessCallback callback,
-                                               void *user_data)
+void dbus_service_set_service_callbacks(DbusService *service,
+                                        const DbusServiceCallbacks *callbacks, void *user_data)
 {
-    service->conv_awareness_callback = callback;
-    service->conv_awareness_user_data = user_data;
-}
-
-void dbus_service_set_adaptive_level_callback(DbusService *service,
-                                               DbusAdaptiveLevelCallback callback,
-                                               void *user_data)
-{
-    service->adaptive_level_callback = callback;
-    service->adaptive_level_user_data = user_data;
-}
-
-void dbus_service_set_ear_pause_mode_callback(DbusService *service,
-                                               DbusEarPauseModeCallback callback,
-                                               void *user_data)
-{
-    service->ear_pause_mode_callback = callback;
-    service->ear_pause_mode_user_data = user_data;
-}
-
-void dbus_service_set_listening_modes_callback(DbusService *service,
-                                                DbusListeningModesCallback callback,
-                                                void *user_data)
-{
-    service->listening_modes_callback = callback;
-    service->listening_modes_user_data = user_data;
-}
-
-void dbus_service_set_display_name_callback(DbusService *service,
-                                             DbusDisplayNameCallback callback,
-                                             void *user_data)
-{
-    service->display_name_callback = callback;
-    service->display_name_user_data = user_data;
-}
-
-void dbus_service_set_setting_callback(DbusService *service,
-                                        DbusSettingCallback callback,
-                                        void *user_data)
-{
-    service->setting_callback = callback;
-    service->setting_user_data = user_data;
-}
-
-void dbus_service_set_auto_connect_callback(DbusService *service,
-                                            DbusAutoConnectCallback callback,
-                                            void *user_data)
-{
-    service->auto_connect_callback = callback;
-    service->auto_connect_user_data = user_data;
+    service->options = *callbacks;
+    service->options_user_data = user_data;
 }
 
 void dbus_service_set_auto_connect(DbusService *service, bool enabled)
 {
     service->auto_connect = enabled;
     dbus_service_emit_properties_changed(service, "AutoConnect");
-}
-
-void dbus_service_set_apple_handoff_callback(DbusService *service,
-                                             DbusAutoConnectCallback callback,
-                                             void *user_data)
-{
-    service->apple_handoff_callback = callback;
-    service->apple_handoff_user_data = user_data;
-}
-
-void dbus_service_set_research_send_callback(DbusService *service,
-                                             DbusRawCallback callback,
-                                             void *user_data)
-{
-    service->research_send_callback = callback;
-    service->research_send_user_data = user_data;
-}
-
-void dbus_service_set_claim_audio_callback(DbusService *service,
-                                           DbusActionCallback callback,
-                                           void *user_data)
-{
-    service->claim_audio_callback = callback;
-    service->claim_audio_user_data = user_data;
 }
 
 void dbus_service_set_reconnecting(DbusService *service, bool reconnecting)
@@ -745,13 +643,6 @@ void dbus_service_set_apple_handoff(DbusService *service, bool enabled)
 {
     service->apple_handoff = enabled;
     dbus_service_emit_properties_changed(service, "AppleHandoff");
-}
-
-void dbus_service_set_hd_mic_callback(DbusService *service, DbusAutoConnectCallback callback,
-                                      void *user_data)
-{
-    service->hd_mic_callback = callback;
-    service->hd_mic_user_data = user_data;
 }
 
 void dbus_service_set_hd_mic(DbusService *service, bool available, bool enabled)

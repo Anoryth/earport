@@ -17,36 +17,33 @@
 #define DBUS_OBJECT_PATH        "/io/github/anoryth/EarPort"
 #define DBUS_INTERFACE_NAME     "io.github.anoryth.EarPort1"
 
-/* Commands sent to the AirPods: the callbacks return false if they could
- * not be sent (AirPods not connected), and the method then fails */
+/* Commands sent to the AirPods (controls.c): false if they could not be
+ * sent (AirPods not connected), and the method then fails */
+typedef struct {
+    bool (*noise_control)(NoiseControlMode mode, void *user_data);
+    bool (*conv_awareness)(bool enabled, void *user_data);
+    bool (*adaptive_level)(int level, void *user_data);  /* 0-100, checked */
+    /* At least two enabled, checked */
+    bool (*listening_modes)(bool off, bool transparency, bool anc, bool adaptive, void *user_data);
+    /* SetSetting: byte is the validated value to send */
+    bool (*setting)(const AirPodsSettingDef *def, uint8_t byte, void *user_data);
+    void (*display_name)(const char *name, void *user_data);
+} DbusDeviceCallbacks;
 
-/* Callback for noise control mode change request */
-typedef bool (*DbusNoiseControlCallback)(NoiseControlMode mode, void *user_data);
-
-/* Callback for conversational awareness change request */
-typedef bool (*DbusConvAwarenessCallback)(bool enabled, void *user_data);
-
-/* Callback for adaptive noise level change request */
-typedef bool (*DbusAdaptiveLevelCallback)(int level, void *user_data);
-
-/* Callback for ear pause mode change request */
-typedef void (*DbusEarPauseModeCallback)(int mode, void *user_data);
-
-/* Callback for listening modes configuration change request */
-typedef bool (*DbusListeningModesCallback)(bool off, bool transparency, bool anc, bool adaptive, void *user_data);
-
-/* Callback for display name change request */
-typedef void (*DbusDisplayNameCallback)(const char *name, void *user_data);
-/* An action on the AirPods; false if they are not connected */
-typedef bool (*DbusActionCallback)(void *user_data);
-
-/* D-Bus service context */
-/* Callback for generic settings: byte is the validated value to send.
- * Returns false if it could not be sent (AirPods not connected). */
-typedef bool (*DbusSettingCallback)(const AirPodsSettingDef *def, uint8_t byte, void *user_data);
-
-/* Callback for the automatic connection option */
-typedef void (*DbusAutoConnectCallback)(bool enabled, void *user_data);
+/* Options of the service itself and actions on the link (main.c) */
+typedef struct {
+    void (*ear_pause_mode)(int mode, void *user_data);  /* 0-2, checked */
+    void (*auto_connect)(bool enabled, void *user_data);
+    void (*apple_handoff)(bool enabled, void *user_data);
+    /* Only called when available, see dbus_service_set_hd_mic */
+    void (*hd_mic)(bool enabled, void *user_data);
+    /* ClaimAudio: have the AirPods play from this computer; false if not
+     * connected */
+    bool (*claim_audio)(void *user_data);
+    /* ResearchSend: a raw packet to the AirPods, only in research mode
+     * (research_log=true); false if refused or not connected */
+    bool (*research_send)(const uint8_t *data, size_t len, void *user_data);
+} DbusServiceCallbacks;
 
 typedef struct DbusService DbusService;
 
@@ -75,90 +72,24 @@ bool dbus_service_start(DbusService *service);
  */
 void dbus_service_stop(DbusService *service);
 
-/**
- * Set callback for noise control mode change requests
- */
-void dbus_service_set_noise_control_callback(DbusService *service,
-                                              DbusNoiseControlCallback callback,
-                                              void *user_data);
+/* Set before dbus_service_start(); copied. A method whose callback is
+ * missing does nothing (commands to the AirPods fail). */
+void dbus_service_set_device_callbacks(DbusService *service, const DbusDeviceCallbacks *callbacks,
+                                       void *user_data);
+void dbus_service_set_service_callbacks(DbusService *service,
+                                        const DbusServiceCallbacks *callbacks, void *user_data);
 
-/**
- * Set callback for conversational awareness change requests
- */
-void dbus_service_set_conv_awareness_callback(DbusService *service,
-                                               DbusConvAwarenessCallback callback,
-                                               void *user_data);
-
-/**
- * Set callback for adaptive noise level change requests
- */
-void dbus_service_set_adaptive_level_callback(DbusService *service,
-                                               DbusAdaptiveLevelCallback callback,
-                                               void *user_data);
-
-/**
- * Set callback for ear pause mode change requests
- */
-void dbus_service_set_ear_pause_mode_callback(DbusService *service,
-                                               DbusEarPauseModeCallback callback,
-                                               void *user_data);
-
-/**
- * Set callback for listening modes configuration change requests
- */
-void dbus_service_set_listening_modes_callback(DbusService *service,
-                                                DbusListeningModesCallback callback,
-                                                void *user_data);
-
-/**
- * Set callback for generic setting change requests (SetSetting)
- */
-void dbus_service_set_setting_callback(DbusService *service,
-                                        DbusSettingCallback callback,
-                                        void *user_data);
-
-/**
- * Set callback and current value of the automatic connection option
- */
-void dbus_service_set_auto_connect_callback(DbusService *service,
-                                            DbusAutoConnectCallback callback,
-                                            void *user_data);
+/* Current value of the service's options, announced to clients */
 void dbus_service_set_auto_connect(DbusService *service, bool enabled);
-
-/* "Switch with your Apple devices" option (same callback shape) */
-void dbus_service_set_apple_handoff_callback(DbusService *service,
-                                             DbusAutoConnectCallback callback,
-                                             void *user_data);
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled);
 
-/* HD microphone option (same callback shape); available: built with it
- * and the AAC-ELD decoder opens, SetHdMic fails otherwise */
-void dbus_service_set_hd_mic_callback(DbusService *service, DbusAutoConnectCallback callback,
-                                      void *user_data);
+/* HD microphone option; available: built with it and the AAC-ELD decoder
+ * opens, SetHdMic fails otherwise */
 void dbus_service_set_hd_mic(DbusService *service, bool available, bool enabled);
 
 /* Connecting the AirPods again after an Apple device took them: clients
  * keep quiet about the disconnection meanwhile */
 void dbus_service_set_reconnecting(DbusService *service, bool reconnecting);
-
-/* ResearchSend: a raw packet to the AirPods, only in research mode
- * (research_log=true); false if refused or not connected */
-typedef bool (*DbusRawCallback)(const uint8_t *data, size_t len, void *user_data);
-void dbus_service_set_research_send_callback(DbusService *service,
-                                             DbusRawCallback callback,
-                                             void *user_data);
-
-/* ClaimAudio: have the AirPods play from this computer */
-void dbus_service_set_claim_audio_callback(DbusService *service,
-                                           DbusActionCallback callback,
-                                           void *user_data);
-
-/**
- * Set callback for display name change requests
- */
-void dbus_service_set_display_name_callback(DbusService *service,
-                                             DbusDisplayNameCallback callback,
-                                             void *user_data);
 
 /**
  * Emit DeviceConnected signal
