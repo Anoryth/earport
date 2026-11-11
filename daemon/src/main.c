@@ -333,6 +333,17 @@ static void on_link_disconnected(void *user_data)
     device_session_ended(&app.device);
 }
 
+/* Have the AirPods report double and triple presses (turned into track
+ * changes) instead of acting on them, or stop */
+static void send_stem_presses(void)
+{
+    const uint8_t mask = app.config.stem_track_controls
+                             ? AAP_STEM_MASK_DOUBLE | AAP_STEM_MASK_TRIPLE : 0x00;
+    uint8_t packet[AAP_CONTROL_CMD_SIZE];
+    aap_build_control_cmd(AAP_CTRL_STEM_PRESSES, &mask, 1, packet);
+    aap_link_send(app.link, packet, sizeof(packet));
+}
+
 static void on_link_connected(const char *address, const char *name, void *user_data)
 {
     (void)user_data;
@@ -341,6 +352,8 @@ static void on_link_connected(const char *address, const char *name, void *user_
     tipi_link_opened(app.tipi);
     relink_link_opened(app.relink);
     controls_send_saved_settings(&app.controls, address);
+    if (app.config.stem_track_controls)
+        send_stem_presses();
     /* Before the source is back: a recording going on turns it off again */
     controls_restore_ca(&app.controls);
     hd_mic_name_changed(NULL);
@@ -446,6 +459,17 @@ static void on_set_auto_connect(bool enabled, void *user_data)
     config_save(&app.config);
     dbus_service_set_auto_connect(app.dbus_service, enabled);
     autoconnect_set_enabled(app.autoconnect, enabled);
+}
+
+static void on_set_stem_track_controls(bool enabled, void *user_data)
+{
+    (void)user_data;
+
+    app.config.stem_track_controls = enabled;
+    config_save(&app.config);
+    dbus_service_set_stem_track_controls(app.dbus_service, enabled);
+    if (aap_link_is_connected(app.link))
+        send_stem_presses();
 }
 
 /* Protocol experiments without stopping the service (research mode only) */
@@ -743,6 +767,7 @@ int main(int argc, char *argv[])
     const DbusServiceCallbacks service_callbacks = {
         .ear_pause_mode = on_set_ear_pause_mode,
         .auto_connect = on_set_auto_connect,
+        .stem_track_controls = on_set_stem_track_controls,
         .apple_handoff = on_set_apple_handoff,
         .hd_mic = on_set_hd_mic,
         .claim_audio = claim_audio,
@@ -750,6 +775,7 @@ int main(int argc, char *argv[])
     };
     dbus_service_set_service_callbacks(app.dbus_service, &service_callbacks, NULL);
     dbus_service_set_auto_connect(app.dbus_service, app.config.auto_connect);
+    dbus_service_set_stem_track_controls(app.dbus_service, app.config.stem_track_controls);
     dbus_service_set_apple_handoff(app.dbus_service, app.config.apple_handoff);
 
     if (!dbus_service_start(app.dbus_service)) {

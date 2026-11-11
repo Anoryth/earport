@@ -288,6 +288,17 @@ void device_handle_packet(Device *dev, const AapParsedPacket *pkt)
         break;
     }
 
+    case AAP_PKT_TYPE_STEM_PRESS:
+        /* Only sent once asked for (AAP_CTRL_STEM_PRESSES), in place of the
+         * AirPods' own action, which does nothing useful here */
+        if (pkt->data.stem_press == AAP_STEM_PRESS_DOUBLE)
+            media_control_skip(dev->media, true);
+        else if (pkt->data.stem_press == AAP_STEM_PRESS_TRIPLE)
+            media_control_skip(dev->media, false);
+        else
+            g_message("Stem press 0x%02X ignored", pkt->data.stem_press);
+        break;
+
     case AAP_PKT_TYPE_HOSTS: {
         /* Logged to understand how the AirPods see each host */
         GString *line = g_string_new(NULL);

@@ -214,6 +214,13 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         mediaGroup.add(this._earPauseRow);
 
+        this._stemTrackRow = new Adw.SwitchRow({
+            title: _('Change Tracks With the Stem'),
+            subtitle: _('Press twice for the next track, three times for the previous one'),
+            visible: false,
+        });
+        mediaGroup.add(this._stemTrackRow);
+
         this._hdMicRow = new Adw.SwitchRow({
             title: _('HD Microphone'),
             subtitle: _('Experimental. Adds a high-quality microphone input, named after your AirPods with “(HD)”, that keeps playback in high quality while recording. Choose it in the Sound settings.'),
@@ -364,6 +371,12 @@ export default class EarPortPreferences extends ExtensionPreferences {
             if (this._updatingFromProxy)
                 return;
             this._proxy?.SetAutoConnectRemote(this._autoConnectRow.active, () => {});
+        });
+
+        this._stemTrackRow.connect('notify::active', () => {
+            if (this._updatingFromProxy)
+                return;
+            this._proxy?.SetStemTrackControlsRemote(this._stemTrackRow.active, () => {});
         });
 
         this._appleHandoffRow.connect('notify::active', () => {
@@ -656,6 +669,11 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._autoConnectRow.visible = typeof enabled === 'boolean';
         if (this._autoConnectRow.visible)
             this._autoConnectRow.active = enabled;
+
+        const stemTrack = this._proxy?.StemTrackControls;
+        this._stemTrackRow.visible = typeof stemTrack === 'boolean';
+        if (this._stemTrackRow.visible)
+            this._stemTrackRow.active = stemTrack;
 
         const handoff = this._proxy?.AppleHandoff;
         this._appleHandoffRow.visible = typeof handoff === 'boolean';

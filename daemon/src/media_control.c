@@ -41,6 +41,7 @@ struct MediaControl {
      * start, and to know whether something plays here. Players that quit
      * are dropped (NameOwnerChanged). */
     GHashTable *player_status;
+    char *last_player;         /* Last one whose status changed: skipped when none plays */
     guint name_owner_subscription_id;
     MediaPlaybackStartedCallback playback_started_callback;
     MediaPausedForSleepCallback paused_for_sleep_callback;
@@ -60,9 +61,6 @@ static void on_player_properties_changed(GDBusConnection *connection G_GNUC_UNUS
     GVariant *changed = NULL;
     const gchar *status = NULL;
 
-    if (mc->playback_started_callback == NULL)
-        return;
-
     g_variant_get(parameters, "(&s@a{sv}@as)", NULL, &changed, NULL);
     if (g_variant_lookup(changed, "PlaybackStatus", "&s", &status)) {
         /* Players say "Playing" again when the audio route changes: only a
@@ -70,7 +68,9 @@ static void on_player_properties_changed(GDBusConnection *connection G_GNUC_UNUS
         const gchar *prev = g_hash_table_lookup(mc->player_status, sender_name);
         bool started = g_strcmp0(prev, "Playing") != 0 && g_strcmp0(status, "Playing") == 0;
         g_hash_table_replace(mc->player_status, g_strdup(sender_name), g_strdup(status));
-        if (started)
+        g_free(mc->last_player);
+        mc->last_player = g_strdup(sender_name);
+        if (started && mc->playback_started_callback != NULL)
             mc->playback_started_callback(mc->playback_started_user_data);
     }
     g_variant_unref(changed);
@@ -89,8 +89,11 @@ static void on_name_owner_changed(GDBusConnection *connection G_GNUC_UNUSED,
     const gchar *name, *new_owner;
 
     g_variant_get(parameters, "(&s&s&s)", &name, NULL, &new_owner);
-    if (new_owner[0] == '\0')
+    if (new_owner[0] == '\0') {
         g_hash_table_remove(mc->player_status, name);
+        if (g_strcmp0(mc->last_player, name) == 0)
+            g_clear_pointer(&mc->last_player, g_free);
+    }
 }
 
 bool media_control_is_playing(MediaControl *mc)
@@ -104,6 +107,51 @@ bool media_control_is_playing(MediaControl *mc)
             return true;
     }
     return false;
+}
+
+static void on_skip_done(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    char *player = user_data;
+    GError *error = NULL;
+    GVariant *reply = g_dbus_connection_call_finish(G_DBUS_CONNECTION(source), res, &error);
+
+    if (reply != NULL) {
+        g_variant_unref(reply);
+    } else {
+        if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+            g_message("Failed to change the track of %s: %s", player, error->message);
+        g_error_free(error);
+    }
+    g_free(player);
+}
+
+/* shortcut: a player paused since before the daemon started is unknown, so
+ * nothing skips until one plays or pauses; ask the players if it matters */
+void media_control_skip(MediaControl *mc, bool next)
+{
+    if (mc == NULL)
+        return;
+
+    const char *player = mc->last_player;
+    GHashTableIter iter;
+    gpointer name, status;
+    g_hash_table_iter_init(&iter, mc->player_status);
+    while (g_hash_table_iter_next(&iter, &name, &status)) {
+        if (g_strcmp0(status, "Playing") == 0) {
+            player = name;
+            break;
+        }
+    }
+    if (player == NULL) {
+        g_message("Stem press: no media player to change the track of");
+        return;
+    }
+
+    const char *method = next ? "Next" : "Previous";
+    g_message("Stem press: %s on %s", method, player);
+    g_dbus_connection_call(mc->connection, player, MPRIS_DBUS_PATH, MPRIS_PLAYER_INTERFACE,
+                           method, NULL, NULL, G_DBUS_CALL_FLAGS_NONE, PLAYER_CALL_TIMEOUT_MS,
+                           mc->cancellable, on_skip_done, g_strdup(player));
 }
 
 /* ============================================================================
@@ -406,6 +454,7 @@ void media_control_free(MediaControl *mc)
     g_list_free_full(mc->paused_players, g_free);
     g_list_free_full(mc->handoff_players, g_free);
     g_hash_table_unref(mc->player_status);
+    g_free(mc->last_player);
 
     if (mc->connection) {
         if (mc->playback_subscription_id > 0)

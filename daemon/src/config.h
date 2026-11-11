@@ -18,6 +18,7 @@ typedef struct {
     bool auto_connect;    /* Connect when the AirPods are put in or playback starts */
     bool apple_handoff;   /* Present this computer as an Apple device to the AirPods */
     bool hd_mic;          /* PipeWire source for the AirPods' HD microphone */
+    bool stem_track_controls; /* Double/triple press: next/previous track */
     bool research_log;    /* Log unknown packets (hidden, set by hand) */
 } EarPortConfig;
 

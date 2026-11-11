@@ -35,6 +35,7 @@
 #define AAP_OPCODE_SMART_ROUTING 0x44
 #define AAP_OPCODE_NOTIFICATIONS 0x0F
 #define AAP_OPCODE_HEAD_TRACKING 0x17
+#define AAP_OPCODE_STEM_PRESS    0x19
 #define AAP_OPCODE_METADATA      0x1D
 #define AAP_OPCODE_CA_DETECTION  0x4B
 #define AAP_OPCODE_SET_FEATURES  0x4D
@@ -55,6 +56,15 @@
 #define AAP_CTRL_CONV_AWARENESS      0x28
 #define AAP_CTRL_ADAPTIVE_LEVEL      0x2E
 #define AAP_CTRL_ALLOW_OFF_OPTION    0x34
+#define AAP_CTRL_STEM_PRESSES        0x39  /* Presses reported (0x19) instead of acted on */
+
+/* 0x39 mask: the presses the AirPods report instead of acting on them */
+#define AAP_STEM_MASK_DOUBLE 0x02
+#define AAP_STEM_MASK_TRIPLE 0x04
+
+/* Stem press reported (04 00 04 00 19 00 [type] [bud]) */
+#define AAP_STEM_PRESS_DOUBLE 0x06
+#define AAP_STEM_PRESS_TRIPLE 0x07
 
 /* Listening modes bitmask values (for 0x1A ListeningModeConfigs) */
 #define AAP_LISTENING_MODE_OFF          0x01
@@ -111,6 +121,7 @@ typedef enum {
     AAP_PKT_TYPE_AUDIO_SOURCE,
     AAP_PKT_TYPE_HOSTS,
     AAP_PKT_TYPE_MIC_AUDIO,
+    AAP_PKT_TYPE_STEM_PRESS,
 } AapPacketType;
 
 /* Parsed battery data */
@@ -232,6 +243,7 @@ typedef struct {
         NoiseControlMode noise_control;
         bool conversational_awareness;
         int ca_volume_level;
+        uint8_t stem_press;           /* AAP_STEM_PRESS_* */
         AapMetadata metadata;
         AapListeningModes listening_modes;
         int adaptive_level;           /* 0-100 */

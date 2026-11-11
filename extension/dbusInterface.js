@@ -42,6 +42,7 @@ export const AirPodsInterface = `
     <property name="Settings" type="a{sv}" access="read"/>
     <property name="NearbyBattery" type="a{sv}" access="read"/>
     <property name="AutoConnect" type="b" access="read"/>
+    <property name="StemTrackControls" type="b" access="read"/>
     <property name="AppleHandoff" type="b" access="read"/>
     <property name="HdMic" type="b" access="read"/>
     <property name="HdMicAvailable" type="b" access="read"/>
@@ -68,6 +69,9 @@ export const AirPodsInterface = `
     <method name="SetSetting">
       <arg type="s" name="key" direction="in"/>
       <arg type="v" name="value" direction="in"/>
+    </method>
+    <method name="SetStemTrackControls">
+      <arg type="b" name="enabled" direction="in"/>
     </method>
     <method name="SetAutoConnect">
       <arg type="b" name="enabled" direction="in"/>

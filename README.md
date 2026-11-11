@@ -32,6 +32,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Switch with your Apple devices** (optional, experimental) - The AirPods move between the computer and your iPhone, iPad or Mac on their own, as between Apple devices, and stay connected to both, even when you take one AirPod out
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
+- **Track controls** - Press the stem twice for the next track, three times for the previous one, as on an iPhone (can be turned off)
 - **Pause when falling asleep** - When your AirPods notice you fell asleep, playback pauses after a 10-minute grace period, as on an iPhone, unless you use the computer meanwhile; players that allow it go back to where you dozed off (on models offering the setting, turned on in the AirPods settings)
 - **Quick Settings integration** - Native GNOME Shell Quick Settings panel
 - **Quick mode switching** - Click the Quick Settings tile or use a configurable keyboard shortcut (default `Super+Shift+N`) to cycle noise control modes, with OSD feedback
@@ -262,6 +263,8 @@ to remove it (the only step asking for sudo).
 ### Ear Detection & Media Control
 
 By default, media will automatically pause when you remove one or both AirPods from your ears, and resume when you put them back in.
+
+Press the stem twice to skip to the next track, or three times to go back. Without EarPort, the AirPods only send play/pause to Linux for these presses. Turn off **Change Tracks With the Stem** in the preferences to keep them as they are.
 
 ### Switching With Your Apple Devices (Experimental)
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-11-01 14:05+0100\n"
+"POT-Creation-Date: 2026-11-09 20:49+0100\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Italian\n"
@@ -31,7 +31,7 @@ msgid "charging"
 msgstr "in carica"
 
 #: extension/earportToggle.js:45 extension/earportToggle.js:399
-#: extension/earportToggle.js:415 extension/prefs.js:524
+#: extension/earportToggle.js:415 extension/prefs.js:537
 msgid "Disconnected"
 msgstr "Disconnesso"
 
@@ -52,12 +52,12 @@ msgid "Adaptive"
 msgstr "Adattivo"
 
 #: extension/earportToggle.js:103 extension/notifications.js:60
-#: extension/prefs.js:498
+#: extension/prefs.js:511
 msgid "Left"
 msgstr "Sinistro"
 
 #: extension/earportToggle.js:104 extension/notifications.js:62
-#: extension/prefs.js:498
+#: extension/prefs.js:511
 msgid "Right"
 msgstr "Destro"
 
@@ -171,7 +171,7 @@ msgstr "Stato del dispositivo"
 msgid "Current AirPods connection status"
 msgstr "Stato attuale della connessione degli AirPods"
 
-#: extension/prefs.js:93 extension/prefs.js:225
+#: extension/prefs.js:93 extension/prefs.js:232
 msgid "Connection"
 msgstr "Connessione"
 
@@ -274,7 +274,7 @@ msgstr "Controllo multimediale"
 msgid "Configure media playback behavior"
 msgstr "Configura il comportamento della riproduzione"
 
-#: extension/prefs.js:206 extension/prefs.js:277
+#: extension/prefs.js:206 extension/prefs.js:284
 msgid "Disabled"
 msgstr "Disattivato"
 
@@ -295,10 +295,18 @@ msgid "Pause playback when earbuds are removed"
 msgstr "Mette in pausa la riproduzione quando si tolgono gli auricolari"
 
 #: extension/prefs.js:218
+msgid "Change Tracks With the Stem"
+msgstr "Cambia brano con lo stelo"
+
+#: extension/prefs.js:219
+msgid "Press twice for the next track, three times for the previous one"
+msgstr "Premi due volte per il brano successivo, tre volte per quello precedente"
+
+#: extension/prefs.js:225
 msgid "HD Microphone"
 msgstr "Microfono HD"
 
-#: extension/prefs.js:219
+#: extension/prefs.js:226
 msgid ""
 "Experimental. Adds a high-quality microphone input, named after your AirPods "
 "with “(HD)”, that keeps playback in high quality while recording. Choose it "
@@ -308,11 +316,11 @@ msgstr ""
 "dei tuoi AirPods seguito da «(HD)», che mantiene la riproduzione in alta "
 "qualità durante la registrazione. Sceglilo nelle impostazioni Audio."
 
-#: extension/prefs.js:230
+#: extension/prefs.js:237
 msgid "Automatic Connection"
 msgstr "Connessione automatica"
 
-#: extension/prefs.js:231
+#: extension/prefs.js:238
 msgid ""
 "Connect when you put your AirPods in or start playing, unless another device "
 "is using them"
@@ -320,11 +328,11 @@ msgstr ""
 "Connetti quando indossi gli AirPods o avvii la riproduzione, a meno che un "
 "altro dispositivo li stia usando"
 
-#: extension/prefs.js:236
+#: extension/prefs.js:243
 msgid "Switch With Your Apple Devices"
 msgstr "Passa tra i tuoi dispositivi Apple"
 
-#: extension/prefs.js:237
+#: extension/prefs.js:244
 msgid ""
 "Experimental. The AirPods move between this computer and your iPhone, iPad "
 "or Mac on their own, as between Apple devices. This computer then presents "

@@ -40,6 +40,7 @@ static const gchar introspection_xml[] =
     "    <property name='Settings' type='a{sv}' access='read'/>"
     "    <property name='NearbyBattery' type='a{sv}' access='read'/>"
     "    <property name='AutoConnect' type='b' access='read'/>"
+    "    <property name='StemTrackControls' type='b' access='read'/>"
     "    <property name='AppleHandoff' type='b' access='read'/>"
     "    <property name='HdMic' type='b' access='read'/>"
     "    <property name='HdMicAvailable' type='b' access='read'/>"
@@ -75,6 +76,9 @@ static const gchar introspection_xml[] =
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
     "    <method name='SetHdMic'>"
+    "      <arg type='b' name='enabled' direction='in'/>"
+    "    </method>"
+    "    <method name='SetStemTrackControls'>"
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
     "    <method name='SetAutoConnect'>"
@@ -124,6 +128,7 @@ struct DbusService {
     void *options_user_data;
 
     bool auto_connect;
+    bool stem_track_controls;
     bool apple_handoff;
     bool hd_mic;
     bool hd_mic_available;
@@ -300,6 +305,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
         result = g_variant_new_boolean(state->listening_modes.adaptive_enabled);
     } else if (g_strcmp0(property_name, "AutoConnect") == 0) {
         result = g_variant_new_boolean(service->auto_connect);
+    } else if (g_strcmp0(property_name, "StemTrackControls") == 0) {
+        result = g_variant_new_boolean(service->stem_track_controls);
     } else if (g_strcmp0(property_name, "AppleHandoff") == 0) {
         result = g_variant_new_boolean(service->apple_handoff);
     } else if (g_strcmp0(property_name, "HdMic") == 0) {
@@ -430,6 +437,15 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
 
         if (service->options.auto_connect)
             service->options.auto_connect(enabled, service->options_user_data);
+        g_dbus_method_invocation_return_value(invocation, NULL);
+
+    } else if (g_strcmp0(method_name, "SetStemTrackControls") == 0) {
+        gboolean enabled;
+        g_variant_get(parameters, "(b)", &enabled);
+        g_message("D-Bus: SetStemTrackControls(%s)", enabled ? "true" : "false");
+
+        if (service->options.stem_track_controls)
+            service->options.stem_track_controls(enabled, service->options_user_data);
         g_dbus_method_invocation_return_value(invocation, NULL);
 
     } else if (g_strcmp0(method_name, "ResearchSend") == 0) {
@@ -625,6 +641,12 @@ void dbus_service_set_service_callbacks(DbusService *service,
 {
     service->options = *callbacks;
     service->options_user_data = user_data;
+}
+
+void dbus_service_set_stem_track_controls(DbusService *service, bool enabled)
+{
+    service->stem_track_controls = enabled;
+    dbus_service_emit_properties_changed(service, "StemTrackControls");
 }
 
 void dbus_service_set_auto_connect(DbusService *service, bool enabled)

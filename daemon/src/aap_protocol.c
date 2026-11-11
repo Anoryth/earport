@@ -429,6 +429,13 @@ AapParseResult aap_parse_packet(const uint8_t *data, size_t len, AapParsedPacket
         result->data.ca_volume_level = data[9];
         return AAP_PARSE_OK;
 
+    case AAP_OPCODE_STEM_PRESS:
+        result->type = AAP_PKT_TYPE_STEM_PRESS;
+        if (len < 8)
+            return AAP_PARSE_INCOMPLETE;
+        result->data.stem_press = data[6];
+        return AAP_PARSE_OK;
+
     case AAP_OPCODE_PROXIMITY_KEYS_RSP:
         result->type = AAP_PKT_TYPE_PROXIMITY_KEYS;
         return aap_parse_proximity_keys(data, len, &result->data.proximity_keys);

@@ -65,6 +65,7 @@ static void test_defaults(void)
     g_assert_cmpint(config.ear_pause_mode, ==, 1);
     g_assert_false(config.auto_connect);
     g_assert_false(config.hd_mic);
+    g_assert_true(config.stem_track_controls);
     g_assert_false(config.research_log);
 
     /* Written on first start, without the hidden option */

@@ -218,6 +218,22 @@ static void test_mic_audio(void)
                     AAP_PARSE_UNKNOWN_OPCODE);
 }
 
+/* Stem presses, once reported in place of the AirPods' own action:
+ * double then triple press on the right bud (AirPods Pro 2) */
+static void test_stem_press(void)
+{
+    const uint8_t doubled[] = { 0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x06, 0x02 };
+    const uint8_t tripled[] = { 0x04, 0x00, 0x04, 0x00, 0x19, 0x00, 0x07, 0x02 };
+    AapParsedPacket p;
+
+    g_assert_cmpint(PARSE(doubled, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpint(p.type, ==, AAP_PKT_TYPE_STEM_PRESS);
+    g_assert_cmpuint(p.data.stem_press, ==, AAP_STEM_PRESS_DOUBLE);
+    g_assert_cmpint(PARSE(tripled, &p), ==, AAP_PARSE_OK);
+    g_assert_cmpuint(p.data.stem_press, ==, AAP_STEM_PRESS_TRIPLE);
+    g_assert_cmpint(aap_parse_packet(doubled, 7, &p), ==, AAP_PARSE_INCOMPLETE);
+}
+
 static void test_sleep_detection(void)
 {
     const uint8_t night[] = { 0x04, 0x00, 0x04, 0x00, 0x57, 0x00, 0x07, 0x00,
@@ -594,6 +610,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/aap/unhandled", test_unhandled_packets);
     g_test_add_func("/aap/build-commands", test_build_commands);
     g_test_add_func("/aap/mic-audio", test_mic_audio);
+    g_test_add_func("/aap/stem-press", test_stem_press);
     g_test_add_func("/aap/build-control-cmd", test_build_control_cmd);
     g_test_add_func("/aap/debug-hides-keys", test_debug_hides_keys);
     g_test_add_func("/model/from-number", test_model_from_number);

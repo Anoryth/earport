@@ -26,6 +26,8 @@ static const char player_xml[] =
     "  <interface name='org.mpris.MediaPlayer2.Player'>"
     "    <method name='Play'/>"
     "    <method name='Pause'/>"
+    "    <method name='Next'/>"
+    "    <method name='Previous'/>"
     "    <method name='Seek'><arg name='Offset' type='x' direction='in'/></method>"
     "    <property name='PlaybackStatus' type='s' access='read'/>"
     "  </interface>"
@@ -44,6 +46,8 @@ typedef struct {
     char *status;                /* "Playing", "Paused", "Stopped" */
     int plays;
     int pauses;
+    int nexts;
+    int previouses;
     gint64 seek_offset;
     guint delay_ms;              /* Answer this late (0: at once) */
 } FakePlayer;
@@ -80,6 +84,10 @@ static void on_player_method(GDBusConnection *connection, const char *sender, co
     g_mutex_lock(&p->lock);
     if (g_strcmp0(method, "Seek") == 0) {
         g_variant_get(parameters, "(x)", &p->seek_offset);
+    } else if (g_strcmp0(method, "Next") == 0) {
+        p->nexts++;
+    } else if (g_strcmp0(method, "Previous") == 0) {
+        p->previouses++;
     } else if (g_strcmp0(method, "Play") == 0) {
         p->plays++;
         g_free(p->status);
@@ -460,6 +468,48 @@ static void test_is_playing(void)
     fake_player_free(player);
 }
 
+static int skips(FakePlayer *p, bool next)
+{
+    g_mutex_lock(&p->lock);
+    int n = next ? p->nexts : p->previouses;
+    g_mutex_unlock(&p->lock);
+    return n;
+}
+
+/* Stem presses change the track of the player that plays, else of the last
+ * one used; nothing known: nothing happens */
+static void test_skip(void)
+{
+    FakePlayer *music = fake_player_new("skip-music", "Stopped");
+    FakePlayer *video = fake_player_new("skip-video", "Stopped");
+    MediaControl *mc = media_control_new();
+
+    media_control_skip(mc, true);
+    run_for(100);
+    g_assert_cmpint(skips(music, true) + skips(video, true), ==, 0);
+
+    fake_player_start(music);
+    WAIT_FOR(media_control_is_playing(mc));
+    fake_player_announce(video, "Paused", false);
+    run_for(100);
+    media_control_skip(mc, true);
+    WAIT_FOR(skips(music, true) == 1);
+    g_assert_cmpint(skips(video, true), ==, 0);
+
+    /* Nothing plays: the video changed last */
+    fake_player_announce(music, "Paused", false);
+    WAIT_FOR(!media_control_is_playing(mc));
+    fake_player_announce(video, "Paused", false);
+    run_for(100);
+    media_control_skip(mc, false);
+    WAIT_FOR(skips(video, false) == 1);
+    g_assert_cmpint(skips(music, false), ==, 0);
+
+    media_control_free(mc);
+    fake_player_free(video);
+    fake_player_free(music);
+}
+
 /* A frozen player must not hold the daemon nor the other players */
 static void test_frozen_player(void)
 {
@@ -626,6 +676,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/media/playback-started", test_playback_started);
     g_test_add_func("/media/playing-again-is-not-a-start", test_playing_again_is_not_a_start);
     g_test_add_func("/media/is-playing", test_is_playing);
+    g_test_add_func("/media/skip", test_skip);
     g_test_add_func("/media/frozen-player", test_frozen_player);
     g_test_add_func("/media/back-in-during-pause", test_back_in_during_pause);
     g_test_add_func("/media/handoff", test_handoff);

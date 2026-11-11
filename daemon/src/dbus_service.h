@@ -34,6 +34,7 @@ typedef struct {
 typedef struct {
     void (*ear_pause_mode)(int mode, void *user_data);  /* 0-2, checked */
     void (*auto_connect)(bool enabled, void *user_data);
+    void (*stem_track_controls)(bool enabled, void *user_data);
     void (*apple_handoff)(bool enabled, void *user_data);
     /* Only called when available, see dbus_service_set_hd_mic */
     void (*hd_mic)(bool enabled, void *user_data);
@@ -81,6 +82,7 @@ void dbus_service_set_service_callbacks(DbusService *service,
 
 /* Current value of the service's options, announced to clients */
 void dbus_service_set_auto_connect(DbusService *service, bool enabled);
+void dbus_service_set_stem_track_controls(DbusService *service, bool enabled);
 void dbus_service_set_apple_handoff(DbusService *service, bool enabled);
 
 /* HD microphone option; available: built with it and the AAC-ELD decoder
