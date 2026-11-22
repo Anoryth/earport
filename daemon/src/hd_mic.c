@@ -54,6 +54,13 @@ static const uint8_t ELD_ASC[] = { 0xF8, 0xE6, 0x30, 0x00 };
 #define PRIME_SAMPLES (RATE * 40 / 1000)
 #define MAX_LATENCY_SAMPLES (RATE * 200 / 1000)
 #define RETRY_S 5           /* PipeWire went away: try again */
+/* No more recording this long before the AirPods' stream stops: an
+ * application closing and reopening the source (a video call choosing its
+ * input) sent stop/start bursts, then the output restart mid-call, after
+ * which the AirPods stopped answering (22/11) */
+#ifndef HD_MIC_STOP_DELAY_MS
+#define HD_MIC_STOP_DELAY_MS 2000
+#endif
 
 struct HdMic {
     HdMicCallbacks callbacks;
@@ -77,6 +84,7 @@ struct HdMic {
     struct pw_stream *stream;
     struct spa_hook stream_listener;
     guint retry_id;
+    guint stop_id;          /* Stopping once nothing records any more */
 
     GHashTable *links;      /* Links leaving our source (ids) */
     bool capturing;
@@ -120,8 +128,17 @@ static void start_capture(HdMic *mic)
     mic->callbacks.capture_changed(true, mic->user_data);
 }
 
+static void cancel_stop(HdMic *mic)
+{
+    if (mic->stop_id > 0) {
+        g_source_remove(mic->stop_id);
+        mic->stop_id = 0;
+    }
+}
+
 static void stop_capture(HdMic *mic)
 {
+    cancel_stop(mic);
     if (!mic->capturing)
         return;
     mic->capturing = false;
@@ -259,16 +276,26 @@ static void on_global(void *data, uint32_t id, uint32_t permissions, const char 
     if (output == NULL || strtoul(output, NULL, 10) != pw_stream_get_node_id(mic->stream))
         return;
     g_hash_table_add(mic->links, GUINT_TO_POINTER(id));
+    cancel_stop(mic);
     if (!mic->capturing)
         start_capture(mic);
+}
+
+static gboolean stop_cb(gpointer user_data)
+{
+    HdMic *mic = user_data;
+    mic->stop_id = 0;
+    if (g_hash_table_size(mic->links) == 0)
+        stop_capture(mic);
+    return G_SOURCE_REMOVE;
 }
 
 static void on_global_remove(void *data, uint32_t id)
 {
     HdMic *mic = data;
     if (g_hash_table_remove(mic->links, GUINT_TO_POINTER(id)) &&
-        g_hash_table_size(mic->links) == 0)
-        stop_capture(mic);
+        g_hash_table_size(mic->links) == 0 && mic->stop_id == 0)
+        mic->stop_id = g_timeout_add(HD_MIC_STOP_DELAY_MS, stop_cb, mic);
 }
 
 static const struct pw_registry_events registry_events = {
@@ -462,6 +489,7 @@ void hd_mic_free(HdMic *mic)
         return;
     if (mic->retry_id > 0)
         g_source_remove(mic->retry_id);
+    cancel_stop(mic);
     pipewire_close(mic);
     if (mic->loop_source > 0)
         g_source_remove(mic->loop_source);
