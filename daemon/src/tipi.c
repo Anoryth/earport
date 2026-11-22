@@ -307,8 +307,8 @@ void tipi_link_closed(Tipi *tipi, bool left)
      * come alone is worth a reconnection again. Not after a drop while worn
      * (a radio timeout, the AirPods hesitating with another device): it
      * would cut them again each time they come back. */
-    if (left && tipi->in_case)
-        tipi->relinked = false;
+    if (left)
+        tipi->relinked = !tipi->in_case;
     reset_session(tipi);
     if (!dropped || tipi->reconnect_id > 0)
         return;

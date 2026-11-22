@@ -408,6 +408,7 @@ static void test_alone_playing(void)
     g_assert_cmpint(calls.relinks, ==, 0);
 
     /* Put away, out again, alone and nothing playing */
+    tipi_ear_changed(tipi, false, false, true);
     tipi_link_closed(tipi, true);
     session(tipi, &alone);
     g_assert_cmpint(calls.relinks, ==, 1);
@@ -441,6 +442,17 @@ static void test_alone_dropped_or_recording(void)
     tipi_set_recording(tipi, false);
     session(tipi, &alone);
     g_assert_cmpint(calls.relinks, ==, 2);
+    tipi_free(tipi);
+
+    /* Dropped while worn before any reconnection: not the first one either */
+    calls = (Calls){ 0 };
+    tipi = new_session(&calls);
+    tipi_ear_changed(tipi, true, true, false);
+    tipi_link_closed(tipi, true);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, &alone, ME);
+    run_for(250);
+    g_assert_cmpint(calls.relinks, ==, 0);
     tipi_free(tipi);
 }
 
