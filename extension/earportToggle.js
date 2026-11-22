@@ -12,7 +12,6 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
@@ -22,6 +21,7 @@ import {BatteryIndicator} from './batteryIndicator.js';
 import {ConversationVolume} from './conversationVolume.js';
 import {NoiseControlButton} from './noiseControlButton.js';
 import {Notifications} from './notifications.js';
+import {VolumeOsd, showOsd} from './volumeOsd.js';
 
 /* Last service version without the Version property */
 const UNVERSIONED_SERVICE = '0.4.0';
@@ -78,6 +78,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._settings = extensionObject.getSettings();
         this._notifications = new Notifications(this._settings);
         this._conversationVolume = new ConversationVolume(this._settings);
+        this._volumeOsd = new VolumeOsd(() => this._proxy?.DeviceAddress,
+            () => this._conversationVolume.fading);
 
         this._createMenu();
 
@@ -559,8 +561,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     _showModeOsd(mode) {
-        Main.osdWindowManager.show(-1,
-            this._modeIcons[mode] ?? Gio.ThemedIcon.new('audio-headphones-symbolic'),
+        showOsd(this._modeIcons[mode] ?? Gio.ThemedIcon.new('audio-headphones-symbolic'),
             this._modeNames[mode] ?? mode);
     }
 
@@ -572,6 +573,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     destroy() {
+        this._volumeOsd.destroy();
         this._conversationVolume.destroy();
         this._clearQuietDisconnect();
 

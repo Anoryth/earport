@@ -40,7 +40,7 @@ export class ConversationVolume {
             return;
         }
 
-        const sink = this._getAirPodsSink(address);
+        const sink = getAirPodsSink(address);
         if (!sink)
             return;
 
@@ -124,14 +124,19 @@ export class ConversationVolume {
         return true;
     }
 
-    /* Default output, only if it is these AirPods */
-    _getAirPodsSink(address) {
-        const sink = Volume.getMixerControl().get_default_sink();
-        if (!address || !sink)
-            return null;
-
-        /* bluez_output.AC_07_75_F0_31_02.1 (PipeWire), bluez_sink.… (PulseAudio) */
-        const id = address.replace(/:/g, '_').toUpperCase();
-        return sink.get_name()?.toUpperCase().includes(id) ? sink : null;
+    /* True while the volume is being faded */
+    get fading() {
+        return this._fadeId !== 0;
     }
+}
+
+/* Default output, only if it is the AirPods at this address */
+export function getAirPodsSink(address) {
+    const sink = Volume.getMixerControl().get_default_sink();
+    if (!address || !sink)
+        return null;
+
+    /* bluez_output.AC_07_75_F0_31_02.1 (PipeWire), bluez_sink.… (PulseAudio) */
+    const id = address.replace(/:/g, '_').toUpperCase();
+    return sink.get_name()?.toUpperCase().includes(id) ? sink : null;
 }
