@@ -86,6 +86,9 @@ export const AirPodsInterface = `
     <method name="SetHdMic">
       <arg type="b" name="enabled" direction="in"/>
     </method>
+    <method name="SetRecording">
+      <arg type="b" name="recording" direction="in"/>
+    </method>
     <method name="SetDisplayName">
       <arg type="s" name="name" direction="in"/>
     </method>
@@ -116,6 +119,7 @@ export const AirPodsInterface = `
     <signal name="MicrophoneMuted">
       <arg type="b" name="muted"/>
     </signal>
+    <signal name="MuteMicrophone"/>
   </interface>
 </node>
 `;

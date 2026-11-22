@@ -78,6 +78,9 @@ static const gchar introspection_xml[] =
     "    <method name='SetHdMic'>"
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
+    "    <method name='SetRecording'>"
+    "      <arg type='b' name='recording' direction='in'/>"
+    "    </method>"
     "    <method name='SetStemTrackControls'>"
     "      <arg type='b' name='enabled' direction='in'/>"
     "    </method>"
@@ -114,6 +117,7 @@ static const gchar introspection_xml[] =
     "    <signal name='MicrophoneMuted'>"
     "      <arg type='b' name='muted'/>"
     "    </signal>"
+    "    <signal name='MuteMicrophone'/>"
     "  </interface>"
     "</node>";
 
@@ -135,6 +139,7 @@ struct DbusService {
     bool apple_handoff;
     bool hd_mic;
     bool hd_mic_available;
+    guint recording_watch;      /* The client that said an application records */
     bool reconnecting;
 };
 
@@ -221,6 +226,27 @@ out:
 }
 
 /* A command for the AirPods was sent, or could not be */
+static void unwatch_recording(DbusService *service)
+{
+    if (service->recording_watch > 0) {
+        g_bus_unwatch_name(service->recording_watch);
+        service->recording_watch = 0;
+    }
+}
+
+/* GNOME Shell restarted, or the extension crashed, while an application
+ * recorded: no more single presses taken from the AirPods */
+static void on_recording_client_gone(GDBusConnection *connection, const gchar *name,
+                                     gpointer user_data)
+{
+    (void)connection;
+    DbusService *service = user_data;
+    g_message("D-Bus: %s left while recording", name);
+    unwatch_recording(service);
+    if (service->options.recording)
+        service->options.recording(false, service->options_user_data);
+}
+
 static void return_command_result(GDBusMethodInvocation *invocation, bool sent)
 {
     if (sent)
@@ -495,6 +521,20 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             g_dbus_method_invocation_return_value(invocation, NULL);
         }
 
+    } else if (g_strcmp0(method_name, "SetRecording") == 0) {
+        gboolean recording = FALSE;
+        g_variant_get(parameters, "(b)", &recording);
+        g_message("D-Bus: SetRecording(%s)", recording ? "true" : "false");
+
+        unwatch_recording(service);
+        if (recording)
+            service->recording_watch = g_bus_watch_name_on_connection(
+                service->connection, g_dbus_method_invocation_get_sender(invocation),
+                G_BUS_NAME_WATCHER_FLAGS_NONE, NULL, on_recording_client_gone, service, NULL);
+        if (service->options.recording)
+            service->options.recording(recording, service->options_user_data);
+        g_dbus_method_invocation_return_value(invocation, NULL);
+
     } else if (g_strcmp0(method_name, "SetSetting") == 0) {
         handle_set_setting(service, parameters, invocation);
 
@@ -589,6 +629,8 @@ void dbus_service_free(DbusService *service)
 {
     if (service == NULL)
         return;
+
+    unwatch_recording(service);
 
     dbus_service_stop(service);
 
@@ -757,6 +799,11 @@ void dbus_service_emit_paused_for_sleep(DbusService *service)
 void dbus_service_emit_microphone_muted(DbusService *service, bool muted)
 {
     emit_signal(service, "MicrophoneMuted", g_variant_new("(b)", muted));
+}
+
+void dbus_service_emit_mute_microphone(DbusService *service)
+{
+    emit_signal(service, "MuteMicrophone", NULL);
 }
 
 void dbus_service_emit_properties_changed(DbusService *service,

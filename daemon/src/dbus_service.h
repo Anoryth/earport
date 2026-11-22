@@ -38,6 +38,9 @@ typedef struct {
     void (*apple_handoff)(bool enabled, void *user_data);
     /* Only called when available, see dbus_service_set_hd_mic */
     void (*hd_mic)(bool enabled, void *user_data);
+    /* SetRecording: an application records (the client, GNOME Shell, sees
+     * it); false again when that client leaves the bus without saying so */
+    void (*recording)(bool recording, void *user_data);
     /* ClaimAudio: have the AirPods play from this computer; false if not
      * connected */
     bool (*claim_audio)(void *user_data);
@@ -134,6 +137,10 @@ void dbus_service_emit_speaking_changed(DbusService *service, bool speaking);
 
 /* The stem muted or unmuted the HD microphone during a recording */
 void dbus_service_emit_microphone_muted(DbusService *service, bool muted);
+
+/* The stem asks to mute or unmute the input an application records from,
+ * the HD microphone aside (the client does it) */
+void dbus_service_emit_mute_microphone(DbusService *service);
 
 /* Playback was paused because the user fell asleep (once per pause) */
 void dbus_service_emit_paused_for_sleep(DbusService *service);

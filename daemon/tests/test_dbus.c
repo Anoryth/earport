@@ -655,6 +655,43 @@ static void test_hd_mic_option(Fixture *f, gconstpointer data)
     g_assert_cmpint(asked, ==, 1);
 }
 
+static void on_recording(bool recording, void *user_data)
+{
+    *(int *)user_data = recording;
+}
+
+/* An application records, as GNOME Shell tells; back to not recording when
+ * that client leaves without saying so (the Shell restarted) */
+static void test_recording_client_gone(Fixture *f, gconstpointer data)
+{
+    (void)data;
+    int recording = -1;
+    const DbusServiceCallbacks callbacks = { .recording = on_recording };
+    dbus_service_set_service_callbacks(f->dbus, &callbacks, &recording);
+
+    call_ok(f, "SetRecording", g_variant_new("(b)", TRUE));
+    g_assert_cmpint(recording, ==, 1);
+    call_ok(f, "SetRecording", g_variant_new("(b)", FALSE));
+    g_assert_cmpint(recording, ==, 0);
+
+    GDBusConnection *shell = g_dbus_connection_new_for_address_sync(
+        g_test_dbus_get_bus_address(test_bus),
+        G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT | G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
+        NULL, NULL, NULL);
+    CallResult result = { 0 };
+    g_dbus_connection_call(shell, BUS_NAME, OBJECT_PATH, INTERFACE, "SetRecording",
+                           g_variant_new("(b)", TRUE), NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL,
+                           on_call_done, &result);
+    RUN_UNTIL(result.done);
+    g_assert_no_error(result.error);
+    g_variant_unref(result.reply);
+    g_assert_cmpint(recording, ==, 1);
+
+    g_dbus_connection_close_sync(shell, NULL, NULL);
+    g_object_unref(shell);
+    RUN_UNTIL(recording == 0);
+}
+
 /* Lost while speaking: clients get the volume back */
 static void test_disconnection(Fixture *f, gconstpointer data)
 {
@@ -824,6 +861,7 @@ int main(int argc, char *argv[])
     ADD("/dbus/adaptive-resent-when-refused", test_adaptive_resent_when_refused);
     ADD("/dbus/adaptive-not-resent-when-reported", test_adaptive_not_resent_when_reported);
     ADD("/dbus/hd-mic-option", test_hd_mic_option);
+    ADD("/dbus/recording-client-gone", test_recording_client_gone);
     ADD("/dbus/disconnect-announces-reset", test_disconnect_announces_reset);
     ADD("/dbus/mic-turns-ca-off", test_mic_turns_ca_off);
     ADD("/dbus/mic-keeps-ca-off", test_mic_keeps_ca_off);

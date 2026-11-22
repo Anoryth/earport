@@ -60,6 +60,7 @@ typedef struct {
     HdMic *hd_mic;
     guint hd_mic_output_id;
     bool mic_capturing;     /* An application records from the HD microphone */
+    bool recording;         /* An application records, whatever the input (Shell) */
     gint64 mic_capture_end_us;
     guint hd_mic_pause_id;  /* The source is away after the AirPods dropped */
     bool stopping;               /* Packets queued now would not leave */
@@ -310,6 +311,8 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         bool muted;
         if (hd_mic_toggle_mute(app.hd_mic, &muted))
             dbus_service_emit_microphone_muted(app.dbus_service, muted);
+        else if (app.recording)
+            dbus_service_emit_mute_microphone(app.dbus_service);
         return;
     }
 
@@ -358,15 +361,15 @@ static void on_link_disconnected(void *user_data)
 }
 
 /* Have the AirPods report double and triple presses (turned into track
- * changes) instead of acting on them, and single presses while the HD
- * microphone records (mute, as in a call on the iPhone; play/pause
- * otherwise). shortcut: always a single press, whatever the call setting
+ * changes) instead of acting on them, and single presses while an
+ * application records, from the HD microphone or any input (mute, as in a
+ * call on the iPhone; play/pause otherwise). shortcut: always a single press, whatever the call setting
  * (0x24, press once or twice to mute); read it if someone asks. */
 static void send_stem_presses(void)
 {
     uint8_t mask = app.config.stem_track_controls
                        ? AAP_STEM_MASK_DOUBLE | AAP_STEM_MASK_TRIPLE : 0x00;
-    if (app.mic_capturing)
+    if (app.mic_capturing || app.recording)
         mask |= AAP_STEM_MASK_SINGLE;
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_control_cmd(AAP_CTRL_STEM_PRESSES, &mask, 1, packet);
@@ -381,7 +384,7 @@ static void on_link_connected(const char *address, const char *name, void *user_
     tipi_link_opened(app.tipi);
     relink_link_opened(app.relink);
     controls_send_saved_settings(&app.controls, address);
-    if (app.config.stem_track_controls)
+    if (app.config.stem_track_controls || app.recording)
         send_stem_presses();
     /* Before the source is back: a recording going on turns it off again */
     controls_restore_ca(&app.controls);
@@ -673,6 +676,14 @@ static void handoff_restart_audio(HandoffRestart how, void *user_data)
     audio_route_restart(app.state.device_address, modes[how]);
 }
 
+static void on_set_recording(bool recording, void *user_data)
+{
+    (void)user_data;
+    app.recording = recording;
+    if (app.state.connected)
+        send_stem_presses();
+}
+
 static void on_set_hd_mic(bool enabled, void *user_data)
 {
     (void)user_data;
@@ -833,6 +844,7 @@ int main(int argc, char *argv[])
         .stem_track_controls = on_set_stem_track_controls,
         .apple_handoff = on_set_apple_handoff,
         .hd_mic = on_set_hd_mic,
+        .recording = on_set_recording,
         .claim_audio = claim_audio,
         .research_send = research_send,
     };

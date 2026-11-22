@@ -19,6 +19,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 
 import {BatteryIndicator} from './batteryIndicator.js';
 import {ConversationVolume} from './conversationVolume.js';
+import {MicMute, showMicOsd} from './micMute.js';
 import {NoiseControlButton} from './noiseControlButton.js';
 import {Notifications} from './notifications.js';
 import {VolumeOsd, showOsd} from './volumeOsd.js';
@@ -80,6 +81,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._conversationVolume = new ConversationVolume(this._settings);
         this._volumeOsd = new VolumeOsd(() => this._proxy?.DeviceAddress,
             () => this._conversationVolume.fading);
+        this._micMute = new MicMute(() => this._sendRecording());
 
         this._createMenu();
 
@@ -246,9 +248,10 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         );
         this._signalIds.push(
             this._proxy.connectSignal('MicrophoneMuted', (proxy, sender, [muted]) =>
-                showOsd(Gio.ThemedIcon.new(muted
-                    ? 'microphone-sensitivity-muted-symbolic'
-                    : 'microphone-sensitivity-high-symbolic'), null))
+                showMicOsd(muted))
+        );
+        this._signalIds.push(
+            this._proxy.connectSignal('MuteMicrophone', () => this._micMute.toggle())
         );
 
         this._updateState();
@@ -382,6 +385,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._installItem.visible = missing;
         this._settingsItem.visible = !missing;
         this._updateServiceVersion();
+        if (!missing)
+            this._sendRecording();
         if (missing) {
             /* Gone mid-conversation: no SpeakingChanged(false) will come */
             this._onSpeakingChanged(null, null, [false]);
@@ -578,7 +583,17 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         }
     }
 
+    /* Older services lack SetRecording: the stem then only mutes the HD
+     * microphone */
+    _sendRecording() {
+        if (!this._serviceMissing)
+            this._proxy?.SetRecordingRemote(this._micMute?.recording ?? false, () => {});
+    }
+
     destroy() {
+        this._micMute.destroy();
+        if (this._micMute.recording)
+            this._proxy?.SetRecordingRemote(false, () => {});
         this._volumeOsd.destroy();
         this._conversationVolume.destroy();
         this._clearQuietDisconnect();
