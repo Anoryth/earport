@@ -69,6 +69,7 @@ static const gchar introspection_xml[] =
     "      <arg type='v' name='value' direction='in'/>"
     "    </method>"
     "    <method name='ClaimAudio'/>"
+    "    <method name='Connect'/>"
     "    <method name='ResearchSend'>"
     "      <arg type='ay' name='packet' direction='in'/>"
     "    </method>"
@@ -367,6 +368,8 @@ static GVariant *get_property(GDBusConnection *connection G_GNUC_UNUSED,
                                   g_variant_new_string(state->nearby_name ? state->nearby_name : "AirPods"));
             g_variant_builder_add(&builder, "{sv}", "Headphones",
                                   g_variant_new_boolean(state->nearby_headphones));
+            g_variant_builder_add(&builder, "{sv}", "LidOpen",
+                                  g_variant_new_boolean(state->nearby_lid_open));
         }
         result = g_variant_builder_end(&builder);
     } else if (g_strcmp0(property_name, "Settings") == 0) {
@@ -488,6 +491,15 @@ static void handle_method_call(GDBusConnection *connection G_GNUC_UNUSED,
             g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
                                                   "Research mode off or AirPods not connected");
         g_variant_unref(bytes);
+
+    } else if (g_strcmp0(method_name, "Connect") == 0) {
+        g_message("D-Bus: Connect()");
+        if (service->options.connect &&
+            service->options.connect(service->options_user_data))
+            g_dbus_method_invocation_return_value(invocation, NULL);
+        else
+            g_dbus_method_invocation_return_error(invocation, G_DBUS_ERROR, G_DBUS_ERROR_FAILED,
+                                                  "AirPods unknown or already connected");
 
     } else if (g_strcmp0(method_name, "ClaimAudio") == 0) {
         g_message("D-Bus: ClaimAudio()");

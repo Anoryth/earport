@@ -18,6 +18,10 @@
 #define STATUS_POD_IN_EAR_2  0x08
 #define STATUS_PRIMARY_LEFT  0x20
 
+/* Lid byte (8): set while the case is open (AirPods Pro 2, 22/11/2026);
+ * the low bits count openings, but not the same way on both pods */
+#define LID_OPEN 0x08
+
 /* Encrypted block at the end of the advert: [?] [primary pod] [other pod]
  * [case], each level & 0x7F (0x7F unknown), bit 7 = charging */
 #define ENCRYPTED_SIZE 16
@@ -40,6 +44,7 @@ bool proximity_parse(const uint8_t *data, size_t len, ProximityInfo *info)
     info->both_in_case = (status & STATUS_BOTH_IN_CASE) != 0;
     info->connection_state = data[10];
     info->primary_left = (status & STATUS_PRIMARY_LEFT) != 0;
+    info->lid_open = (data[8] & LID_OPEN) != 0;
     return true;
 }
 

@@ -118,6 +118,7 @@ typedef struct {
     bool nearby_left_charging, nearby_right_charging, nearby_case_charging;
     const char *nearby_host;     /* "none", "idle", "music", "call" */
     bool nearby_headphones;      /* AirPods Max: one battery */
+    bool nearby_lid_open;        /* Their case is open */
     char *nearby_name;           /* Custom or Bluetooth name */
 
     /* Device the AirPods play from: "" unknown, "none", "computer" (this

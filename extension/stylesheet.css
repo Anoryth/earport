@@ -168,3 +168,28 @@
 .earport-nc-button:checked .earport-nc-label {
     font-weight: 600;
 }
+
+/* ============================================
+   Proximity Card
+   ============================================ */
+
+/* The background and colors come from popup-menu-content (shell theme) */
+.earport-proximity-card {
+    padding: 12px 16px 16px 16px;
+    spacing: 4px;
+    min-width: 18em;
+}
+
+.earport-proximity-card-title {
+    font-weight: bold;
+    font-size: 1.091em;
+}
+
+.earport-proximity-card-close {
+    padding: 6px;
+    border-radius: 99px;
+}
+
+.earport-proximity-card-connect {
+    margin-top: 4px;
+}

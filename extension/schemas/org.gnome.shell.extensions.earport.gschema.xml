@@ -22,6 +22,11 @@
       <summary>Volume during conversations</summary>
       <description>Share of the current volume, in percent, kept while conversation awareness detects that you speak</description>
     </key>
+    <key name="proximity-card" type="b">
+      <default>true</default>
+      <summary>Proximity card</summary>
+      <description>Show the batteries and a Connect button when the AirPods' case opens near this computer while they are not connected here</description>
+    </key>
     <key name="hold-notifications-during-conversations" type="b">
       <default>true</default>
       <summary>Hold notifications during conversations</summary>

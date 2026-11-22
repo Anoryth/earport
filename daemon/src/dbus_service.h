@@ -44,6 +44,9 @@ typedef struct {
     /* ClaimAudio: have the AirPods play from this computer; false if not
      * connected */
     bool (*claim_audio)(void *user_data);
+    /* Connect: connect the AirPods used last (the proximity card); false if
+     * none yet or already connected */
+    bool (*connect)(void *user_data);
     /* ResearchSend: a raw packet to the AirPods, only in research mode
      * (research_log=true); false if refused or not connected */
     bool (*research_send)(const uint8_t *data, size_t len, void *user_data);

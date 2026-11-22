@@ -585,6 +585,24 @@ static void connect_airpods(void *user_data)
         bluez_device_connect(app.device_path, on_airpods_connected, NULL);
 }
 
+static void on_connect_requested(bool connected, const char *error, void *user_data)
+{
+    (void)user_data;
+    if (!connected)
+        g_message("Connecting the AirPods on request failed: %s", error);
+}
+
+/* Asked by the user (the proximity card) */
+static bool connect_on_request(void *user_data)
+{
+    (void)user_data;
+    if (app.device_path == NULL || app.state.connected)
+        return false;
+    g_message("Connecting the AirPods on request");
+    bluez_device_connect(app.device_path, on_connect_requested, NULL);
+    return true;
+}
+
 static void disconnect_airpods(void *user_data)
 {
     (void)user_data;
@@ -846,6 +864,7 @@ int main(int argc, char *argv[])
         .hd_mic = on_set_hd_mic,
         .recording = on_set_recording,
         .claim_audio = claim_audio,
+        .connect = connect_on_request,
         .research_send = research_send,
     };
     dbus_service_set_service_callbacks(app.dbus_service, &service_callbacks, NULL);

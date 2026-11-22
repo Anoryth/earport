@@ -412,7 +412,8 @@ bool device_nearby_battery(Device *dev, const char *address, const ProximityBatt
                    s->nearby_left_charging != battery->left_charging ||
                    s->nearby_right_charging != battery->right_charging ||
                    s->nearby_case_charging != battery->case_charging ||
-                   s->nearby_headphones != headphones || g_strcmp0(s->nearby_host, host) != 0;
+                   s->nearby_headphones != headphones || g_strcmp0(s->nearby_host, host) != 0 ||
+                   s->nearby_lid_open != info->lid_open;
     s->nearby_left = battery->left;
     s->nearby_right = battery->right;
     s->nearby_case = battery->case_level;
@@ -421,6 +422,7 @@ bool device_nearby_battery(Device *dev, const char *address, const ProximityBatt
     s->nearby_case_charging = battery->case_charging;
     s->nearby_headphones = headphones;
     s->nearby_host = host;
+    s->nearby_lid_open = info->lid_open;
 
     /* Once per appearance: the name may have changed in between */
     if (!was_valid) {
@@ -440,8 +442,9 @@ bool device_nearby_battery(Device *dev, const char *address, const ProximityBatt
     }
 
     if (changed) {
-        g_message("Nearby AirPods: L=%d%% R=%d%% Case=%d%% (%s)",
-                  battery->left, battery->right, battery->case_level, host);
+        g_message("Nearby AirPods: L=%d%% R=%d%% Case=%d%% (%s, lid %s)",
+                  battery->left, battery->right, battery->case_level, host,
+                  info->lid_open ? "open" : "closed");
         dbus_service_emit_properties_changed(dev->dbus, "NearbyBattery");
     }
     return ask_name;

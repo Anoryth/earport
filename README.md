@@ -30,6 +30,7 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 - **Quiet conversations** - Notification banners and their sounds wait until you stop speaking (can be turned off)
 - **Automatic connection** (optional) - Connects the AirPods when you put them in or start playing on the computer, but never takes them from another device that is playing or in a call
 - **Switch with your Apple devices** (optional, experimental) - The AirPods move between the computer and your iPhone, iPad or Mac on their own, as between Apple devices, and stay connected to both, even when you take one AirPod out
+- **Proximity card** - Opening the case near the computer, while the AirPods are not connected to it, shows their batteries and a Connect button, as on an iPhone (idea from the [OscarHickman/earport](https://github.com/OscarHickman/earport) fork; can be turned off)
 - **Remaining listening time** - Estimated from how fast your own AirPods discharge, learned over your listening sessions
 - **Ear detection** - Automatic media pause/resume when removing/inserting AirPods
 - **Track controls** - Press the stem twice for the next track, three times for the previous one, as on an iPhone (can be turned off); once to mute the microphone during a call

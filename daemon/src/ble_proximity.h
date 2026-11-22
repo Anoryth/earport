@@ -33,6 +33,7 @@ typedef struct {
     bool both_in_case;
     uint8_t connection_state;   /* ProximityConnectionState */
     bool primary_left;          /* Pod pairs below are primary first */
+    bool lid_open;              /* The case is open */
 } ProximityInfo;
 
 /* Precise battery from the encrypted part of the advert, -1 if unknown */

@@ -17,11 +17,12 @@ import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js'
 
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {BatteryIndicator} from './batteryIndicator.js';
+import {BatteryIndicator, showNearbyLevels} from './batteryIndicator.js';
 import {ConversationVolume} from './conversationVolume.js';
 import {MicMute, showMicOsd} from './micMute.js';
 import {NoiseControlButton} from './noiseControlButton.js';
 import {Notifications} from './notifications.js';
+import {ProximityCard} from './proximityCard.js';
 import {VolumeOsd, showOsd} from './volumeOsd.js';
 
 /* Last service version without the Version property */
@@ -82,6 +83,8 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._volumeOsd = new VolumeOsd(() => this._proxy?.DeviceAddress,
             () => this._conversationVolume.fading);
         this._micMute = new MicMute(() => this._sendRecording());
+        this._proximityCard = new ProximityCard(this._settings, this._batteryIcons,
+            this._chargingIcon, () => this._proxy?.ConnectRemote(() => {}));
 
         this._createMenu();
 
@@ -262,6 +265,9 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
          * quiet is real */
         this._noticeDisconnection();
         this._updateState();
+        this._proximityCard.update(
+            this._proxy.get_cached_property('NearbyBattery')?.recursiveUnpack() ?? {},
+            this._proxy.Connected);
     }
 
     _onDeviceConnected(_proxy, _sender, [_address, name]) {
@@ -453,17 +459,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
             this.menu.setHeader('audio-headphones-symbolic', nearby.Name);
         this._batteryBox.opacity = 255;
 
-        /* AirPods Max: a single battery, in whichever slot it comes */
-        const headphones = nearby.Headphones ?? false;
-        this._leftBattery.setHeadphonesMode(headphones);
-        this._rightBattery.setHeadphonesMode(headphones);
-        this._caseBattery.setHeadphonesMode(headphones);
-        if (headphones && nearby.Left < 0)
-            this._leftBattery.setLevel(nearby.Right, nearby.RightCharging);
-        else
-            this._leftBattery.setLevel(nearby.Left, nearby.LeftCharging);
-        this._rightBattery.setLevel(nearby.Right, nearby.RightCharging);
-        this._caseBattery.setLevel(nearby.Case, nearby.CaseCharging);
+        showNearbyLevels([this._leftBattery, this._rightBattery, this._caseBattery], nearby);
         this._updateBatteryAccessibleName();
     }
 
@@ -591,6 +587,7 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
     }
 
     destroy() {
+        this._proximityCard.destroy();
         this._micMute.destroy();
         if (this._micMute.recording)
             this._proxy?.SetRecordingRemote(false, () => {});

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: earport 0.3.0\n"
 "Report-Msgid-Bugs-To: https://github.com/Anoryth/earport/issues\n"
-"POT-Creation-Date: 2026-11-09 20:49+0100\n"
+"POT-Creation-Date: 2026-11-22 22:55+0100\n"
 "PO-Revision-Date: 2026-09-28 20:07+0200\n"
 "Last-Translator: EarPort Contributors\n"
 "Language-Team: Italian\n"
@@ -30,96 +30,96 @@ msgstr "non disponibile"
 msgid "charging"
 msgstr "in carica"
 
-#: extension/earportToggle.js:45 extension/earportToggle.js:399
-#: extension/earportToggle.js:415 extension/prefs.js:537
+#: extension/earportToggle.js:47 extension/earportToggle.js:418
+#: extension/earportToggle.js:434 extension/prefs.js:545
 msgid "Disconnected"
 msgstr "Disconnesso"
 
-#: extension/earportToggle.js:66
+#: extension/earportToggle.js:68
 msgid "Noise Control Off"
 msgstr "Modalità di ascolto non attiva"
 
-#: extension/earportToggle.js:67 extension/prefs.js:188
+#: extension/earportToggle.js:69 extension/prefs.js:188
 msgid "Noise Cancellation"
 msgstr "Cancellazione del rumore"
 
-#: extension/earportToggle.js:68 extension/prefs.js:182
+#: extension/earportToggle.js:70 extension/prefs.js:182
 msgid "Transparency"
 msgstr "Modalità Trasparenza"
 
-#: extension/earportToggle.js:69 extension/prefs.js:194
+#: extension/earportToggle.js:71 extension/prefs.js:194
 msgid "Adaptive"
 msgstr "Adattivo"
 
-#: extension/earportToggle.js:103 extension/notifications.js:60
-#: extension/prefs.js:511
+#: extension/earportToggle.js:110 extension/notifications.js:60
+#: extension/prefs.js:519 extension/proximityCard.js:99
 msgid "Left"
 msgstr "Sinistro"
 
-#: extension/earportToggle.js:104 extension/notifications.js:62
-#: extension/prefs.js:511
+#: extension/earportToggle.js:111 extension/notifications.js:62
+#: extension/prefs.js:519 extension/proximityCard.js:100
 msgid "Right"
 msgstr "Destro"
 
-#: extension/earportToggle.js:105
+#: extension/earportToggle.js:112 extension/proximityCard.js:101
 msgid "Case"
 msgstr "Custodia"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/earportToggle.js:151 extension/prefs.js:176
+#: extension/earportToggle.js:158 extension/prefs.js:176
 msgid "Off"
 msgstr "Off"
 
 #. Translators: short noise control button label, keep it under ~8 characters
-#: extension/earportToggle.js:153
+#: extension/earportToggle.js:160
 msgid "ANC"
 msgstr "ANC"
 
 #. Translators: short noise control button label for Transparency mode, keep it under ~8 characters
-#: extension/earportToggle.js:155
+#: extension/earportToggle.js:162
 msgid "Hear"
 msgstr "Trasparenza"
 
 #. Translators: short noise control button label for Adaptive mode, keep it under ~8 characters
-#: extension/earportToggle.js:158
+#: extension/earportToggle.js:165
 msgid "Auto"
 msgstr "Auto"
 
-#: extension/earportToggle.js:178
+#: extension/earportToggle.js:185
 msgid "Use on This Computer"
 msgstr "Usa su questo computer"
 
-#: extension/earportToggle.js:189
+#: extension/earportToggle.js:196
 msgid "Advanced Settings"
 msgstr "Impostazioni avanzate"
 
-#: extension/earportToggle.js:198
+#: extension/earportToggle.js:205
 msgid "How to Install the EarPort Service"
 msgstr "Come installare il servizio EarPort"
 
-#: extension/earportToggle.js:208
+#: extension/earportToggle.js:215
 msgid "Update the EarPort Service"
 msgstr "Aggiorna il servizio EarPort"
 
-#: extension/earportToggle.js:338 extension/earportToggle.js:438
+#: extension/earportToggle.js:355 extension/earportToggle.js:457
 msgid "Other device"
 msgstr "Altro dispositivo"
 
-#: extension/earportToggle.js:399
+#: extension/earportToggle.js:418
 msgid "Service not running"
 msgstr "Servizio non in esecuzione"
 
-#: extension/earportToggle.js:476
+#: extension/earportToggle.js:485
 msgid "Less than 5 min of listening left"
 msgstr "Meno di 5 min di ascolto rimanenti"
 
-#: extension/earportToggle.js:478
+#: extension/earportToggle.js:487
 #, javascript-format
 msgid "About %d min of listening left"
 msgstr "Circa %d min di ascolto rimanenti"
 
 #. Translators: hours∶minutes, same format as the shell's battery
-#: extension/earportToggle.js:483
+#: extension/earportToggle.js:492
 #, javascript-format
 msgid "About %d∶%02d of listening left"
 msgstr "Circa %d∶%02d di ascolto rimanenti"
@@ -274,7 +274,7 @@ msgstr "Controllo multimediale"
 msgid "Configure media playback behavior"
 msgstr "Configura il comportamento della riproduzione"
 
-#: extension/prefs.js:206 extension/prefs.js:284
+#: extension/prefs.js:206 extension/prefs.js:290
 msgid "Disabled"
 msgstr "Disattivato"
 
@@ -300,7 +300,8 @@ msgstr "Cambia brano con lo stelo"
 
 #: extension/prefs.js:219
 msgid "Press twice for the next track, three times for the previous one"
-msgstr "Premi due volte per il brano successivo, tre volte per quello precedente"
+msgstr ""
+"Premi due volte per il brano successivo, tre volte per quello precedente"
 
 #: extension/prefs.js:225
 msgid "HD Microphone"
@@ -345,201 +346,219 @@ msgstr ""
 "brevemente quando lo attivi."
 
 #: extension/prefs.js:249
+msgid "Proximity Card"
+msgstr "Scheda di prossimità"
+
+#: extension/prefs.js:250
+msgid ""
+"Show the batteries and a Connect button when you open the case near this "
+"computer, while the AirPods are not connected here"
+msgstr "Mostra le batterie e un pulsante Connetti quando apri la custodia vicino a questo computer, se gli AirPods non sono connessi qui"
+
+#: extension/prefs.js:255
 msgid "Notifications"
 msgstr "Notifiche"
 
-#: extension/prefs.js:250
+#: extension/prefs.js:256
 msgid "Configure notification preferences"
 msgstr "Configura le notifiche"
 
-#: extension/prefs.js:255
+#: extension/prefs.js:261
 msgid "Connection Notifications"
 msgstr "Notifiche di connessione"
 
-#: extension/prefs.js:256
+#: extension/prefs.js:262
 msgid "Notify when AirPods connect or disconnect"
 msgstr "Notifica quando gli AirPods si connettono o disconnettono"
 
-#: extension/prefs.js:261
+#: extension/prefs.js:267
 msgid "Low Battery Notifications"
 msgstr "Notifiche di batteria scarica"
 
-#: extension/prefs.js:262
+#: extension/prefs.js:268
 msgid "Notify when battery drops below threshold"
 msgstr "Notifica quando la batteria scende sotto la soglia"
 
-#: extension/prefs.js:267
+#: extension/prefs.js:273
 msgid "Low Battery Threshold"
 msgstr "Soglia di batteria scarica"
 
-#: extension/prefs.js:268
+#: extension/prefs.js:274
 msgid "Notify when battery drops below this percentage"
 msgstr "Notifica quando la batteria scende sotto questa percentuale"
 
-#: extension/prefs.js:279
+#: extension/prefs.js:285
 msgid "Keyboard Shortcuts"
 msgstr "Scorciatoie da tastiera"
 
-#: extension/prefs.js:289
+#: extension/prefs.js:295
 msgid "Cycle Noise Control Mode"
 msgstr "Cambia modalità di controllo del rumore"
 
-#: extension/prefs.js:290
+#: extension/prefs.js:296
 msgid "Also works when the Quick Settings menu is closed"
 msgstr "Funziona anche con il menu delle impostazioni rapide chiuso"
 
-#: extension/prefs.js:304
+#: extension/prefs.js:310
 msgid "About"
 msgstr "Informazioni"
 
-#: extension/prefs.js:310
+#: extension/prefs.js:316
 msgid "AirPods integration for GNOME"
 msgstr "Integrazione degli AirPods per GNOME"
 
-#: extension/prefs.js:316
+#: extension/prefs.js:322
 msgid "Version"
 msgstr "Versione"
 
-#: extension/prefs.js:412
+#: extension/prefs.js:420
 msgid "At least two modes must stay in the cycle"
 msgstr "Almeno due modalità devono restare nel ciclo"
 
-#: extension/prefs.js:456 extension/prefs.js:537
+#: extension/prefs.js:464 extension/prefs.js:545
 msgid "Daemon not running"
 msgstr "Servizio non in esecuzione"
 
-#: extension/prefs.js:465
+#: extension/prefs.js:473
 msgid "Error connecting to daemon"
 msgstr "Errore di connessione al servizio"
 
-#: extension/prefs.js:507
+#: extension/prefs.js:515
 #, javascript-format
 msgid "Connected: %s"
 msgstr "Connesso: %s"
 
-#: extension/prefs.js:509 extension/prefs.js:510
+#: extension/prefs.js:517 extension/prefs.js:518
 msgid "In ear"
 msgstr "Indossato"
 
-#: extension/prefs.js:509 extension/prefs.js:510
+#: extension/prefs.js:517 extension/prefs.js:518
 msgid "Out"
 msgstr "Fuori"
 
-#: extension/prefs.js:521
+#: extension/prefs.js:529
 #, javascript-format
 msgid "Device model: %s"
 msgstr "Modello del dispositivo: %s"
 
-#: extension/prefs.js:538
+#: extension/prefs.js:546
 msgid "No device connected"
 msgstr "Nessun dispositivo connesso"
 
-#: extension/prefs.js:552
+#: extension/prefs.js:560
 msgid "AirPods Settings"
 msgstr "Impostazioni degli AirPods"
 
-#: extension/prefs.js:558
+#: extension/prefs.js:566
 msgid "No settings available"
 msgstr "Nessuna impostazione disponibile"
 
-#: extension/prefs.js:559
+#: extension/prefs.js:567
 msgid "Connect your AirPods to change the settings stored on them"
 msgstr "Connetti gli AirPods per modificare le impostazioni salvate su di essi"
 
-#: extension/prefs.js:572
+#: extension/prefs.js:580
 msgid "Listening Modes"
 msgstr "Modalità di ascolto"
 
-#: extension/prefs.js:574
+#: extension/prefs.js:582
 msgid "Noise Cancellation with One AirPod"
 msgstr "Cancellazione rumore con un auricolare AirPods"
 
-#: extension/prefs.js:575
+#: extension/prefs.js:583
 msgid "Allow noise cancellation with only one AirPod in your ear"
 msgstr ""
 "Consente la cancellazione del rumore anche con un solo auricolare indossato"
 
-#: extension/prefs.js:579
+#: extension/prefs.js:587
 msgid "Audio"
 msgstr "Audio"
 
-#: extension/prefs.js:581
+#: extension/prefs.js:589
 msgid "Personalized Volume"
 msgstr "Volume personalizzato"
 
-#: extension/prefs.js:582
+#: extension/prefs.js:590
 msgid "Adjust media volume based on your environment"
 msgstr "Regola il volume dei contenuti in base all'ambiente"
 
-#: extension/prefs.js:585
+#: extension/prefs.js:593
 msgid "Pause Media When Falling Asleep"
 msgstr "Metti in pausa contenuti multimediali quando mi addormento"
 
-#: extension/prefs.js:586
+#: extension/prefs.js:594
 msgid "Pause playback when you fall asleep"
 msgstr "Mette in pausa la riproduzione quando ti addormenti"
 
-#: extension/prefs.js:590
+#: extension/prefs.js:598
 msgid "Stem Controls"
 msgstr "Controlli sullo stelo"
 
-#: extension/prefs.js:592
+#: extension/prefs.js:600
 msgid "Press Speed"
 msgstr "Velocità pressione"
 
-#: extension/prefs.js:593
+#: extension/prefs.js:601
 msgid "Speed required to press two or three times"
 msgstr "Velocità richiesta per premere due o tre volte"
 
-#: extension/prefs.js:594 extension/prefs.js:597 extension/prefs.js:602
+#: extension/prefs.js:602 extension/prefs.js:605 extension/prefs.js:610
 msgid "Default"
 msgstr "Predefinita"
 
-#: extension/prefs.js:594
+#: extension/prefs.js:602
 msgid "Slower"
 msgstr "Più lenta"
 
-#: extension/prefs.js:594
+#: extension/prefs.js:602
 msgid "Slowest"
 msgstr "La più lenta"
 
-#: extension/prefs.js:595
+#: extension/prefs.js:603
 msgid "Press and Hold Duration"
 msgstr "Durata della pressione prolungata"
 
-#: extension/prefs.js:596
+#: extension/prefs.js:604
 msgid "Time required to press and hold"
 msgstr "Tempo richiesto per tenere premuto"
 
-#: extension/prefs.js:597
+#: extension/prefs.js:605
 msgid "Shorter"
 msgstr "Più breve"
 
-#: extension/prefs.js:597
+#: extension/prefs.js:605
 msgid "Shortest"
 msgstr "La più breve"
 
-#: extension/prefs.js:598
+#: extension/prefs.js:606
 msgid "Volume Swipe"
 msgstr "Scorrimento volume"
 
-#: extension/prefs.js:599
+#: extension/prefs.js:607
 msgid "Swipe up or down on the stem to adjust the volume"
 msgstr "Scorri verso l’alto o il basso sullo stelo per regolare il volume"
 
-#: extension/prefs.js:600
+#: extension/prefs.js:608
 msgid "Volume Swipe Duration"
 msgstr "Lunghezza dello scorrimento"
 
-#: extension/prefs.js:601
+#: extension/prefs.js:609
 msgid "Wait time between swipes to prevent unintended changes"
 msgstr ""
 "Attesa tra uno scorrimento e l'altro per evitare modifiche involontarie"
 
-#: extension/prefs.js:602
+#: extension/prefs.js:610
 msgid "Longer"
 msgstr "Più lunga"
 
-#: extension/prefs.js:602
+#: extension/prefs.js:610
 msgid "Longest"
 msgstr "La più lunga"
+
+#: extension/proximityCard.js:91
+msgid "Close"
+msgstr "Chiudi"
+
+#: extension/proximityCard.js:111
+msgid "Connect"
+msgstr "Connetti"

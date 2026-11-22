@@ -35,6 +35,18 @@ static void test_parse(void)
     one_out[5] = 0x09;
     g_assert_true(proximity_parse(one_out, sizeof(one_out), &info));
     g_assert_true(info.in_ear);
+    g_assert_false(info.lid_open);
+
+    /* In the case, lid open then closed (lid bytes captured 22/11) */
+    uint8_t in_case[sizeof(advert_music)];
+    memcpy(in_case, advert_music, sizeof(in_case));
+    in_case[5] = 0x35;
+    in_case[8] = 0x5a;
+    g_assert_true(proximity_parse(in_case, sizeof(in_case), &info));
+    g_assert_true(info.lid_open);
+    in_case[8] = 0x52;
+    g_assert_true(proximity_parse(in_case, sizeof(in_case), &info));
+    g_assert_false(info.lid_open);
 
     /* Not a proximity advert, pairing mode, too short */
     uint8_t other_type[sizeof(advert_music)];

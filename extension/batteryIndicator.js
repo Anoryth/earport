@@ -198,3 +198,19 @@ class BatteryIndicator extends St.BoxLayout {
         cr.$dispose();
     }
 });
+
+/* The NearbyBattery property (AirPods seen nearby, not connected here) on
+ * the left, right and case indicators */
+export function showNearbyLevels([left, right, caseBattery], nearby) {
+    /* AirPods Max: a single battery, in whichever slot it comes */
+    const headphones = nearby.Headphones ?? false;
+    left.setHeadphonesMode(headphones);
+    right.setHeadphonesMode(headphones);
+    caseBattery.setHeadphonesMode(headphones);
+    if (headphones && nearby.Left < 0)
+        left.setLevel(nearby.Right, nearby.RightCharging);
+    else
+        left.setLevel(nearby.Left, nearby.LeftCharging);
+    right.setLevel(nearby.Right, nearby.RightCharging);
+    caseBattery.setLevel(nearby.Case, nearby.CaseCharging);
+}

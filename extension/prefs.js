@@ -245,6 +245,12 @@ export default class EarPortPreferences extends ExtensionPreferences {
         });
         connectionGroup.add(this._appleHandoffRow);
 
+        this._proximityCardRow = new Adw.SwitchRow({
+            title: _('Proximity Card'),
+            subtitle: _('Show the batteries and a Connect button when you open the case near this computer, while the AirPods are not connected here'),
+        });
+        connectionGroup.add(this._proximityCardRow);
+
         const notificationsGroup = new Adw.PreferencesGroup({
             title: _('Notifications'),
             description: _('Configure notification preferences'),
@@ -329,6 +335,8 @@ export default class EarPortPreferences extends ExtensionPreferences {
         this._conversationVolumeRow.value = this._settings.get_int('conversation-volume');
         this._settings.bind('hold-notifications-during-conversations',
             this._holdNotificationsRow, 'active', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('proximity-card',
+            this._proximityCardRow, 'active', Gio.SettingsBindFlags.DEFAULT);
 
         const shortcuts = this._settings.get_strv('cycle-noise-mode-shortcut');
         this._shortcutLabel.accelerator = shortcuts.length > 0 ? shortcuts[0] : '';
