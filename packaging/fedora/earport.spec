@@ -3,7 +3,7 @@
 %global _vpath_srcdir daemon
 
 Name:           earport
-Version:        0.7.1
+Version:        0.8.0
 Release:        1%{?dist}
 Summary:        AirPods integration for GNOME: battery, noise control and ear detection
 
@@ -73,6 +73,9 @@ glib-compile-schemas %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/sche
 %{_datadir}/gnome-shell/extensions/%{uuid}/
 
 %changelog
+* Sun Nov 22 2026 Florent Pauliat <flo7634@gmail.com> - 0.8.0-1
+- Update to 0.8.0
+
 * Sun Nov 08 2026 Florent Pauliat <flo7634@gmail.com> - 0.7.1-1
 - Update to 0.7.1
 
