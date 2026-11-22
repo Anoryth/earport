@@ -124,22 +124,6 @@ build_daemon() {
     print_success "Daemon built successfully"
 }
 
-remove_legacy_install() {
-    # Clean up a pre-rename LibrePods installation, if any
-    if systemctl --user list-unit-files librepods-daemon.service &> /dev/null; then
-        systemctl --user disable --now librepods-daemon.service 2>/dev/null || true
-    fi
-
-    if [ -f /usr/local/bin/librepods-daemon ]; then
-        print_step "Removing legacy LibrePods installation (requires sudo)..."
-        sudo rm -f /usr/local/bin/librepods-daemon \
-            /usr/local/lib/systemd/user/librepods-daemon.service \
-            /usr/local/share/dbus-1/services/org.librepods.Daemon.service
-    fi
-
-    rm -rf "$HOME/.local/share/gnome-shell/extensions/librepods@librepods.org"
-}
-
 install_daemon() {
     print_step "Installing the service for $(whoami)..."
 
@@ -291,7 +275,6 @@ main() {
         --daemon)
             print_header
             check_dependencies --daemon
-            remove_legacy_install
             build_daemon
             install_daemon
             remove_system_install
@@ -300,7 +283,6 @@ main() {
             ;;
         --extension)
             print_header
-            remove_legacy_install
             install_extension
             enable_extension
             echo ""
@@ -313,7 +295,6 @@ main() {
         --install|"")
             print_header
             check_dependencies
-            remove_legacy_install
             build_daemon
             install_daemon
             remove_system_install

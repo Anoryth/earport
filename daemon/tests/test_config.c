@@ -40,23 +40,6 @@ static void write_config_file(const char *dir, const char *name, const char *con
  * Daemon settings
  * ========================================================================== */
 
-/* Checked once per process: must run first */
-static void test_migration(void)
-{
-    EarPortConfig config;
-
-    write_config_file("librepods", "daemon.conf", "[Settings]\near_pause_mode=2\n");
-    write_config_file("librepods", "devices.conf", "[00_11_22_33_44_55]\nconversational_awareness=true\n");
-
-    g_assert_true(config_load(&config));
-    g_assert_cmpint(config.ear_pause_mode, ==, 2);
-
-    g_autofree char *old_dir = g_build_filename(g_get_user_config_dir(), "librepods", NULL);
-    g_autofree char *devices = config_file("devices.conf");
-    g_assert_false(g_file_test(old_dir, G_FILE_TEST_EXISTS));
-    g_assert_true(g_file_test(devices, G_FILE_TEST_EXISTS));
-}
-
 static void test_defaults(void)
 {
     EarPortConfig config;
@@ -283,7 +266,6 @@ int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
 
-    g_test_add_func("/config/migration", test_migration);
     g_test_add_func("/config/defaults", test_defaults);
     g_test_add_func("/config/save-load", test_save_load);
     g_test_add_func("/config/research-log-kept", test_research_log_kept);
