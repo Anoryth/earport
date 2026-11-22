@@ -59,6 +59,7 @@ typedef struct {
     SleepPause *sleep_pause;
     HdMic *hd_mic;
     guint hd_mic_output_id;
+    bool mic_capturing;     /* An application records from the HD microphone */
     bool stopping;               /* Packets queued now would not leave */
 } AppContext;
 
@@ -196,13 +197,17 @@ static void hd_mic_name_changed(void *user_data)
     hd_mic_set_name(app.hd_mic, airpods_state_get_display_name(&app.state));
 }
 
+static void send_stem_presses(void);
+
 static void hd_mic_capture_changed(bool capturing, void *user_data)
 {
     (void)user_data;
+    app.mic_capturing = capturing;
     if (!app.state.connected || app.stopping)
         return;   /* The profile remembers, for the next connection */
 
     controls_mic_capture_changed(&app.controls, capturing);
+    send_stem_presses();
     if (capturing)
         return;
     /* The stream's stop sometimes leaves A2DP playing in one ear; suspending
@@ -290,6 +295,12 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         hd_mic_audio(app.hd_mic, &pkt->data.mic_audio);
         return;
     }
+    if (pkt->type == AAP_PKT_TYPE_STEM_PRESS && pkt->data.stem_press == AAP_STEM_PRESS_SINGLE) {
+        bool muted;
+        if (hd_mic_toggle_mute(app.hd_mic, &muted))
+            dbus_service_emit_microphone_muted(app.dbus_service, muted);
+        return;
+    }
 
     /* The AirPods announce the setting on connection */
     if (pkt->type == AAP_PKT_TYPE_CONTROL_SETTING &&
@@ -334,11 +345,16 @@ static void on_link_disconnected(void *user_data)
 }
 
 /* Have the AirPods report double and triple presses (turned into track
- * changes) instead of acting on them, or stop */
+ * changes) instead of acting on them, and single presses while the HD
+ * microphone records (mute, as in a call on the iPhone; play/pause
+ * otherwise). shortcut: always a single press, whatever the call setting
+ * (0x24, press once or twice to mute); read it if someone asks. */
 static void send_stem_presses(void)
 {
-    const uint8_t mask = app.config.stem_track_controls
-                             ? AAP_STEM_MASK_DOUBLE | AAP_STEM_MASK_TRIPLE : 0x00;
+    uint8_t mask = app.config.stem_track_controls
+                       ? AAP_STEM_MASK_DOUBLE | AAP_STEM_MASK_TRIPLE : 0x00;
+    if (app.mic_capturing)
+        mask |= AAP_STEM_MASK_SINGLE;
     uint8_t packet[AAP_CONTROL_CMD_SIZE];
     aap_build_control_cmd(AAP_CTRL_STEM_PRESSES, &mask, 1, packet);
     aap_link_send(app.link, packet, sizeof(packet));

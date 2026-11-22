@@ -244,6 +244,12 @@ class EarPortToggle extends QuickSettings.QuickMenuToggle {
         this._signalIds.push(
             this._proxy.connectSignal('PausedForSleep', () => this._notifications.pausedForSleep())
         );
+        this._signalIds.push(
+            this._proxy.connectSignal('MicrophoneMuted', (proxy, sender, [muted]) =>
+                showOsd(Gio.ThemedIcon.new(muted
+                    ? 'microphone-sensitivity-muted-symbolic'
+                    : 'microphone-sensitivity-high-symbolic'), null))
+        );
 
         this._updateState();
     }

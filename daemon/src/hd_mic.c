@@ -23,6 +23,7 @@ void hd_mic_set_name(HdMic *mic, const char *name) { (void)mic; (void)name; }
 void hd_mic_set_connected(HdMic *mic, bool connected) { (void)mic; (void)connected; }
 void hd_mic_set_ready(HdMic *mic) { (void)mic; }
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio) { (void)mic; (void)audio; }
+bool hd_mic_toggle_mute(HdMic *mic, bool *muted) { (void)mic; (void)muted; return false; }
 
 #else
 
@@ -33,6 +34,7 @@ void hd_mic_audio(HdMic *mic, const AapMicAudio *audio) { (void)mic; (void)audio
 #include <math.h>
 #include <pipewire/pipewire.h>
 #include <spa/param/audio/format-utils.h>
+#include <spa/param/props.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -78,6 +80,7 @@ struct HdMic {
 
     GHashTable *links;      /* Links leaving our source (ids) */
     bool capturing;
+    bool muted;             /* The source's mute, whoever set it */
 
     float ring[RING_SIZE];
     size_t ring_read;
@@ -87,6 +90,15 @@ struct HdMic {
 };
 
 static void update(HdMic *mic);
+
+/* The stream's mute is the source's: GNOME shows it, the adapter applies it */
+static void set_muted(HdMic *mic, bool muted)
+{
+    float value = muted ? 1.0f : 0.0f;
+    if (mic->stream != NULL)
+        pw_stream_set_control(mic->stream, SPA_PROP_mute, 1, &value, 0);
+    mic->muted = muted;
+}
 
 /* ============================================================================
  * Capture
@@ -114,6 +126,8 @@ static void stop_capture(HdMic *mic)
         return;
     mic->capturing = false;
     g_message("HD microphone: no more recording, stopping the AirPods' stream");
+    if (mic->muted)
+        set_muted(mic, false);
     if (mic->connected && mic->ready)
         mic->callbacks.send(AAP_PKT_MIC_STOP, AAP_MIC_STOP_SIZE, mic->user_data);
     mic->callbacks.capture_changed(false, mic->user_data);
@@ -172,6 +186,16 @@ void hd_mic_audio(HdMic *mic, const AapMicAudio *audio)
     }
 }
 
+bool hd_mic_toggle_mute(HdMic *mic, bool *muted)
+{
+    if (mic == NULL || !mic->capturing)
+        return false;
+    set_muted(mic, !mic->muted);
+    g_message("HD microphone: %s with the stem", mic->muted ? "muted" : "unmuted");
+    *muted = mic->muted;
+    return true;
+}
+
 /* ============================================================================
  * PipeWire
  * ========================================================================== */
@@ -209,8 +233,17 @@ static void on_process(void *data)
     pw_stream_queue_buffer(mic->stream, b);
 }
 
+/* Muted from GNOME or pactl too: the stem then toggles from there */
+static void on_control_info(void *data, uint32_t id, const struct pw_stream_control *control)
+{
+    HdMic *mic = data;
+    if (id == SPA_PROP_mute && control->n_values > 0)
+        mic->muted = control->values[0] > 0.5f;
+}
+
 static const struct pw_stream_events stream_events = {
     PW_VERSION_STREAM_EVENTS,
+    .control_info = on_control_info,
     .process = on_process,
 };
 
@@ -289,6 +322,7 @@ static void pipewire_close(HdMic *mic)
     if (mic->stream != NULL) {
         pw_stream_destroy(mic->stream);
         mic->stream = NULL;
+        mic->muted = false;
     }
     if (mic->registry != NULL) {
         spa_hook_remove(&mic->registry_listener);

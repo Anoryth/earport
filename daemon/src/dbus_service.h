@@ -132,6 +132,9 @@ void dbus_service_emit_ear_detection_changed(DbusService *service,
  */
 void dbus_service_emit_speaking_changed(DbusService *service, bool speaking);
 
+/* The stem muted or unmuted the HD microphone during a recording */
+void dbus_service_emit_microphone_muted(DbusService *service, bool muted);
+
 /* Playback was paused because the user fell asleep (once per pause) */
 void dbus_service_emit_paused_for_sleep(DbusService *service);
 

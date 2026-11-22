@@ -51,6 +51,10 @@ void hd_mic_set_ready(HdMic *mic);
 /* A microphone audio packet from the AirPods */
 void hd_mic_audio(HdMic *mic, const AapMicAudio *audio);
 
+/* Mute or unmute the source while an application records (false
+ * otherwise); *muted is the new state. A recording ends unmuted. */
+bool hd_mic_toggle_mute(HdMic *mic, bool *muted);
+
 /* Exposed for the tests, only built with the HD microphone: the gain for a
  * frame with this peak (0-1) after one with 'gain'; whether FFmpeg opens
  * the AAC-ELD decoder (without PipeWire, absent from package builders) */

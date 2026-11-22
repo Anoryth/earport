@@ -59,10 +59,12 @@
 #define AAP_CTRL_STEM_PRESSES        0x39  /* Presses reported (0x19) instead of acted on */
 
 /* 0x39 mask: the presses the AirPods report instead of acting on them */
+#define AAP_STEM_MASK_SINGLE 0x01
 #define AAP_STEM_MASK_DOUBLE 0x02
 #define AAP_STEM_MASK_TRIPLE 0x04
 
 /* Stem press reported (04 00 04 00 19 00 [type] [bud]) */
+#define AAP_STEM_PRESS_SINGLE 0x05
 #define AAP_STEM_PRESS_DOUBLE 0x06
 #define AAP_STEM_PRESS_TRIPLE 0x07
 

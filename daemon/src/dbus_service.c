@@ -111,6 +111,9 @@ static const gchar introspection_xml[] =
     "      <arg type='b' name='speaking'/>"
     "    </signal>"
     "    <signal name='PausedForSleep'/>"
+    "    <signal name='MicrophoneMuted'>"
+    "      <arg type='b' name='muted'/>"
+    "    </signal>"
     "  </interface>"
     "</node>";
 
@@ -749,6 +752,11 @@ void dbus_service_emit_speaking_changed(DbusService *service, bool speaking)
 void dbus_service_emit_paused_for_sleep(DbusService *service)
 {
     emit_signal(service, "PausedForSleep", NULL);
+}
+
+void dbus_service_emit_microphone_muted(DbusService *service, bool muted)
+{
+    emit_signal(service, "MicrophoneMuted", g_variant_new("(b)", muted));
 }
 
 void dbus_service_emit_properties_changed(DbusService *service,
