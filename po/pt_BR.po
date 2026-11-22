@@ -41,7 +41,7 @@ msgstr "Modos de audição desativados"
 
 #: extension/earportToggle.js:67 extension/prefs.js:188
 msgid "Noise Cancellation"
-msgstr "Cancelamento ativo de ruído"
+msgstr "Cancelamento de ruído"
 
 #: extension/earportToggle.js:68 extension/prefs.js:182
 msgid "Transparency"
@@ -181,7 +181,7 @@ msgstr "Verificando…"
 
 #: extension/prefs.js:100
 msgid "Ear Detection"
-msgstr "Detecção de uso"
+msgstr "Detecção de ouvido"
 
 #: extension/prefs.js:101
 msgid "Unknown"

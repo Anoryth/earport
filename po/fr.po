@@ -179,7 +179,7 @@ msgstr "Vérification…"
 
 #: extension/prefs.js:100
 msgid "Ear Detection"
-msgstr "Détection intra-auriculaire"
+msgstr "Détection des oreilles"
 
 #: extension/prefs.js:101
 msgid "Unknown"

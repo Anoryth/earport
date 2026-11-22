@@ -211,7 +211,7 @@ msgstr "Geavanceerde functies van je AirPods"
 
 #: extension/prefs.js:127
 msgid "Conversation Awareness"
-msgstr "Gesprekswaarneming"
+msgstr "Gespreksdetectie"
 
 #: extension/prefs.js:128
 msgid "Automatically lower volume when you speak"
