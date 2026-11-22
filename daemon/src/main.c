@@ -203,6 +203,7 @@ static void hd_mic_capture_changed(bool capturing, void *user_data)
 {
     (void)user_data;
     app.mic_capturing = capturing;
+    tipi_set_recording(app.tipi, capturing);
     if (!app.state.connected || app.stopping)
         return;   /* The profile remembers, for the next connection */
 
@@ -324,7 +325,9 @@ static void on_link_packet(const AapParsedPacket *pkt, void *user_data)
         tipi_hosts_changed(app.tipi, &pkt->data.hosts, app.state.host_address);
     else if (pkt->type == AAP_PKT_TYPE_EAR_DETECTION)
         tipi_ear_changed(app.tipi, app.state.ear_detection.primary_in_ear,
-                         app.state.ear_detection.secondary_in_ear);
+                         app.state.ear_detection.secondary_in_ear,
+                         pkt->data.ear_detection.primary_in_case ||
+                         pkt->data.ear_detection.secondary_in_case);
     else if (pkt->type == AAP_PKT_TYPE_AUDIO_SOURCE) {
         handoff_source_changed(app.handoff, app.state.audio_source,
                                pkt->data.audio_source.type == AAP_AUDIO_SOURCE_CALL);

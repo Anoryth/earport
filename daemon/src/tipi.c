@@ -76,6 +76,8 @@ struct Tipi {
 
     bool relinked;              /* Reconnected for being alone: not again
                                  * until the AirPods leave by themselves */
+    bool in_case;               /* A pod is in the case */
+    bool recording;             /* An application records from them */
 
     guint reconnect_id;
     int tries;
@@ -125,6 +127,7 @@ static void reset_session(Tipi *tipi)
     tipi->primary_in = false;
     tipi->secondary_in = false;
     tipi->primary_out_us = 0;
+    tipi->in_case = false;
 }
 
 Tipi *tipi_new(const TipiCallbacks *callbacks, void *user_data)
@@ -160,7 +163,10 @@ static gboolean on_alone_check(gpointer user_data)
     tipi->alone_id = 0;
     /* Playing here: the user chose this computer. Not once it stops either:
      * a pause or a gap between videos would cut the AirPods mid-session */
-    if (!tipi->enabled || tipi->partner[0] != '\0' || tipi->relinked || tipi->playing_here)
+    /* Recording (the HD microphone): a reconnection would cut it, and the
+     * AirPods may have dropped for it */
+    if (!tipi->enabled || tipi->partner[0] != '\0' || tipi->relinked || tipi->playing_here ||
+        tipi->recording)
         return G_SOURCE_REMOVE;
 
     tipi->relinked = true;
@@ -236,8 +242,9 @@ void tipi_hosts_changed(Tipi *tipi, const AapHosts *hosts, const char *my_addres
         update_list(tipi, my_address);
 }
 
-void tipi_ear_changed(Tipi *tipi, bool primary_in, bool secondary_in)
+void tipi_ear_changed(Tipi *tipi, bool primary_in, bool secondary_in, bool in_case)
 {
+    tipi->in_case = in_case;
     if (tipi->primary_in && !primary_in)
         tipi->primary_out_us = g_get_monotonic_time();
     else if (primary_in)
@@ -296,11 +303,13 @@ void tipi_link_closed(Tipi *tipi, bool left)
     bool again = tipi->back_us > 0 && now - tipi->back_us < TIPI_AGAIN_MS * 1000;
     bool dropped = tipi->enabled && left && tipi->known && tipi->other[0] != '\0' &&
                    !(tipi->my_flags & HOST_PLAYS) && swapping && !again;
-    reset_session(tipi);
-    /* Gone by themselves (their case, out of reach): the next time they
-     * come alone is worth a reconnection again */
-    if (left)
+    /* Put away (they leave once a pod is in the case): the next time they
+     * come alone is worth a reconnection again. Not after a drop while worn
+     * (a radio timeout, the AirPods hesitating with another device): it
+     * would cut them again each time they come back. */
+    if (left && tipi->in_case)
         tipi->relinked = false;
+    reset_session(tipi);
     if (!dropped || tipi->reconnect_id > 0)
         return;
 
@@ -308,4 +317,9 @@ void tipi_link_closed(Tipi *tipi, bool left)
     tipi->tries = 0;
     tipi->reconnect_id = g_timeout_add(TIPI_RECONNECT_FIRST_MS, on_reconnect, tipi);
     set_reconnecting(tipi, true);
+}
+
+void tipi_set_recording(Tipi *tipi, bool recording)
+{
+    tipi->recording = recording;
 }

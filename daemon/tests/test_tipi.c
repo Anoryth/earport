@@ -181,8 +181,8 @@ static void test_playback(void)
 /* The primary pod comes out, the other one stays in */
 static void swap_pods(Tipi *tipi)
 {
-    tipi_ear_changed(tipi, true, true);
-    tipi_ear_changed(tipi, false, true);
+    tipi_ear_changed(tipi, true, true, false);
+    tipi_ear_changed(tipi, false, true, false);
 }
 
 /* Dropped for the device playing as the pods switch: back, a few tries
@@ -239,7 +239,7 @@ static void test_not_dropped(void)
     /* Taken by another device, pods in place: the user chose it */
     AapHosts hosts = table(2, 0x05, 2, 0x13);
     tipi_hosts_changed(tipi, &hosts, ME);
-    tipi_ear_changed(tipi, true, true);
+    tipi_ear_changed(tipi, true, true, false);
     tipi_link_closed(tipi, true);
 
     /* The primary pod came out a while ago */
@@ -260,8 +260,8 @@ static void test_not_dropped(void)
     tipi_link_opened(tipi);
     hosts = table(2, 0x05, 2, 0x13);
     tipi_hosts_changed(tipi, &hosts, ME);
-    tipi_ear_changed(tipi, true, false);
-    tipi_ear_changed(tipi, false, false);
+    tipi_ear_changed(tipi, true, false, false);
+    tipi_ear_changed(tipi, false, false, false);
     tipi_link_closed(tipi, true);
 
     /* Disconnected from here */
@@ -328,6 +328,7 @@ static void test_alone(void)
     g_assert_cmpint(calls.relinks, ==, 1);
 
     /* Put away, out again, alone: once more */
+    tipi_ear_changed(tipi, false, false, true);
     tipi_link_closed(tipi, true);
     tipi_link_opened(tipi);
     tipi_hosts_changed(tipi, &alone, ME);
@@ -413,6 +414,36 @@ static void test_alone_playing(void)
     tipi_free(tipi);
 }
 
+/* Dropped while worn (a radio timeout, the AirPods hesitating with another
+ * device), or recording from the HD microphone: not reconnected, which
+ * would drop them again */
+static void test_alone_dropped_or_recording(void)
+{
+    Calls calls = { 0 };
+    Tipi *tipi = new_session(&calls);
+    AapHosts alone = alone_table();
+    tipi_hosts_changed(tipi, &alone, ME);
+    WAIT_FOR(calls.relinks >= 1);
+
+    tipi_ear_changed(tipi, true, true, false);
+    tipi_link_closed(tipi, true);
+    tipi_link_opened(tipi);
+    tipi_hosts_changed(tipi, &alone, ME);
+    run_for(250);
+    g_assert_cmpint(calls.relinks, ==, 1);
+
+    tipi_ear_changed(tipi, false, false, true);
+    tipi_link_closed(tipi, true);
+    tipi_set_recording(tipi, true);
+    session(tipi, &alone);
+    g_assert_cmpint(calls.relinks, ==, 1);
+
+    tipi_set_recording(tipi, false);
+    session(tipi, &alone);
+    g_assert_cmpint(calls.relinks, ==, 2);
+    tipi_free(tipi);
+}
+
 int main(int argc, char *argv[])
 {
     g_test_init(&argc, &argv, NULL);
@@ -425,6 +456,7 @@ int main(int argc, char *argv[])
     g_test_add_func("/tipi/alone-left-alone", test_alone_left_alone);
     g_test_add_func("/tipi/alone-playing", test_alone_playing);
     g_test_add_func("/tipi/alone-after-phone", test_alone_after_phone);
+    g_test_add_func("/tipi/alone-dropped-or-recording", test_alone_dropped_or_recording);
 
     return g_test_run();
 }

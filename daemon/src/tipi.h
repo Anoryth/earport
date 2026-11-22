@@ -60,7 +60,7 @@ void tipi_link_opened(Tipi *tipi);
 void tipi_hosts_changed(Tipi *tipi, const AapHosts *hosts, const char *my_address);
 
 /* Ear detection, as the AirPods report it (primary and secondary pod) */
-void tipi_ear_changed(Tipi *tipi, bool primary_in, bool secondary_in);
+void tipi_ear_changed(Tipi *tipi, bool primary_in, bool secondary_in, bool in_case);
 
 /* A player started playing here */
 void tipi_playback_started(Tipi *tipi);
@@ -72,5 +72,9 @@ void tipi_source_changed(Tipi *tipi, const char *source);
 /* The link closed; left: by the AirPods (closed, or lost: they stop
  * answering when a third device comes in), not by this computer */
 void tipi_link_closed(Tipi *tipi, bool left);
+
+/* An application records from the AirPods (HD microphone): no reconnection
+ * for being alone meanwhile */
+void tipi_set_recording(Tipi *tipi, bool recording);
 
 #endif /* TIPI_H */
