@@ -8,12 +8,15 @@ AirPods integration for GNOME Shell on Linux. This project provides full support
 
 <img src="extension.png" width="384" alt="The EarPort menu in GNOME Shell Quick Settings: AirPods Pro at 85 % and 82 %, case charging at 64 %, about 4:30 of listening left, noise cancellation on">
 
-> **New in 0.7: HD microphone (experimental).** Record with your AirPods in
-> high quality while your music or call keeps playing in high quality, instead
-> of the usual Bluetooth headset microphone that drops everything to call
-> quality. [How it works](#hd-microphone-experimental)
+> **New in 0.8: the stem and the case, as on an iPhone.** Open the case near
+> the computer to see the batteries and connect in one click; press the stem
+> twice or three times to change tracks, once to mute the microphone during a
+> call; the volume you set with the stem shows on screen.
+> [Details](#ear-detection--media-control)
 >
-> Since 0.6, your AirPods can also [switch with your Apple devices](#switching-with-your-apple-devices-experimental)
+> Since 0.7, the [HD microphone](#hd-microphone-experimental) records in high
+> quality while playback stays in high quality (experimental), and since 0.6
+> your AirPods can [switch with your Apple devices](#switching-with-your-apple-devices-experimental)
 > on their own, as with a Mac (experimental).
 
 ## Features
