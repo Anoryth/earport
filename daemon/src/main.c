@@ -213,8 +213,14 @@ static void hd_mic_capture_changed(bool capturing, void *user_data)
 
     controls_mic_capture_changed(&app.controls, capturing);
     send_stem_presses();
-    if (capturing)
+    if (capturing) {
+        /* Recording again right after stopping: no restart in the middle */
+        if (app.hd_mic_output_id > 0) {
+            g_source_remove(app.hd_mic_output_id);
+            app.hd_mic_output_id = 0;
+        }
         return;
+    }
     /* The stream's stop sometimes leaves A2DP playing in one ear; suspending
      * and resuming the output fixes it without pausing the players (turning
      * the profile off removes the output, and browsers pause) */
