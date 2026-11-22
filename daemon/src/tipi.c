@@ -77,6 +77,7 @@ struct Tipi {
     bool relinked;              /* Reconnected for being alone: not again
                                  * until the AirPods leave by themselves */
     bool in_case;               /* A pod is in the case */
+    bool alone_waiting;         /* Alone, the pods still in the case */
     bool recording;             /* An application records from them */
 
     guint reconnect_id;
@@ -128,6 +129,7 @@ static void reset_session(Tipi *tipi)
     tipi->secondary_in = false;
     tipi->primary_out_us = 0;
     tipi->in_case = false;
+    tipi->alone_waiting = false;
 }
 
 Tipi *tipi_new(const TipiCallbacks *callbacks, void *user_data)
@@ -168,6 +170,11 @@ static gboolean on_alone_check(gpointer user_data)
     if (!tipi->enabled || tipi->partner[0] != '\0' || tipi->relinked || tipi->playing_here ||
         tipi->recording)
         return G_SOURCE_REMOVE;
+    /* Still in the case: once a pod is worn, not to cut them for nothing */
+    if (tipi->in_case && !tipi->primary_in && !tipi->secondary_in) {
+        tipi->alone_waiting = true;
+        return G_SOURCE_REMOVE;
+    }
 
     tipi->relinked = true;
     g_message("The AirPods keep this computer alone: reconnecting once so that another "
@@ -245,6 +252,10 @@ void tipi_hosts_changed(Tipi *tipi, const AapHosts *hosts, const char *my_addres
 void tipi_ear_changed(Tipi *tipi, bool primary_in, bool secondary_in, bool in_case)
 {
     tipi->in_case = in_case;
+    if (tipi->alone_waiting && (primary_in || secondary_in) && tipi->alone_id == 0) {
+        tipi->alone_waiting = false;
+        tipi->alone_id = g_timeout_add(TIPI_ALONE_CHECK_MS, on_alone_check, tipi);
+    }
     if (tipi->primary_in && !primary_in)
         tipi->primary_out_us = g_get_monotonic_time();
     else if (primary_in)

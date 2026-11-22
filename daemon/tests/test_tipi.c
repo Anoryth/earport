@@ -444,6 +444,18 @@ static void test_alone_dropped_or_recording(void)
     g_assert_cmpint(calls.relinks, ==, 2);
     tipi_free(tipi);
 
+    /* Back with the pods in the case: only once one is worn */
+    calls = (Calls){ 0 };
+    tipi = new_session(&calls);
+    tipi_ear_changed(tipi, false, false, true);
+    tipi_hosts_changed(tipi, &alone, ME);
+    run_for(250);
+    g_assert_cmpint(calls.relinks, ==, 0);
+    tipi_ear_changed(tipi, true, false, true);
+    WAIT_FOR(calls.relinks >= 1);
+    g_assert_cmpint(calls.relinks, ==, 1);
+    tipi_free(tipi);
+
     /* Dropped while worn before any reconnection: not the first one either */
     calls = (Calls){ 0 };
     tipi = new_session(&calls);
