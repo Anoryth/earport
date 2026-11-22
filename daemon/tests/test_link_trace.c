@@ -17,13 +17,15 @@
 typedef struct {
     int closed;
     bool left;
+    bool timeout;
 } Closed;
 
-static void on_closed(bool left, void *user_data)
+static void on_closed(bool left, bool timeout, void *user_data)
 {
     Closed *closed = user_data;
     closed->closed++;
     closed->left = left;
+    closed->timeout = timeout;
 }
 
 static LinkTrace *trace_new(Closed *closed)
@@ -62,12 +64,15 @@ static void test_reasons(void)
     disconnected(AIRPODS_PATH, "org.bluez.Reason.Remote");
     wait_closed(&closed, 1);
     g_assert_true(closed.left);
+    g_assert_false(closed.timeout);
     disconnected(AIRPODS_PATH, "org.bluez.Reason.Timeout");
     wait_closed(&closed, 2);
     g_assert_true(closed.left);
+    g_assert_true(closed.timeout);
     disconnected(AIRPODS_PATH, "org.bluez.Reason.Local");
     wait_closed(&closed, 3);
     g_assert_false(closed.left);
+    g_assert_false(closed.timeout);
     disconnected(AIRPODS_PATH, "org.bluez.Reason.Unknown");
     wait_closed(&closed, 4);
     g_assert_false(closed.left);

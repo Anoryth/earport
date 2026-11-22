@@ -60,6 +60,8 @@ typedef struct {
     HdMic *hd_mic;
     guint hd_mic_output_id;
     bool mic_capturing;     /* An application records from the HD microphone */
+    gint64 mic_capture_end_us;
+    guint hd_mic_pause_id;  /* The source is away after the AirPods dropped */
     bool stopping;               /* Packets queued now would not leave */
 } AppContext;
 
@@ -203,6 +205,8 @@ static void hd_mic_capture_changed(bool capturing, void *user_data)
 {
     (void)user_data;
     app.mic_capturing = capturing;
+    if (!capturing)
+        app.mic_capture_end_us = g_get_monotonic_time();
     tipi_set_recording(app.tipi, capturing);
     if (!app.state.connected || app.stopping)
         return;   /* The profile remembers, for the next connection */
@@ -606,10 +610,38 @@ static void relink_reconnecting(bool reconnecting, void *user_data)
     update_reconnecting();
 }
 
-static void on_link_closed(bool left, void *user_data)
+/* The HD microphone's source stays away this long after the AirPods
+ * dropped while it recorded */
+#define HD_MIC_PAUSE_S (5 * 60)
+
+static gboolean hd_mic_pause_over(gpointer user_data)
+{
+    (void)user_data;
+    app.hd_mic_pause_id = 0;
+    g_message("HD microphone: back after the pause");
+    hd_mic_set_enabled(app.hd_mic, app.config.hd_mic);
+    return G_SOURCE_REMOVE;
+}
+
+static void on_link_closed(bool left, bool timeout, void *user_data)
 {
     (void)user_data;
     tipi_link_closed(app.tipi, left);
+
+    /* The AirPods sometimes stop answering while their microphone streams,
+     * and again at each reconnection while the application still records:
+     * the source goes away for a while, the application falls back to
+     * another microphone. Recording until shortly before counts: BlueZ
+     * declares them gone seconds after they stopped answering (6 s seen). */
+    bool recorded = app.mic_capturing ||
+                    g_get_monotonic_time() - app.mic_capture_end_us < 10 * G_USEC_PER_SEC;
+    if (timeout && recorded && app.hd_mic != NULL && app.config.hd_mic &&
+        app.hd_mic_pause_id == 0) {
+        g_message("HD microphone: the AirPods stopped answering while it recorded, "
+                  "away for %d minutes", HD_MIC_PAUSE_S / 60);
+        hd_mic_set_enabled(app.hd_mic, false);
+        app.hd_mic_pause_id = g_timeout_add_seconds(HD_MIC_PAUSE_S, hd_mic_pause_over, NULL);
+    }
 }
 
 static void handoff_pause_players(void *user_data)
@@ -640,6 +672,10 @@ static void on_set_hd_mic(bool enabled, void *user_data)
     (void)user_data;
     app.config.hd_mic = enabled;
     config_save(&app.config);
+    if (app.hd_mic_pause_id > 0) {
+        g_source_remove(app.hd_mic_pause_id);
+        app.hd_mic_pause_id = 0;
+    }
     hd_mic_set_enabled(app.hd_mic, enabled);
     dbus_service_set_hd_mic(app.dbus_service, app.hd_mic != NULL, enabled);
 }
@@ -714,6 +750,8 @@ static void cleanup(void)
     app.hd_mic = NULL;
     if (app.hd_mic_output_id > 0)
         g_source_remove(app.hd_mic_output_id);
+    if (app.hd_mic_pause_id > 0)
+        g_source_remove(app.hd_mic_pause_id);
     autoconnect_free(app.autoconnect);
     app.autoconnect = NULL;
 

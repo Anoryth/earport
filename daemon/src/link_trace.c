@@ -32,10 +32,10 @@ static void on_disconnected(GDBusConnection *bus, const gchar *sender, const gch
     const gchar *name = NULL, *message = NULL;
     g_variant_get(parameters, "(&s&s)", &name, &message);
     g_message("BlueZ: AirPods link closed: %s (%s)", message, name);
+    bool timeout = g_strcmp0(name, "org.bluez.Reason.Timeout") == 0;
     if (trace->closed_callback != NULL)
-        trace->closed_callback(g_strcmp0(name, "org.bluez.Reason.Remote") == 0 ||
-                                   g_strcmp0(name, "org.bluez.Reason.Timeout") == 0,
-                               trace->closed_user_data);
+        trace->closed_callback(timeout || g_strcmp0(name, "org.bluez.Reason.Remote") == 0,
+                               timeout, trace->closed_user_data);
 }
 
 /* The audio stream to the AirPods, under their path (".../sep2/fd0") */

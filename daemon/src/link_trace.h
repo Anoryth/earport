@@ -16,8 +16,8 @@ typedef struct LinkTrace LinkTrace;
 
 /* The link to the AirPods closed; left: they closed it or stopped
  * answering (they do both when another device takes them), rather than
- * this computer closing it */
-typedef void (*LinkTraceClosedCallback)(bool left, void *user_data);
+ * this computer closing it; timeout: they stopped answering */
+typedef void (*LinkTraceClosedCallback)(bool left, bool timeout, void *user_data);
 
 LinkTrace *link_trace_new(void);
 void link_trace_free(LinkTrace *trace);
